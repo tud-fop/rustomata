@@ -1,0 +1,8 @@
+[package]
+name = "automata"
+version = "0.1.0"
+authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
+
+[dependencies]
+ordered-float = { git = "https://github.com/denki/rust-ordered-float.git" }
+num = "0.1.36"
