@@ -1,5 +1,6 @@
 mod automata;
 mod tree_stack;
+mod pmcfg;
 
 extern crate ordered_float;
 
@@ -13,6 +14,7 @@ use ordered_float::OrderedFloat;
 
 pub use tree_stack::*;
 pub use automata::*;
+pub use pmcfg::*;
 
 fn main() {
     let automaton_file_name = env::args_os().nth(1).unwrap();
