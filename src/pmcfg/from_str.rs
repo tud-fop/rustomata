@@ -24,7 +24,7 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W> {
 
         for l in s.lines() {
             if !l.is_empty() && !l.starts_with("initial: ") {
-                rules.push(try!(l.trim().parse().map_err(|_| format!("Substring {} is not a rule.", l.trim()))));
+                rules.push(try!(l.trim().parse()));
             }
         }
 

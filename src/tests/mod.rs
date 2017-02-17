@@ -101,74 +101,108 @@ fn test_from_str_automaton() {
 
 
 #[test]
-fn from_str_pmcfg() {
-    assert_eq!(Ok(VarT::Var(0,1)), "Var 0 1".parse::<VarT<String>>());
-    assert_eq!(Ok(VarT::T("test".to_string())), "T test".parse());
+fn test_from_str_pmcfg() {
+    let c0: Composition<String> = Composition {
+        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)]],
+    };
 
-    let c1: Composition<String>
-        = Composition{ composition: vec![
-            vec![],
-            vec![]
-        ] };
+    let c1: Composition<String> = Composition { composition: vec![vec![], vec![]] };
 
-    let c2
-        = Composition{ composition: vec![
-            vec![VarT::T("a".to_string()), VarT::Var(0,0), VarT::T("b".to_string())],
-            vec![VarT::T("c".to_string()), VarT::Var(0,1), VarT::T("d".to_string())]
-        ] };
+    let c2 = Composition {
+        composition: vec![vec![VarT::T("a".to_string()),
+                               VarT::Var(0, 0)],
+                          vec![VarT::T("c".to_string()),
+                               VarT::Var(0, 1)]],
+    };
 
-    let c3
-        = Composition{ composition: vec![
-            vec![VarT::T("a".to_string())],
-            vec![VarT::T("c".to_string())]
-        ] };
+    let c3 = Composition {
+        composition: vec![vec![VarT::T("b".to_string()),
+                               VarT::Var(0, 0)],
+                          vec![VarT::T("d".to_string()),
+                               VarT::Var(0, 1)]],
+    };
 
+    assert_eq!(Ok(c0.clone()), "[[Var 0 0, Var 1 0, Var 0 1, Var 1 1]]".parse::<Composition<String>>());
     assert_eq!(Ok(c1.clone()), "[[],[]]".parse::<Composition<String>>());
-    assert_eq!(Ok(c2.clone()), "[[T a, Var 0 0, T b],[T c, Var 0 1, T d]]".parse::<Composition<String>>());
-    assert_eq!(Ok(c3.clone()), "[[T a],[T c]]".parse::<Composition<String>>());
+    assert_eq!(Ok(c2.clone()),
+               "[[T a, Var 0 0],[T c, Var 0 1]]".parse::<Composition<String>>());
+    assert_eq!(Ok(c3.clone()),
+               "[[T b, Var 0 0],[T d, Var 0 1]]".parse::<Composition<String>>());
 
-    let r1: PMCFGRule<String, String, i32>
-        = PMCFGRule {
-            head: "A".to_string(),
-            tail: Vec::new(),
-            composition: c1.clone(),
-            weight: 0
-        };
+    let r0: PMCFGRule<String, String, LogProb> = PMCFGRule {
+        head: "S".to_string(),
+        tail: vec!["A".to_string(), "B".to_string()],
+        composition: c0.clone(),
+        weight: LogProb::new(1.0).unwrap(),
+    };
 
-    let r2: PMCFGRule<String, String, i32>
-        = PMCFGRule {
-            head: "A".to_string(),
-            tail: vec!["A".to_string()],
-            composition: c2.clone(),
-            weight: -2
-        };
+    let r1: PMCFGRule<String, String, LogProb> = PMCFGRule {
+        head: "A".to_string(),
+        tail: Vec::new(),
+        composition: c1.clone(),
+        weight: LogProb::new(0.6).unwrap(),
+    };
 
-    let r3: PMCFGRule<String, String, i32>
-        = PMCFGRule {
-            head: "A".to_string(),
-            tail: vec!["A".to_string(), "B".to_string()],
-            composition: c2.clone(),
-            weight: -2
-        };
+    let r2: PMCFGRule<String, String, LogProb> = PMCFGRule {
+        head: "A".to_string(),
+        tail: vec!["A".to_string()],
+        composition: c2.clone(),
+        weight: LogProb::new(0.4).unwrap(),
+    };
 
-    let r1_string = "A → [[],[]] ()  # 0";
-    let r2_string = "A → [[T a, Var 0 0, T b],[T c, Var 0 1, T d]] (A)  # -2";
+    let r3: PMCFGRule<String, String, LogProb> = PMCFGRule {
+        head: "B".to_string(),
+        tail: Vec::new(),
+        composition: c1.clone(),
+        weight: LogProb::new(0.7).unwrap(),
+    };
 
-    assert_eq!(Ok(r1.clone()), r1_string.parse::<PMCFGRule<String, String, i32>>());
-    assert_eq!(Ok(r1.clone()), r1_string.parse::<PMCFGRule<String, String, i32>>());
-    assert_eq!(Ok(r2.clone()), r2_string.parse::<PMCFGRule<String, String, i32>>());
-    assert_eq!(Ok(r3.clone()), "A    →    [[T a, Var 0 0, T b],[T c, Var 0 1, T d]]      (A, B)     #    -2".parse::<PMCFGRule<String, String, i32>>());
+    let r4: PMCFGRule<String, String, LogProb> = PMCFGRule {
+        head: "B".to_string(),
+        tail: vec!["B".to_string()],
+        composition: c3.clone(),
+        weight: LogProb::new(0.3).unwrap(),
+    };
 
-    let g: PMCFG<String, String, i32>
-        = PMCFG {
-            _dummy: PhantomData,
-            initial: "A".to_string(),
-            rules: vec![r1.clone(), r2.clone()]
-        };
+    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)  # 1.0";
+    let r1_string = "A → [[],[]] ()  # 0.6";
+    let r2_string = "A → [[T a, Var 0 0],[T c, Var 0 1]] (A)  # 0.4";
+    let r3_string = "B → [[],[]] ()  # 0.7";
+    let r4_string = "B → [[T b, Var 0 0],[T d, Var 0 1]] (B)  # 0.3";
 
-    let mut g_string = String::from("initial: A\n\n");
+    assert_eq!(Ok(r0.clone()),
+               r0_string.parse::<PMCFGRule<String, String, LogProb>>());
+    assert_eq!(Ok(r1.clone()),
+               r1_string.parse::<PMCFGRule<String, String, LogProb>>());
+    assert_eq!(Ok(r2.clone()),
+               r2_string.parse::<PMCFGRule<String, String, LogProb>>());
+    assert_eq!(Ok(r3.clone()),
+               r3_string.parse::<PMCFGRule<String, String, LogProb>>());
+    assert_eq!(Ok(r4.clone()),
+               r4_string.parse::<PMCFGRule<String, String, LogProb>>());
+
+    let g: PMCFG<String, String, LogProb> = PMCFG {
+        _dummy: PhantomData,
+        initial: "S".to_string(),
+        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
+    };
+
+    let mut g_string = String::from("initial: S\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
     g_string.push_str(r1_string.clone());
     g_string.push_str("\n");
     g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r4_string.clone());
+
+    assert_eq!(Ok(g.clone()), g_string.parse());
+
+    let a = TreeStackAutomaton::from(g);
+
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]));
+}
 
     assert_eq!(Ok(g), g_string.parse());
