@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use tree_stack::*;
 use automata::*;
 use pmcfg::*;
+use log_prob::*;
 
 
 #[test]
@@ -205,4 +206,3 @@ fn test_from_str_pmcfg() {
     assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]));
 }
 
-    assert_eq!(Ok(g), g_string.parse());
