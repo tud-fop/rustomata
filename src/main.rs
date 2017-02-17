@@ -3,7 +3,6 @@ extern crate num_traits;
 mod automata;
 mod tree_stack;
 mod pmcfg;
-mod log_prob;
 mod util;
 
 #[cfg(test)]
@@ -16,7 +15,6 @@ use std::fs::File;
 pub use tree_stack::*;
 pub use automata::*;
 pub use pmcfg::*;
-pub use log_prob::*;
 pub use util::*;
 
 fn main() {
@@ -24,7 +22,7 @@ fn main() {
     let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
     let mut grammar_string = String::new();
     let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
+    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
 //    println!("{:?}", grammar);
 

@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use tree_stack::*;
 use automata::*;
 use pmcfg::*;
-use log_prob::*;
 use util::integeriser::*;
+use util::log_prob::*;
 
 
 #[test]
