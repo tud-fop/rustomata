@@ -73,11 +73,10 @@ fn test_from_str_automaton() {
     assert_eq!(Ok(t2.clone()), t2_string.parse());
     assert_eq!(Ok(t3.clone()), t3_string.parse());
 
-    let automaton: TreeStackAutomaton<String, String, f64>
-        = TreeStackAutomaton::new(
-            vec![t1.clone(), t2.clone(), t3.clone()],
-            TreeStack::new("eins".to_string()),
-        );
+    let automaton: TreeStackAutomaton<String, String, LogProb> = TreeStackAutomaton::new(
+        vec![t1.clone(), t2.clone(), t3.clone()],
+        TreeStack::new("eins".to_string())
+    );
 
     let mut automaton_string: String = String::from("initial: eins\n\n");
     automaton_string.push_str(t1_string.as_str());
@@ -87,7 +86,17 @@ fn test_from_str_automaton() {
     automaton_string.push_str(t3_string.as_str());
     automaton_string.push_str("\n");
 
-    assert_eq!(Ok(automaton), automaton_string.parse())
+    let automaton_parse: Result<TreeStackAutomaton<String, String, LogProb>, _> = automaton_string.parse();
+
+    assert_eq!(
+        automaton.list_transitions(),
+        automaton_parse.clone().unwrap().list_transitions()
+    );
+
+    assert_eq!(
+        automaton.initial,
+        automaton_parse.unwrap().initial
+    );
 }
 
 

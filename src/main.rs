@@ -1,3 +1,5 @@
+extern crate num_traits;
+
 mod automata;
 mod tree_stack;
 mod pmcfg;

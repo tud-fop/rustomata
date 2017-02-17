@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
 use std::num::ParseIntError;
@@ -82,6 +83,3 @@ impl<A: FromStr> FromStr for TreeStackInstruction<A> {
         }
     }
 }
-
-
-
