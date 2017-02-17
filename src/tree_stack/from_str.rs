@@ -4,37 +4,40 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 
 use automata;
-use tree_stack::{TreeStack,TreeStackAutomaton,TreeStackInstruction};
+use tree_stack::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 
-impl<A: Ord + PartialEq + Debug + Clone + FromStr,
-     T: FromStr,
-     W: FromStr>
-    FromStr for TreeStackAutomaton<A, T, W> {
-        type Err = String;
+impl<A: Ord + PartialEq + Debug + Clone + FromStr + Hash, T: Eq + FromStr, W: Eq + Ord + FromStr> FromStr
+    for TreeStackAutomaton<A, T, W> {
+    type Err = String;
 
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            let initial: A;
-            let mut transitions: Vec<automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let initial: A;
+        let mut transitions: Vec<automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>
                 = Vec::new();
 
-            let mut it = s.lines();
+        let mut it = s.lines();
 
-            match it.next() {
-                Some(l) if l.starts_with("initial: ")
-                    => initial = try!(l[8..].trim().parse().map_err(|_| format!("Substring {} is not a storage symbol.", l[8..].trim()))),
-                _
-                    => return Err("No initial state supplied on line 1.".to_string())
+        match it.next() {
+            Some(l) if l.starts_with("initial: ") => {
+                initial = try!(l[8..]
+                    .trim()
+                    .parse()
+                    .map_err(|_| format!("Substring {} is not a storage symbol.", l[8..].trim())))
             }
-
-            for l in s.lines() {
-                if l.starts_with("Transition ") {
-                    transitions.push(try!(l.trim().parse().map_err(|_| format!("Substring {} is not a transition.", l.trim()))));
-                }
-            }
-
-            Ok(TreeStackAutomaton::new(transitions, TreeStack::new(initial)))
+            _ => return Err("No initial state supplied on line 1.".to_string()),
         }
+
+        for l in s.lines() {
+            if l.starts_with("Transition ") {
+                transitions.push(try!(l.trim()
+                    .parse()
+                    .map_err(|_| format!("Substring {} is not a transition.", l.trim()))));
+            }
+        }
+
+        Ok(TreeStackAutomaton::new(transitions, TreeStack::new(initial)))
     }
+}
 
 impl<A: FromStr> FromStr for TreeStackInstruction<A> {
     type Err = String;
@@ -48,21 +51,34 @@ impl<A: FromStr> FromStr for TreeStackInstruction<A> {
                 let cur_val: A = try!(v[2].parse().map_err(|_| e.clone()));
                 let old_val: A = try!(v[3].parse().map_err(|_| e.clone()));
                 let new_val: A = try!(v[4].parse().map_err(|_| e.clone()));
-                Ok(TreeStackInstruction::Up { n: n, current_val: cur_val, old_val: old_val, new_val: new_val })
-            },
+                Ok(TreeStackInstruction::Up {
+                    n: n,
+                    current_val: cur_val,
+                    old_val: old_val,
+                    new_val: new_val,
+                })
+            }
             "Push" if v.len() == 4 => {
                 let n: u8 = try!(v[1].parse().map_err(|e: ParseIntError| e.to_string()));
                 let cur_val: A = try!(v[2].parse().map_err(|_| e.clone()));
                 let new_val: A = try!(v[3].parse().map_err(|_| e.clone()));
-                Ok(TreeStackInstruction::Push { n: n, current_val: cur_val, new_val: new_val })
-            },
+                Ok(TreeStackInstruction::Push {
+                    n: n,
+                    current_val: cur_val,
+                    new_val: new_val,
+                })
+            }
             "Down" if v.len() == 4 => {
                 let cur_val: A = try!(v[1].parse().map_err(|_| e.clone()));
                 let old_val: A = try!(v[2].parse().map_err(|_| e.clone()));
                 let new_val: A = try!(v[3].parse().map_err(|_| e.clone()));
-                Ok(TreeStackInstruction::Down { current_val: cur_val, old_val: old_val, new_val: new_val })
-            },
-            _ => Err("Malformed instruction.".to_string())
+                Ok(TreeStackInstruction::Down {
+                    current_val: cur_val,
+                    old_val: old_val,
+                    new_val: new_val,
+                })
+            }
+            _ => Err("Malformed instruction.".to_string()),
         }
     }
 }

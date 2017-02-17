@@ -14,7 +14,7 @@ mod from_str;
 pub struct Configuration<S, T, W> {
     pub word: Vec<T>,
     pub storage: S,
-    pub weight: W
+    pub weight: W,
 }
 
 
@@ -24,7 +24,7 @@ pub struct Transition<A, I: Instruction<A>, T, W> {
     pub _dummy: PhantomData<A>,
     pub word: Vec<T>,
     pub weight: W,
-    pub instruction: I
+    pub instruction: I,
 }
 
 
@@ -34,18 +34,21 @@ pub trait Instruction<A> {
 }
 
 
-impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Add<Output=W> + Copy> Transition<A, I, T, W> {
+impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Copy> Transition<A, I, T, W> {
     pub fn apply(&self, c: &Configuration<A, T, W>) -> Option<Configuration<A, T, W>> {
         if !c.word.starts_with(&self.word[..]) {
             return None;
         }
 
         match self.instruction.apply(c.storage.clone()) {
-            Some(t1) =>
-                Some( Configuration { word: c.word.clone().split_off(self.word.len()),
-                                      storage: t1,
-                                      weight: c.weight + self.weight } ),
-            _        => None
+            Some(t1) => {
+                Some(Configuration {
+                    word: c.word.clone().split_off(self.word.len()),
+                    storage: t1,
+                    weight: c.weight * self.weight,
+                })
+            }
+            _ => None,
         }
     }
 }
@@ -55,7 +58,7 @@ impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Add<Output=W> + Copy>
 pub trait Automaton<S: Clone + Debug + Eq,
                     I: Clone + Debug + Eq + Instruction<S>,
                     T: Clone + Debug + Eq,
-                    W: Add<Output=W> + Clone + Copy + Debug + Eq + Ord> {
+                    W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord>
     fn transitions(&self) -> Vec<Transition<S, I, T, W>>;
     fn initial(&self) -> S;
     fn is_terminal(&self, &Configuration<S, T, W>) -> bool;
@@ -81,7 +84,8 @@ pub trait Automaton<S: Clone + Debug + Eq,
 
 
 
-impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for Transition<A, I, T, W> {
+impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: PartialOrd + Eq> PartialOrd
+    for Transition<A, I, T, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.weight.partial_cmp(&other.weight)
     }
