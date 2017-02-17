@@ -17,6 +17,7 @@ pub use tree_stack::*;
 pub use automata::*;
 pub use pmcfg::*;
 pub use log_prob::*;
+pub use util::*;
 
 fn main() {
     let grammar_file_name = env::args_os().nth(1).unwrap();
