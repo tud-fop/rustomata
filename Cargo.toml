@@ -1,8 +1,8 @@
 [package]
-name = "automata"
+name = "rustomata"
 version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 
 [dependencies]
-ordered-float = { git = "https://github.com/denki/rust-ordered-float.git" }
+ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 num-traits = "0.1.36"
