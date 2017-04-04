@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 
 [dependencies]
-ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
+clap = "2.19"
 num-traits = "0.1.36"
+ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }

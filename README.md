@@ -2,8 +2,7 @@
 Framework for (weighted) automata with storage
 
 ## example usage
-* construct a tree-stack automaton from the given grammar and recognise the word "a a b c c d",
-print out a best (maximum weight) accepting configuration (if there is one)
+* create a grammar file
 ```bash
 cat <<EOF > grammar.gr
 initial: S
@@ -13,7 +12,16 @@ A → [[],  []                             ] (    )   # 0.5
 B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5
 B → [[],  []                             ] (    )   # 0.5
 EOF
-echo "a a b c c d" | cargo run grammar.gr
+```
+* construct a tree-stack automaton from the given grammar,
+print out that automaton
+```bash
+cargo run mcfg automaton grammar.gr
+```
+* construct a tree-stack automaton from the given grammar and recognise the word "a a b c c d",
+print out a best (maximum weight) accepting configuration (if there is one)
+```bash
+echo "a a b c c d" | cargo run mcfg parse grammar.gr
 ```
 
 ## grammar format by example

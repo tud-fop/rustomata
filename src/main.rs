@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate num_traits;
 
 mod automata;
@@ -8,7 +9,7 @@ mod util;
 #[cfg(test)]
 mod tests;
 
-use std::env;
+use clap::{Arg, App, SubCommand};
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -18,22 +19,62 @@ pub use pmcfg::*;
 pub use util::*;
 
 fn main() {
-    let grammar_file_name = env::args_os().nth(1).unwrap();
-    let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
-    let mut grammar_string = String::new();
-    let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+    let matches
+        = App::new("rustomata")
+        .version("0.1")
+        .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
+        .about("Framework for (weighted) automata with storage")
+        .subcommand(SubCommand::with_name("mcfg")
+                    .about("functions related to multiple context-free grammars")
+                    .subcommand(SubCommand::with_name("parse")
+                                .about("parses a word given a multiple context-free grammar")
+                                .arg(Arg::with_name("grammar")
+                                     .help("grammar file to use")
+                                     .index(1)
+                                     .required(true)))
+                    .subcommand(SubCommand::with_name("automaton")
+                                .about("constructs a tree-stack automaton from the given multiple context-free grammar")
+                                .arg(Arg::with_name("grammar")
+                                     .help("grammar file to use")
+                                     .index(1)
+                                     .required(true))))
+        .get_matches();
 
-//    println!("{:?}", grammar);
+    match matches.subcommand() {
+        ("mcfg", Some(mcfg_matches)) => {
+            match mcfg_matches.subcommand() {
+                ("parse", Some(mcfg_parse_matches)) => {
+                    let grammar_file_name = mcfg_parse_matches.value_of("grammar").unwrap();
+                    let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                    let mut grammar_string = String::new();
+                    let _ = grammar_file.read_to_string(&mut grammar_string);
+                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-    let automaton = TreeStackAutomaton::from(grammar);
+                    let automaton = TreeStackAutomaton::from(grammar);
 
-    let mut corpus = String::new();
-    let _ = std::io::stdin().read_to_string(&mut corpus);
+                    let mut corpus = String::new();
+                    let _ = std::io::stdin().read_to_string(&mut corpus);
 
-    for sentence in corpus.lines() {
-        println!("{:?}: {}",
-                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
-                 sentence);
+                    for sentence in corpus.lines() {
+                        println!("{:?}: {}",
+                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                 sentence);
+                    }
+                },
+                ("automaton", Some(mcfg_automaton_matches)) => {
+                    let grammar_file_name = mcfg_automaton_matches.value_of("grammar").unwrap();
+                    let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                    let mut grammar_string = String::new();
+                    let _ = grammar_file.read_to_string(&mut grammar_string);
+                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                    let automaton = TreeStackAutomaton::from(grammar);
+                    println!("{:?}", automaton);
+                }
+                _ => ()
+            }
+        },
+        _ => ()
     }
+
 }
