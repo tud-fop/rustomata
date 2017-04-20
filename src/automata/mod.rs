@@ -136,6 +136,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
 
     loop {
         match active.pop() {
+
             Some(c) => i = c,
             _ => break,
         }
@@ -146,8 +147,8 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
             println!("Considered {} configurations.", count);
             return Some(i);
         }
-
         for rs in filtered_rules.get(&configuration_characteristic(&i)) {
+
             for r in rs {
                 match apply(&i, &r) {
                     Some(c1) => active.push(c1),
