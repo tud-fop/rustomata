@@ -24,9 +24,8 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum PushDownInstruction<A> {
-    Push { current_val: A, new_val : A },
     Pop { current_val: A },
-    Stay { current_val: A, new_val : Vec<A>},
+    Replace { current_val: A, new_val : Vec<A>},
 }
 
 /// Stack with Elements of type `A`
@@ -45,9 +44,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq> PushDownAuto
         for t in transitions {
             let a =
                 match t.instruction {
-                    PushDownInstruction::Push { ref current_val, ..} => current_val.clone(),
                     PushDownInstruction::Pop { ref current_val, ..} => current_val.clone(),
-                    PushDownInstruction::Stay { ref current_val, ..} => current_val.clone(),
+                    PushDownInstruction::Replace { ref current_val, ..} => current_val.clone(),
                 };
 
             if !transition_map.contains_key(&a) {
@@ -84,14 +82,11 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A
     for PushDownInstruction<A> {
         fn apply(&self, p: PushDown<A>) -> Option<PushDown<A>> {
             match self {
-                &PushDownInstruction::Push { ref current_val, ref new_val } => {
-                    p.push(current_val , new_val)
-                }
                 &PushDownInstruction::Pop {ref current_val} => {
                     p.pop(current_val)
                 }
-                &PushDownInstruction::Stay {ref current_val, ref new_val} => {
-                    p.stay(current_val, new_val)
+                &PushDownInstruction::Replace {ref current_val, ref new_val} => {
+                    p.replace(current_val, new_val)
                 }
             }
         }
@@ -178,8 +173,8 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
 
     }
 
-    ///replaces uppermost element, returns `None` if empty. Does Nothing when empty input
-    pub fn stay(&self, c: &A,  a: &Vec<A>)->Option<PushDown<A>>{
+    ///replaces uppermost element with the given elements, returns `None` if empty. Inverts the given Vector. Does Nothing when empty input.
+    pub fn replace(&self, c: &A,  a: &Vec<A>)->Option<PushDown<A>>{
         if a.len()==0{
             return Some(self.clone());
         }

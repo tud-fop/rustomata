@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use cfg::{VarT, Composition, CFGRule, CFG};
+use cfg::{LetterT, Composition, CFGRule, CFG};
 
 impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFG<N, T, W> {
     type Err = String;
@@ -85,7 +85,7 @@ impl<N: FromStr, T: FromStr + Clone> FromStr for Composition<N,T> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut buffer: String= String::new();
-        let mut composition: Vec<VarT<N,T>> = Vec::new();
+        let mut composition: Vec<LetterT<N,T>> = Vec::new();
 
         let mut active: bool = false;
 
@@ -110,23 +110,23 @@ impl<N: FromStr, T: FromStr + Clone> FromStr for Composition<N,T> {
     }
 }
 
-impl<N: FromStr, T: FromStr> FromStr for VarT<N,T> {
+impl<N: FromStr, T: FromStr> FromStr for LetterT<N,T> {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let c= s.chars().nth(0);
         match c {
              Some(x) if !x.is_lowercase() => {
-                Ok(VarT::Label(try!(s.parse()
+                Ok(LetterT::Label(try!(s.parse()
                                  .map_err(|_| format!("Could not parse \"{}\" as T.", x)))))
             }
             Some(x) if x.is_lowercase() => {
-                Ok(VarT::Value(try!(s.parse()
+                Ok(LetterT::Value(try!(s.parse()
                     .map_err(|_| format!("Could not parse \"{}\" as T.", x)))))
             }
-            Some(_) => Err(format!("Could not parse \"{}\" as VarT<T>.", s)),
+            Some(_) => Err(format!("Could not parse \"{}\" as LetterT<T>.", s)),
 
-            None => Err(format!("Could not parse \"{}\" as VarT<T>.", s)),
+            None => Err(format!("Could not parse \"{}\" as LetterT<T>.", s)),
         }
     }
 }
