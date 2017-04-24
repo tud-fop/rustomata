@@ -32,11 +32,11 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             for v in r.composition.composition{
 
                 match v{
-                    cfg::VarT::Value(x) => {
+                    cfg::LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
                         st.push(PushState::T(x.clone()));
                     },
-                    cfg::VarT::Label(x) => {
+                    cfg::LetterT::Label(x) => {
                         st.push(PushState::Nt(x.clone()));
                     },
                 }
@@ -47,7 +47,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     _dummy: PhantomData,
                     word: Vec::new(),
                     weight: r.weight.clone(),
-                    instruction: PushDownInstruction::Stay {
+                    instruction: PushDownInstruction::Replace {
                         current_val: PushState::Nt(r.head.clone()),
                         new_val: st.clone(),
                     }

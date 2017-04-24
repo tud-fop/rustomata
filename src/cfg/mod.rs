@@ -5,7 +5,7 @@ mod from_str;
 
 /// Variable or terminal symbol in an CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum VarT<N,T> {
+pub enum LetterT<N,T> {
     Label(N),
     Value(T),
 }
@@ -13,7 +13,7 @@ pub enum VarT<N,T> {
 /// Composition function in an CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Composition<N,T> {
-    pub composition: Vec<VarT<N,T>>,
+    pub composition: Vec<LetterT<N,T>>,
 }
 
 /// Rule of a weighted CFG.
