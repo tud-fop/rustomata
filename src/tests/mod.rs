@@ -1,10 +1,12 @@
 use std::marker::PhantomData;
+use nom::IResult;
 
 use tree_stack::*;
 use automata::*;
 use pmcfg::*;
 use util::integeriser::*;
 use util::log_prob::*;
+use util::parsing::*;
 
 
 #[test]
@@ -124,13 +126,6 @@ fn test_from_str_pmcfg() {
                                VarT::Var(0, 1)]],
     };
 
-    assert_eq!(Ok(c0.clone()), "[[Var 0 0, Var 1 0, Var 0 1, Var 1 1]]".parse::<Composition<String>>());
-    assert_eq!(Ok(c1.clone()), "[[],[]]".parse::<Composition<String>>());
-    assert_eq!(Ok(c2.clone()),
-               "[[T a, Var 0 0],[T c, Var 0 1]]".parse::<Composition<String>>());
-    assert_eq!(Ok(c3.clone()),
-               "[[T b, Var 0 0],[T d, Var 0 1]]".parse::<Composition<String>>());
-
     let r0: PMCFGRule<String, String, LogProb> = PMCFGRule {
         head: "S".to_string(),
         tail: vec!["A".to_string(), "B".to_string()],
@@ -166,7 +161,7 @@ fn test_from_str_pmcfg() {
         weight: LogProb::new(0.3).unwrap(),
     };
 
-    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)  # 1.0";
+    let r0_string = "\"S\" → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (\"A\", B)  # 1.0";
     let r1_string = "A → [[],[]] ()  # 0.6";
     let r2_string = "A → [[T a, Var 0 0],[T c, Var 0 1]] (A)  # 0.4";
     let r3_string = "B → [[],[]] ()  # 0.7";
@@ -185,11 +180,11 @@ fn test_from_str_pmcfg() {
 
     let g: PMCFG<String, String, LogProb> = PMCFG {
         _dummy: PhantomData,
-        initial: "S".to_string(),
+        initial: vec!["S".to_string()],
         rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
     };
 
-    let mut g_string = String::from("initial: S\n\n");
+    let mut g_string = String::from("initial: [S]\n\n");
     g_string.push_str(r0_string.clone());
     g_string.push_str("\n");
     g_string.push_str(r1_string.clone());

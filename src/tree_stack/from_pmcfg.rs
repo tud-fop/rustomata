@@ -2,7 +2,7 @@ extern crate num_traits;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::fmt::Debug;
+use std::fmt;
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
@@ -19,10 +19,21 @@ pub enum PosState<X> {
     Position(X, u8, u8),
 }
 
+impl<X: fmt::Display> fmt::Display for PosState<X> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &PosState::Designated
+                => write!(f, "@"),
+            &PosState::Position(ref x, i, j)
+                => write!(f, "({}, {}, {})", x, i, j)
+        }
+    }
+}
+
 // TODO assumes that the PMCFG is monotonic on the visit-order of components
-impl<N: Clone + Debug + Ord + PartialEq + Hash,
-     T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One
+impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
+     T: Clone + fmt::Debug + Ord + PartialEq + Hash,
+     W: Clone + fmt::Debug + Ord + PartialEq + One
      > From<pmcfg::PMCFG<N, T, W>> for TreeStackAutomaton<PosState<pmcfg::PMCFGRule<N, T, W>>, T, W> {
     fn from(g: pmcfg::PMCFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
@@ -48,7 +59,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
 
         for r in g.rules.clone() {
-            if r.head == g.initial {
+            if g.initial.contains(&r.head) {
                 initial_rules.push(r.clone())
             }
             rule_map.get_mut(&r.head).unwrap().push(r.clone());

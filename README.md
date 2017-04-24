@@ -5,7 +5,7 @@ Framework for (weighted) automata with storage
 * create a grammar file
 ```bash
 cat <<EOF > grammar.gr
-initial: S
+initial: [S]
 S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5
 A → [[],  []                             ] (    )   # 0.5
@@ -31,7 +31,7 @@ The weights are (for now) assumed to be from the algebra (ℝ₊, ⋅, 1) of non
 
 * an example of an MCFG (in the notation of an sRCG):
 ```
-initial non-terminal: S
+initial non-terminals: only S
 
 productions:
 S(x₁y₁x₂y₂) ← A(x₁, x₂) B(y₁, y₂)  with weight 1
@@ -43,7 +43,7 @@ B(ε, ε)     ← ε                    with weight 0.5
 
 * the same grammar in rustomata's notation:
 ```
-initial: S
+initial: [S]
 
 S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5

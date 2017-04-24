@@ -2,6 +2,7 @@ extern crate num_traits;
 
 use std::f64;
 use std::cmp::Ordering;
+use std::fmt;
 use std::str::FromStr;
 use std::ops::{Add, Mul};
 use self::num_traits::{One, Zero};
@@ -105,3 +106,8 @@ impl FromStr for LogProb {
     }
 }
 
+impl fmt::Display for LogProb {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.probability())
+    }
+}

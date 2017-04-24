@@ -1,64 +1,24 @@
 extern crate num_traits;
 
-use std::cmp::{Ord, Ordering};
+use std::cmp::Ord;
 use std::collections::{BinaryHeap, HashMap};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::Mul;
 use std::vec::Vec;
 use self::num_traits::One;
 
 mod from_str;
+mod configuration;
+mod transition;
 
-/// Configuration of an automaton containing sequence of symbols `word` to be read, a storage value `storage`, and a `weight`.
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct Configuration<S, T, W> {
-    pub word: Vec<T>,
-    pub storage: S,
-    pub weight: W,
-}
-
-
-/// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct Transition<A, I: Instruction<A>, T, W> {
-    pub _dummy: PhantomData<A>,
-    pub word: Vec<T>,
-    pub weight: W,
-    pub instruction: I,
-}
+pub use self::configuration::Configuration;
+pub use self::transition::Transition;
 
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
     fn apply(&self, A) -> Option<A>;
-}
-
-impl<S: Hash, T: Hash, W> Hash for Configuration<S, T, W> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.word.hash(state);
-        self.storage.hash(state);
-    }
-}
-
-impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Copy> Transition<A, I, T, W> {
-    pub fn apply(&self, c: &Configuration<A, T, W>) -> Option<Configuration<A, T, W>> {
-        if !c.word.starts_with(&self.word[..]) {
-            return None;
-        }
-
-        match self.instruction.apply(c.storage.clone()) {
-            Some(t1) => {
-                Some(Configuration {
-                    word: c.word.clone().split_off(self.word.len()),
-                    storage: t1,
-                    weight: c.weight * self.weight,
-                })
-            }
-            _ => None,
-        }
-    }
 }
 
 
@@ -91,36 +51,6 @@ pub trait Automaton<S: Clone + Debug + Eq,
                 &(|c| self.is_terminal(c)))
     }
 }
-
-
-
-
-impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: PartialOrd + Eq> PartialOrd
-    for Transition<A, I, T, W> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.weight.partial_cmp(&other.weight)
-    }
-}
-
-impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: Ord + Eq> Ord for Transition<A, I, T, W> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.weight.cmp(&other.weight)
-    }
-}
-
-
-impl<S: Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for Configuration<S, T, W> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.weight.partial_cmp(&other.weight)
-    }
-}
-
-impl<S: Eq, T: Eq, W: Ord + Eq> Ord for Configuration<S, T, W> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.weight.cmp(&other.weight)
-    }
-}
-
 
 /// Explores the space of all configurations in decreasing order of their weights.
 /// Returns the first `accepting` configuration it encounters.

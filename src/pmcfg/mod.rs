@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
@@ -31,7 +32,7 @@ pub struct PMCFGRule<N, T, W> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
     pub _dummy: PhantomData<T>,
-    pub initial: N,
+    pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
 }
 
@@ -40,5 +41,65 @@ impl<N: Hash, T: Hash, W> Hash for PMCFGRule<N, T, W> {
         self.head.hash(state);
         self.tail.hash(state);
         self.composition.hash(state);
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for Composition<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut buffer = "".to_string();
+
+        let mut iter0 = self.composition.iter().peekable();
+        let mut iter1;
+
+        buffer.push_str("[");
+        while let Some(proj) = iter0.next() {
+            iter1 = proj.into_iter().peekable();
+            buffer.push_str("[");
+            while let Some(vart) = iter1.next() {
+                buffer.push_str(format!("{}", vart).as_str());
+                if iter1.peek().is_some() {
+                    buffer.push_str(", ");
+                }
+            }
+            buffer.push_str("]");
+            if iter0.peek().is_some() {
+                buffer.push_str(", ");
+            }
+        }
+        buffer.push_str("]");
+
+        write!(f, "{}", buffer)
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for VarT<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &VarT::Var(i, j) => {
+                write!(f, "Var {} {}", i, j)
+            },
+            &VarT::T(ref x) => {
+                write!(f, "T \"{}\"", x)
+            }
+        }
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFGRule<N, T, W> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+           let mut buffer = "".to_string();
+
+           let mut iter = self.tail.iter().peekable();
+
+           buffer.push_str("(");
+           while let Some(nt) = iter.next() {
+               buffer.push_str(format!("\"{}\"", nt).as_str());
+               if iter.peek().is_some() {
+                   buffer.push_str(", ");
+               }
+           }
+           buffer.push_str(")");
+
+        write!(f, "\"{}\" → {} {}  # {}", self.head, self.composition, buffer, self.weight)
     }
 }

@@ -1,25 +1,32 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::str::FromStr;
+use std::str::{FromStr, from_utf8};
+
+use nom::{IResult, is_space, digit};
 
 use pmcfg::{VarT, Composition, PMCFGRule, PMCFG};
+use util::parsing::*;
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W> {
+impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W>
+    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+{
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let initial: N;
-        let mut rules: Vec<PMCFGRule<N, T, W>> = Vec::new();
-
         let mut it = s.lines();
+        let mut rules = Vec::new();
+        let initial;
 
         match it.next() {
-            Some(l) if l.starts_with("initial: ") => {
-                initial = try!(l[8..]
-                    .trim()
-                    .parse()
-                    .map_err(|_| format!("Substring {} is not a nonterminal.", l[8..].trim())))
-            }
-            _ => return Err("No initial nonterminal supplied on line 1.".to_string()),
+            Some(l) => {
+                match parse_initials(l.as_bytes()) {
+                    IResult::Done(_, result)
+                        => initial = result,
+                    _
+                        => return Err(format!("Malformed declaration of initial nonterminals: {}", l))
+                }
+            },
+            _ => return Err("Given string is empty.".to_string())
         }
 
         for l in s.lines() {
@@ -37,136 +44,103 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W> {
     }
 }
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFGRule<N, T, W> {
+
+impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFGRule<N, T, W>
+    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+{
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let head: N;
-
-        match (s.contains('→'), s.contains("->"), s.split('→').nth(0), s.split("->").nth(0)) {
-            (true, false, Some(v), _) => {
-                head = try!(v.trim().parse().map_err(|_| format!("Can not parse \"{}\" as N.", v)))
-            }
-            (false, true, _, Some(v)) => {
-                head = try!(v.trim().parse().map_err(|_| format!("Can not parse \"{}\" as N.", v)))
-            }
-            _ => return Err(format!("No unique arrow found in \"{}\".", s)),
+        match parse_pmcfg_rule(s.as_bytes()) {
+            IResult::Done(_, result) => Ok(result),
+            _                        => Err(format!("Could not parse {}", s))
         }
-
-        let mut tail: Vec<N>;
-
-        match (s.rfind(']'), s.rfind('#')) {
-            (Some(l), Some(r)) => {
-                let mut rhs = s[l + 1..r].trim()[1..].to_string();
-                rhs.pop();
-
-                tail = Vec::new();
-                for x in rhs.split(',').map(|x1| x1.trim()).filter(|y| !y.is_empty()) {
-                    tail.push(try!(x
-                        .parse()
-                        .map_err(|_| format!("Can not parse \"{}\" as N.", x))));
-                }
-            }
-            _ => return Err(format!("No successor nonterminals found in \"{}\".", s)),
-        }
-
-        let composition: Composition<T>;
-
-        match (s.find('['), s.rfind(']')) {
-            (Some(l), Some(r)) => composition = try!(s[l..r + 1].parse()),
-            _ => return Err(format!("No composition function found in \"{}\".", s)),
-        }
-
-        let weight: W;
-
-        match s.rfind('#') {
-            Some(pos) => {
-                weight = try!(s[pos + 1..]
-                    .trim()
-                    .parse()
-                    .map_err(|_| format!("Can not parse \"{}\" as W.", &s[pos + 1..])))
-            }
-            _ => return Err(format!("No weight found in \"{}\".", s)),
-        }
-
-        Ok(PMCFGRule {
-            head: head,
-            tail: tail,
-            composition: composition,
-            weight: weight,
-        })
     }
 }
 
-impl<T: FromStr + Clone> FromStr for Composition<T> {
-    type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut buffer: String = String::new();
-        let mut vart_buffer: Vec<VarT<T>> = Vec::new();
-        let mut composition: Vec<Vec<VarT<T>>> = Vec::new();
-
-        let mut active: bool = false;
-
-        let mut inner_mode: bool = false;
-        let mut literal_mode: bool = false;
-        let mut escaped_mode: bool = false;
-
-        for c in s.chars() {
-            match (c, active, inner_mode, literal_mode, escaped_mode) {
-                ('[', false, false, false, false) => active = true,
-                (']', true, false, false, false) => return Ok(Composition { composition: composition }),
-                ('[', true, false, false, false) => {
-                    inner_mode = true;
-                    vart_buffer.clear();
-                    buffer.clear();
-                }
-                (']', true, true, false, false) => {
-                    inner_mode = false;
-                    if !buffer.is_empty() {
-                        vart_buffer.push(try!(buffer.trim().parse()));
-                        buffer.clear();
-                    }
-                    composition.push(vart_buffer.clone());
-                }
-                ('"', true, true, false, false) => literal_mode = true,
-                ('"', true, true, true , false) => literal_mode = false,
-                (_  , true, true, true , true ) => {
-                    buffer.push(c);
-                    escaped_mode = false;
-                }
-                ('\\', true, true, _    , false) => escaped_mode = true,
-                (',', true, true, false, false) => {
-                    vart_buffer.push(try!(buffer.trim().parse()));
-                    buffer.clear();
-                }
-                (',', true, true, true, false) => buffer.push(c),
-                (_, true, true, _, false) => buffer.push(c),
-                _ => (),
-            }
-        }
-
-        Err(format!("Can not parse \"{}\" as Composition<T>.", s))
-    }
+fn parse_successors<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
+    where <N as FromStr>::Err: Debug
+{
+    parse_vec(input, parse_token, "(", ")", ",")
 }
 
-impl<T: FromStr> FromStr for VarT<T> {
-    type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v: Vec<&str> = s.split_whitespace().collect();
-        match v[0] {
-            "Var" if v.len() == 3 => {
-                Ok(VarT::Var(try!(v[1].parse()
-                                 .map_err(|_| format!("Could not parse \"{}\" as u8.", v[1]))),
-                             try!(v[2].parse()
-                                 .map_err(|_| format!("Could not parse \"{}\" as u8.", v[2])))))
-            }
-            "T" if v.len() == 2 => {
-                Ok(VarT::T(try!(v[1].parse()
-                    .map_err(|_| format!("Could not parse \"{}\" as T.", v[1])))))
-            }
-            _ => Err(format!("Could not parse \"{}\" as VarT<T>.", s)),
-        }
-    }
+fn parse_pmcfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult<&[u8], PMCFGRule<N, T, W>>
+    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+{
+    do_parse!(
+        input,
+        head: parse_token >>
+            take_while!(is_space) >>
+            alt!(tag!("→") | tag!("->") | tag!("=>")) >>
+            take_while!(is_space) >>
+            composition: parse_composition >>
+            take_while!(is_space) >>
+            tail: parse_successors >>
+            take_while!(is_space) >>
+            tag!("#") >>
+            take_while!(is_space) >>
+            weight_s: map_res!(is_not!(" "), from_utf8) >>
+            (PMCFGRule {
+                head: head,
+                tail: tail,
+                composition: Composition { composition: composition },
+                weight: weight_s.parse().unwrap(),
+            })
+    )
+}
+
+
+fn parse_var_t<T: FromStr>(input: &[u8]) -> IResult<&[u8], VarT<T>>
+    where <T as FromStr>::Err: Debug
+{
+    do_parse!(
+        input,
+        result: alt!(
+            do_parse!(
+                tag!("Var") >>
+                    take_while!(is_space) >>
+                    i: digit >>
+                    take_while!(is_space) >>
+                    j: digit >>
+                    (VarT::Var(
+                        from_utf8(i).unwrap().parse().unwrap(),
+                        from_utf8(j).unwrap().parse().unwrap()
+                    ))
+            ) |
+            do_parse!(
+                tag!("T") >>
+                    take_while!(is_space) >>
+                    token: parse_token >>
+                    (VarT::T(token))
+            )
+        ) >>
+            (result)
+    )
+}
+
+
+fn parse_projection<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<VarT<T>>>
+    where <T as FromStr>::Err: Debug
+{
+    parse_vec(input, parse_var_t, "[", "]", ",")
+}
+
+fn parse_initials<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
+    where <N as FromStr>::Err: Debug
+{
+    do_parse!(
+        input,
+        tag!("initial:") >>
+            take_while!(is_space) >>
+            result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
+            (result)
+    )
+}
+
+fn parse_composition<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<Vec<VarT<T>>>>
+    where <T as FromStr>::Err: Debug
+{
+    parse_vec(input, parse_projection, "[", "]", ",")
 }
