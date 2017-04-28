@@ -1,4 +1,5 @@
 initial: [S]
+
 S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5
 A → [[],  []                             ] (    )   # 0.5
