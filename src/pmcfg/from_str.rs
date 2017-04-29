@@ -127,18 +127,6 @@ fn parse_projection<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<VarT<T>>>
     parse_vec(input, parse_var_t, "[", "]", ",")
 }
 
-fn parse_initials<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
-    where <N as FromStr>::Err: Debug
-{
-    do_parse!(
-        input,
-        tag!("initial:") >>
-            take_while!(is_space) >>
-            result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
-            (result)
-    )
-}
-
 fn parse_composition<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<Vec<VarT<T>>>>
     where <T as FromStr>::Err: Debug
 {

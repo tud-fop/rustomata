@@ -50,3 +50,15 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
             (result)
     )
 }
+/// parses initials of the form `initials: [...]` into a vector of type `N`
+pub fn parse_initials<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
+    where <N as FromStr>::Err: Debug
+{
+    do_parse!(
+        input,
+        tag!("initial:") >>
+            take_while!(is_space) >>
+            result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
+            (result)
+    )
+}

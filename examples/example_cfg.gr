@@ -1,6 +1,6 @@
-initial: [S]
+initial: [S,B]
 
-S → [[Var 0 0              ]] (A   )  # 1
-A → [[T a, Var 0 0, Var 1 0]] (A, B)  # 0.5
-A → [[T a                  ]] (    )  # 0.5
-B → [[T b                  ]] (    )  # 1
+S → [Nt A             ] # 1
+A → [T a, Nt A, Nt B  ] # 0.5
+A → [T a              ] # 0.5
+B → [T b              ] # 1

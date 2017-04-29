@@ -6,6 +6,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::ops::{Add, Mul};
 use self::num_traits::{One, Zero};
+use self::num_traits::cast::FromPrimitive;
 
 #[derive(PartialOrd, Debug, Default, Clone, Copy)]
 pub struct LogProb {
@@ -93,6 +94,14 @@ impl One for LogProb {
     fn one() -> LogProb {
         LogProb { value: 0.0 }
     }
+}
+
+impl FromPrimitive for LogProb{
+    fn from_f64(n: f64) -> Option<Self>{
+        Some(LogProb{ value: n })
+    }
+    fn from_i64(n: i64) -> Option<Self>{None}
+    fn from_u64(n: u64) -> Option<Self>{None}
 }
 
 impl FromStr for LogProb {

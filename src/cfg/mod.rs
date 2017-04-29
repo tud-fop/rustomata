@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 mod from_str;
+pub mod from_pmcfg;
 
 /// Variable or terminal symbol in an CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -28,7 +29,7 @@ pub struct CFGRule<N, T, W> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFG<N, T, W> {
     pub _dummy: PhantomData<T>,
-    pub initial: N,
+    pub initial: Vec<N>,
     pub rules: Vec<CFGRule<N, T, W>>,
 }
 
