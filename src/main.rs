@@ -132,7 +132,7 @@ fn main() {
                     let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
                     let automaton = PushDownAutomaton::from(grammar);
-                    println!("{:?}", automaton);
+                    println!("{}", automaton);
                 },
                 _ => ()
             }

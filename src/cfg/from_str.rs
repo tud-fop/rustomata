@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::str::{FromStr, from_utf8};
 
-use nom::{IResult, is_space, digit};
+use nom::{IResult, is_space};
 
 use cfg::{LetterT, Composition, CFGRule, CFG};
 use util::parsing::*;

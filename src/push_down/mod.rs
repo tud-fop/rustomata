@@ -1,6 +1,7 @@
 extern crate num_traits;
 
 use std::collections::{BinaryHeap, HashMap};
+use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
@@ -207,3 +208,42 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         })
     }
 }
+
+impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &PushDownInstruction::Pop { ref current_val} => {
+                write!(f, "(Pop {})", current_val)
+            },
+            &PushDownInstruction::Replace { ref current_val, ref new_val } => {
+                let mut buffer = "".to_string();
+
+                let mut iter = new_val.iter().peekable();
+
+                while let Some(nt) = iter.next() {
+                    buffer.push_str(format!("\"{}\"", nt).as_str());
+                    if iter.peek().is_some() {
+                        buffer.push_str(", ");
+                    }
+                }
+                write!(f, "(Replace {} {})", current_val, buffer)
+            }
+        }
+    }
+}
+
+
+impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
+     T: Clone + fmt::Debug + Eq + Hash,
+     W: One + Mul<Output=W> + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display>
+    fmt::Display for PushDownAutomaton<A, T, W> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    println!("Here" );
+            let mut formatted_transitions = String::new();
+            for t in self.list_transitions() {
+                formatted_transitions.push_str(&t.to_string());
+                formatted_transitions.push_str("\n");
+            }
+            write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
+        }
+    }

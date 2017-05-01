@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::str::FromStr;
 
 pub use pmcfg::*;
 use cfg::{LetterT, Composition, CFGRule, CFG};

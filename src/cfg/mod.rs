@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
@@ -37,5 +38,43 @@ impl<N: Hash, T: Hash, W> Hash for CFGRule<N, T, W> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.head.hash(state);
         self.composition.hash(state);
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display> fmt::Display for Composition<N, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut buffer = "".to_string();
+
+        let mut iter = self.composition.iter().peekable();
+
+        buffer.push_str("[");
+        while let Some(proj) = iter.next() {
+            buffer.push_str(format!("{}", proj).as_str());
+                if iter.peek().is_some() {
+                buffer.push_str(", ");
+            }
+        }
+        buffer.push_str("]");
+
+        write!(f, "{}", buffer)
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display> fmt::Display for LetterT<N, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &LetterT::Value(ref x) => {
+                write!(f, "T \"{}\"", x)
+            },
+            &LetterT::Label(ref x) => {
+                write!(f, "Nt \"{}\"", x)
+            }
+        }
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for CFGRule<N, T, W> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "\"{}\" → {}  # {}", self.head, self.composition, self.weight)
     }
 }
