@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 pub use pmcfg::*;
-use cfg::{LetterT, Composition, CFGRule, CFG};
+use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 
 
 pub fn from_pmcfg<N: Clone + Debug + Ord + PartialEq,
@@ -39,7 +39,7 @@ pub fn from_pmcfg<N: Clone + Debug + Ord + PartialEq,
             }
             rules.push(CFGRule{
                 head: r.head.clone(),
-                composition: Composition{
+                composition: CFGComposition{
                     composition: new_composition,
                 },
                 weight: r.weight.clone(),

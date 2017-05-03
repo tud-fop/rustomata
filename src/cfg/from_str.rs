@@ -4,7 +4,7 @@ use std::str::{FromStr, from_utf8};
 
 use nom::{IResult, is_space};
 
-use cfg::{LetterT, Composition, CFGRule, CFG};
+use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 use util::parsing::*;
 
 impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFG<N, T, W>
@@ -73,7 +73,7 @@ fn parse_cfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult<&
             weight_s: map_res!(is_not!(" "), from_utf8) >>
             (CFGRule {
                 head: head,
-                composition: Composition { composition: composition },
+                composition: CFGComposition { composition: composition },
                 weight: weight_s.parse().unwrap(),
             })
     )

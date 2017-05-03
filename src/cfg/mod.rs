@@ -14,7 +14,7 @@ pub enum LetterT<N,T> {
 
 /// Composition function in an CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Composition<N,T> {
+pub struct CFGComposition<N,T> {
     pub composition: Vec<LetterT<N,T>>,
 }
 
@@ -22,7 +22,7 @@ pub struct Composition<N,T> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFGRule<N, T, W> {
     pub head: N,
-    pub composition: Composition<N,T>,
+    pub composition: CFGComposition<N,T>,
     pub weight: W,
 }
 
@@ -41,7 +41,7 @@ impl<N: Hash, T: Hash, W> Hash for CFGRule<N, T, W> {
     }
 }
 
-impl<N: fmt::Display, T: fmt::Display> fmt::Display for Composition<N, T> {
+impl<N: fmt::Display, T: fmt::Display> fmt::Display for CFGComposition<N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buffer = "".to_string();
 
