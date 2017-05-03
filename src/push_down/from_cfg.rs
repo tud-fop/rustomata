@@ -93,9 +93,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
 
         }
-        ///creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `1/initial.len()`
-        let ini_val=1.0/g.initial.len() as f64;
-        let ini_weight=ini_val.to_string();
+        ///creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `one`
 
         for ini in g.initial{
             let mut tvec = Vec::new();
@@ -104,7 +102,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                 automata::Transition {
                     _dummy: PhantomData,
                     word: Vec::new(),
-                    weight: ini_weight.parse().unwrap(),
+                    weight: W::one(),
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::Initial,
                         new_val: tvec,
