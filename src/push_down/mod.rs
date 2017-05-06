@@ -13,6 +13,7 @@ use automata;
 pub mod from_cfg;
 
 pub use from_cfg::*;
+pub use approximation::relabel::*;
 
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.
@@ -32,8 +33,8 @@ pub enum PushDownInstruction<A> {
 /// Stack with Elements of type `A`
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct PushDown<A: Ord> {
-    elements: Vec<A>,
-    empty: A,
+    pub elements: Vec<A>,
+    pub empty: A,
 }
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq> PushDownAutomaton<A, T, W> {

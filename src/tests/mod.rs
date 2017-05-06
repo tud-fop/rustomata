@@ -6,6 +6,7 @@ use push_down::*;
 use automata::*;
 use cfg::*;
 use pmcfg::*;
+use approximation::*;
 use util::integeriser::*;
 use util::log_prob::*;
 use util::parsing::*;
@@ -308,4 +309,45 @@ fn test_integeriser () {
     assert_ne!(arr1i[1], arr2i[0]);
     assert_ne!(arr1i[2], arr2i[1]);
     assert_ne!(arr1i[3], arr2i[3]);
+}
+
+
+fn test_equivalence(a : String)->String{
+    match &*a{
+        "A" => "C".to_string() ,
+        "B" => "C".to_string() ,
+        _ => a.clone(),
+    }
+}
+
+#[test]
+fn test_relabel_pushdown() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [Nt A] # 1";
+    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
+    let r2_string = "A → [T a] # 0.4";
+    let r3_string = "B → [T b] # 1";
+
+    let mut g_string = String::from("initial: [S, B]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+
+    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = PushDownAutomaton::from(g);
+
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+
+    let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
+
+    println!("{:?}", b);
+
+
+
 }

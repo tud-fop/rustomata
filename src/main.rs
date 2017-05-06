@@ -10,6 +10,7 @@ mod util;
 
 mod push_down;
 mod cfg;
+mod approximation;
 
 #[cfg(test)]
 mod tests;
@@ -25,6 +26,48 @@ pub use util::*;
 
 pub use push_down::*;
 pub use cfg::*;
+pub use approximation::*;
+
+
+fn test_equivalence(a : String)->String{
+    match &*a{
+        "A" => "C".to_string() ,
+        "B" => "C".to_string() ,
+        _ => a.clone(),
+    }
+}
+
+fn test_relabel_pushdown() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [Nt A] # 1";
+    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
+    let r2_string = "A → [T a] # 0.4";
+    let r3_string = "B → [T b] # 1";
+
+    let mut g_string = String::from("initial: [S, B]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+
+    let g: CFG<String, String, util::log_prob::LogProb> = g_string.parse().unwrap();
+
+    let a = PushDownAutomaton::from(g);
+
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+
+    let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
+
+    println!("{}", b.unwrap());
+
+
+
+}
+
 
 fn main() {
     let matches
@@ -68,6 +111,10 @@ fn main() {
                                      .help("automaton file to use")
                                      .index(1)
                                      .required(true))))
+        .subcommand(SubCommand::with_name("ctf")
+                    .about("coarse to fine related functions")
+                    .subcommand(SubCommand::with_name("test")
+                                .about("recognises from stdin with a tree-stack automaton")))
         .get_matches();
 
     match matches.subcommand() {
@@ -154,6 +201,14 @@ fn main() {
                                  automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
                                  sentence);
                     }
+                },
+                _ => ()
+            }
+        },
+        ("ctf", Some(r_matches)) => {
+            match r_matches.subcommand() {
+                ("test",_) => {
+                    test_relabel_pushdown();
                 },
                 _ => ()
             }
