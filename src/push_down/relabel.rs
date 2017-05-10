@@ -2,12 +2,8 @@ use std::clone::*;
 
 pub use util::*;
 
-pub use push_down::*;
+pub use approximation::*;
 pub use cfg::*;
-
-pub trait Relabel<P, N1, N2, O>{
-    fn relabel(&self, P) -> O;
-}
 
 impl<A : Relabel<P, N1, N2, B> +Ord + Clone,
      B: Ord + Clone,

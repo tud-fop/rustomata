@@ -11,6 +11,7 @@ use num_traits::One;
 use automata;
 
 pub mod from_cfg;
+pub mod relabel;
 
 pub use from_cfg::*;
 pub use approximation::relabel::*;
@@ -239,7 +240,6 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      W: One + Mul<Output=W> + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display>
     fmt::Display for PushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    println!("Here" );
             let mut formatted_transitions = String::new();
             for t in self.list_transitions() {
                 formatted_transitions.push_str(&t.to_string());

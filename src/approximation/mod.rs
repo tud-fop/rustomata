@@ -1,5 +1,3 @@
-pub mod relabel;
-
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -22,6 +20,10 @@ pub enum ApproximationStrategy {
 /// Approximation of self via ApproximationStrategy `T`
 pub trait Approximation<T, P, N1, N2, O> {
     fn approximation(self, T, P) -> Result<O, String>;
+}
+
+pub trait Relabel<P, N1, N2, O>{
+    fn relabel(&self, P) -> O;
 }
 
 impl <A: Ord + PartialEq + Debug + Clone + Hash +  Relabel<P, N1, N2, B>,
