@@ -4,17 +4,19 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::ops::Mul;
 use std::vec::Vec;
-use num_traits::One;
+use num_traits::{One, Zero};
+use std::ops::{Add, Mul, Div};
 
 use automata;
 
 pub mod from_cfg;
 pub mod relabel;
+pub mod red;
 
 pub use from_cfg::*;
 pub use approximation::relabel::*;
+pub use push_down::red::*;
 
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.
@@ -25,7 +27,7 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 }
 
 /// Instruction on `PushDown<A>`s.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum PushDownInstruction<A> {
     Pop { current_val: A },
     Replace { current_val: A, new_val : Vec<A>},
@@ -38,7 +40,9 @@ pub struct PushDown<A: Ord> {
     pub empty: A,
 }
 
-impl<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq> PushDownAutomaton<A, T, W> {
+impl<A: Ord + PartialEq + Debug + Clone + Hash,
+    T: Eq + Clone + Hash,
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Zero +One> PushDownAutomaton<A, T, W> {
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>,initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
@@ -59,10 +63,11 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq> PushDownAuto
             transition_map.get_mut(&a).unwrap().push(t);
         }
 
-        PushDownAutomaton {
+        let p = PushDownAutomaton {
             transitions: transition_map,
             initial: initial,
-        }
+        };
+        p.reduce_redundancy()
     }
 
     pub fn list_transitions(&self) -> Vec<&automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>> {
@@ -237,7 +242,7 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
 
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Mul<Output=W> + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display>
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Zero>
     fmt::Display for PushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let mut formatted_transitions = String::new();

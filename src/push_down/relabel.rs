@@ -2,8 +2,9 @@ use std::clone::*;
 
 pub use util::*;
 
-pub use approximation::*;
+pub use approximation::relabel::*;
 pub use cfg::*;
+pub use push_down::*;
 
 impl<A : Relabel<N1, N2, B> +Ord + Clone,
      B: Ord + Clone,

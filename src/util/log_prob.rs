@@ -4,7 +4,7 @@ use std::f64;
 use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Div};
 use self::num_traits::{One, Zero};
 
 #[derive(PartialOrd, Debug, Default, Clone, Copy)]
@@ -73,6 +73,17 @@ impl Add for LogProb {
 
     fn add(self, other: Self) -> Self {
         match LogProb::new(self.probability().add(other.probability())) {
+            Ok(p) => p,
+            Err(e) => panic!(e)
+        }
+    }
+}
+
+impl  Div<f64> for LogProb {
+    type Output = Self;
+
+    fn div(self, other: f64) -> Self{
+        match LogProb::new(self.probability()/ other) {
             Ok(p) => p,
             Err(e) => panic!(e)
         }

@@ -189,6 +189,8 @@ fn main() {
 
                     let a = PushDownAutomaton::from(g);
 
+                    println!("{}", a);
+
                     let rlb = RlbElement{
                         dummy : PhantomData,
                         func : test_equivalence,

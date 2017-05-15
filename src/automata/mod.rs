@@ -11,6 +11,7 @@ use self::num_traits::One;
 mod from_str;
 mod configuration;
 mod transition;
+pub mod red;
 
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
