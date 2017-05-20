@@ -17,6 +17,7 @@ impl<A : Relabel<N1, N2, B> +Ord + Clone,
 
             PushDown{
                 elements: new_elements.clone(),
+                limit: self.limit,
                 empty: self.empty.relabel(func),
             }
 

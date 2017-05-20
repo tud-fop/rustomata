@@ -37,6 +37,7 @@ pub enum PushDownInstruction<A> {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct PushDown<A: Ord> {
     pub elements: Vec<A>,
+    pub limit: i64,
     pub empty: A,
 }
 
@@ -126,12 +127,19 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
 impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     ///new `PushDown<A>` stack with empty-symbol of type `A` and initial symbol of type `A`
-    pub fn new(a: A, b : A)->PushDown<A>{
+    pub fn new(a: A, b : A, l: i64)->PushDown<A>{
         let mut ele : Vec<A> = Vec::new();
         ele.push(a.clone());
         ele.push(b.clone());
+        let li;
+        if l < 0{
+            li = -1;
+        }else{
+            li = l;
+        }
         PushDown{
             elements : ele,
+            limit: li,
             empty: a,
         }
     }
@@ -140,25 +148,21 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         let n= self.elements.len();
         &self.elements[n-1]
     }
+
+    //checks wheter stack has reached limit
+    pub fn is_full(&self) ->bool{
+        if self.limit < 0{
+            return false;
+        }
+        (self.elements.len() as i64) >= (self.limit+1)
+    }
+
     /// checks wheter stack is empty, meaning bottomsymbol is at top
     pub fn is_bottom(&self) ->bool{
         *self.current_symbol()==self.empty
     }
+
     /// Opertations for Instructions:
-
-    ///pushes new element at the top
-    pub fn push(&self,o: &A, n: &A)->Option<PushDown<A>>{
-        if !(o==self.current_symbol()){
-            return None
-        }
-        let mut s=self.elements.clone();
-        s.push(n.clone());
-
-        Some(PushDown{
-            elements: s,
-            empty: self.empty.clone(),
-        })
-    }
 
     ///pops uppermost element, returns `None` if empty
     pub fn pop(&self, c: &A)->Option<PushDown<A>>{
@@ -175,6 +179,7 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         b.pop();
         Some(PushDown{
             elements: b,
+            limit: self.limit,
             empty: self.empty.clone(),
 
         })
@@ -209,8 +214,18 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         for x in inva{
             b.push(x.clone());
         }
+        if self.limit >= 0{
+            loop{
+                if (b.len() as i64) <= self.limit +1{
+                    break;
+                }
+                b.remove(1);
+            }
+        }
+
         Some(PushDown{
             elements: b,
+            limit: self.limit.clone(),
             empty: self.empty.clone(),
         })
     }
