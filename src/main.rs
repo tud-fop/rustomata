@@ -77,17 +77,37 @@ fn main() {
                     .subcommand(SubCommand::with_name("recognise")
                                 .about("recognises from stdin with a tree-stack automaton")
                                 .arg(Arg::with_name("automaton")
-                                     .help("automaton file to use")
-                                     .index(1)
-                                     .required(true))))
+                                        .help("automaton file to use")
+                                        .index(1)
+                                        .required(true))))
         .subcommand(SubCommand::with_name("ctf")
                     .about("coarse to fine related functions")
-                    .subcommand(SubCommand::with_name("test")
-                                .about("tests relabel")
+                    .subcommand(SubCommand::with_name("relabelp")
+                                .about("relabels automata with testfunction")
                                 .arg(Arg::with_name("grammar")
                                         .help("grammar file to use")
                                         .index(1)
-                                        .required(true))))
+                                        .required(true)))
+                    .subcommand(SubCommand::with_name("topk")
+                                .about("maps pushdown to its topmost k elements")
+                                .subcommand(SubCommand::with_name("parse")
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
+                                                .index(2)
+                                                .required(true))
+                                        .arg(Arg::with_name("size")
+                                                .help("size of pushdown")
+                                                .index(1)
+                                                .required(true)))
+                                .subcommand(SubCommand::with_name("automaton")
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
+                                                .index(2)
+                                                .required(true))
+                                        .arg(Arg::with_name("size")
+                                                .help("size of pushdown")
+                                                .index(1)
+                                                .required(true)))))
         .get_matches();
 
     match matches.subcommand() {
@@ -180,7 +200,7 @@ fn main() {
         },
         ("ctf", Some(r_matches)) => {
             match r_matches.subcommand() {
-                ("test",Some(test_matches)) => {
+                ("relabelp",Some(test_matches)) => {
                     let grammar_file_name = test_matches.value_of("grammar").unwrap();
                     let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                     let mut grammar_string = String::new();
@@ -199,6 +219,63 @@ fn main() {
                     let b = a.approximation(rlb);
 
                     println!("{}", b.unwrap());
+                },
+                ("topk",Some(topk_matches)) => {
+                    match topk_matches.subcommand(){
+                        ("parse",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let size = parse_matches.value_of("size").unwrap().parse::<i64>().unwrap();
+
+                            let a = PushDownAutomaton::from(g);
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                                reach: a.states(),
+                            };
+                            let b = a.approximation(ptk).unwrap();
+
+                            let mut corpus = String::new();
+                            let _ = std::io::stdin().read_to_string(&mut corpus);
+
+                            for sentence in corpus.lines() {
+                                println!("{:?}: {}",
+                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                         sentence);
+                            }
+                        },
+                        ("automaton",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let size = parse_matches.value_of("size").unwrap().parse::<i64>().unwrap();
+
+                            let a = PushDownAutomaton::from(g);
+
+                            println!("Original Automaton");
+                            println!("{}", a);
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                                reach: a.states(),
+                            };
+
+                            let b = a.approximation(ptk);
+                            println!("Approximated Automaton");
+                            println!("{}", b.unwrap());
+                        },
+                        _ => ()
+                    }
+
                 },
                 _ => ()
             }

@@ -40,7 +40,7 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
 
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Zero
+     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero
      > From<cfg::CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
     where <W as FromStr>::Err: Debug{
      fn from(g: cfg::CFG<N, T, W>) -> Self {
@@ -88,6 +88,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     weight: W::one(),
                     instruction: PushDownInstruction::Pop {
                         current_val: PushState::T(t.clone()),
+                        new_val: None,
                     }
                 }
             );

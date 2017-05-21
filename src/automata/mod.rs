@@ -22,18 +22,24 @@ pub trait Instruction<A> {
     fn apply(&self, A) -> Option<A>;
 }
 
-
 /// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
 pub trait Automaton<S: Clone + Debug + Eq,
                     I: Clone + Debug + Eq + Instruction<S>,
                     T: Clone + Debug + Eq,
                     W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord>
-    where Self::Key: Hash + Eq {
+    where Self::Key: Hash + Eq +Clone{
     type Key;
 
     fn extract_key(&Configuration<S, T, W>) -> &Self::Key;
 
     fn transitions(&self) -> &HashMap<Self::Key, BinaryHeap<Transition<S, I, T, W>>>;
+    fn states(&self) -> Vec<Self::Key>{
+        let mut st=Vec::new();
+        for (k,_) in self.transitions(){
+            st.push(k.clone())
+        }
+        st
+    }
     fn initial(&self) -> S;
     fn is_terminal(&self, &Configuration<S, T, W>) -> bool;
     fn recognise(&self, word: Vec<T>) -> Option<Configuration<S, T, W>> {
@@ -67,7 +73,6 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
 
     loop {
         match active.pop() {
-
             Some(c) => i = c,
             _ => break,
         }
@@ -78,11 +83,13 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
             println!("Considered {} configurations.", count);
             return Some(i);
         }
-        for rs in filtered_rules.get(&configuration_characteristic(&i)) {
 
+        for rs in filtered_rules.get(&configuration_characteristic(&i)) {
             for r in rs {
                 match apply(&i, &r) {
-                    Some(c1) => active.push(c1),
+                    Some(c1) =>{
+                        active.push(c1);
+                    }
                     _ => (),
                 }
             }

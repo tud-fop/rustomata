@@ -356,3 +356,38 @@ fn test_relabel_pushdown() {
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]));
 
 }
+
+#[test]
+fn test_topk() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [Nt A, Nt A, Nt A, Nt A, Nt A ] # 1";
+    let r1_string = "A → [T a                         ] # 0.6";
+    let r2_string = "A → [T b                         ] # 0.4";
+
+
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+
+    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = PushDownAutomaton::from(g);
+
+    let ptk = PDTopKElement{
+        dummy : PhantomData,
+        size : 4,
+        reach: a.states(),
+    };
+
+    let b = a.clone().approximation(ptk).unwrap();
+
+    assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]));
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
+}

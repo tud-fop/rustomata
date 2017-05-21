@@ -29,7 +29,7 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum PushDownInstruction<A> {
-    Pop { current_val: A },
+    Pop { current_val: A , new_val : Option<A>},
     Replace { current_val: A, new_val : Vec<A>},
 }
 
@@ -43,7 +43,7 @@ pub struct PushDown<A: Ord> {
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
-    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Zero +One> PushDownAutomaton<A, T, W> {
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero +One> PushDownAutomaton<A, T, W> {
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>,initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
@@ -91,8 +91,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A
     for PushDownInstruction<A> {
         fn apply(&self, p: PushDown<A>) -> Option<PushDown<A>> {
             match self {
-                &PushDownInstruction::Pop {ref current_val} => {
-                    p.pop(current_val)
+                &PushDownInstruction::Pop {ref current_val, ref new_val} => {
+                    p.pop(current_val, new_val)
                 }
                 &PushDownInstruction::Replace {ref current_val, ref new_val} => {
                     p.replace(current_val, new_val)
@@ -165,23 +165,28 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     /// Opertations for Instructions:
 
     ///pops uppermost element, returns `None` if empty
-    pub fn pop(&self, c: &A)->Option<PushDown<A>>{
+    pub fn pop(&self, c: &A, d: &Option<A>)->Option<PushDown<A>>{
         if self.is_bottom(){
             return None;
         }
 
         if !(self.current_symbol()==c){
-            println!("nooo");
             return None;
         }
 
         let mut b=self.elements.clone();
         b.pop();
+        if self.is_full(){
+            match d{
+                &Some(ref x) => (b.insert(1, x.clone())),
+                &None => (),
+            }
+        }
+
         Some(PushDown{
             elements: b,
             limit: self.limit,
             empty: self.empty.clone(),
-
         })
 
     }
@@ -234,8 +239,11 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
 impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &PushDownInstruction::Pop { ref current_val} => {
-                write!(f, "(Pop {})", current_val)
+            &PushDownInstruction::Pop { ref current_val, ref new_val} => {
+                match new_val{
+                    &Some( ref x) => write!(f, "(Pop {}, uncover {})", current_val, x),
+                    &None => write!(f, "(Pop {})", current_val)
+                }
             },
             &PushDownInstruction::Replace { ref current_val, ref new_val } => {
                 let mut buffer = "".to_string();
@@ -257,7 +265,7 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
 
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Zero>
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero>
     fmt::Display for PushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let mut formatted_transitions = String::new();

@@ -79,11 +79,22 @@ impl Add for LogProb {
     }
 }
 
+impl Add<f64> for LogProb {
+    type Output = f64;
+
+    fn add(self, other: f64) -> f64 {
+        self.probability().add(other)
+    }
+}
+
 impl  Div<f64> for LogProb {
     type Output = Self;
 
     fn div(self, other: f64) -> Self{
-        match LogProb::new(self.probability()/ other) {
+        let mut c=self.probability()/ other;
+        c = c * 1000.0;
+        c= c.round()/1000.0;
+        match LogProb::new(c) {
             Ok(p) => p,
             Err(e) => panic!(e)
         }
