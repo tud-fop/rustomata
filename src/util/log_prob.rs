@@ -4,7 +4,7 @@ use std::f64;
 use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
-use std::ops::{Add, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div};
 use self::num_traits::{One, Zero};
 
 #[derive(PartialOrd, Debug, Default, Clone, Copy)]
@@ -15,14 +15,14 @@ pub struct LogProb {
 impl LogProb {
     pub fn new(value: f64) -> Result<Self, String> {
         if 0.0 <= value && value <= 1.0 {
-            Ok(LogProb { value: - value.log2() })
+            Ok(LogProb { value: - value.ln() })
         } else {
-            Err(format!("Value {} is not a probability (i.e. not in the interval [0,1]).", value))
+            Err(format!("{} is not a probability (i.e. not in the interval [0,1]).", value))
         }
     }
 
     pub fn probability(&self) -> f64 {
-        (- &self.value).exp2()
+        (- &self.value).exp()
     }
 }
 
@@ -53,12 +53,56 @@ impl PartialEq for LogProb {
         } else if other.value.is_nan() {
             false
         } else {
-            self.value == other.value
+            self.value - other.value < f64::EPSILON
         }
     }
 }
 
 impl Eq for LogProb {}
+
+impl Add for LogProb {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let (a, b) = (self.value, other.value);
+
+        let (x, y) = if a > b {
+            (a, b)
+        } else {
+            (b, a)
+        };
+
+        match x - (x - y).exp().ln_1p() {
+            s if s >= 0.0 => LogProb { value: s },
+            _             => panic!(format!("exp(-{}) + exp(-{}) is not a probability, i.e. not in the interval [0,1].", x, y)),
+        }
+    }
+}
+
+impl Sub for LogProb {
+    type Output = Self ;
+
+    fn sub(self, other: Self) -> Self {
+        match (self.value, other.value) {
+            (x, y) if x <= y => LogProb { value: (x - (-(x - y).exp_m1()).ln()) },
+            (x, y) if x >  y => panic!(format!("exp(-{}) - exp(-{}) is not a probability, i.e. not on the interval [0,1].", x, y)),
+            _                => unreachable!(),
+        }
+    }
+}
+
+#[test]
+fn test_add_sub() {
+    match (LogProb::new(0.5), LogProb::new(0.25), LogProb::new(0.75)) {
+        (Ok(x), Ok(y), Ok(z)) => {
+            assert_eq!(x + y, z);
+            assert_eq!(y + x, z);
+            assert_eq!(z - x, y);
+            assert_eq!(z - y, x);
+        },
+        _ => panic!(),
+    }
+}
 
 impl Mul for LogProb {
     type Output = Self;
@@ -68,13 +112,16 @@ impl Mul for LogProb {
     }
 }
 
-impl Add for LogProb {
+impl Div for LogProb {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        match LogProb::new(self.probability().add(other.probability())) {
-            Ok(p) => p,
-            Err(e) => panic!(e)
+    fn div(self, other: Self) -> Self {
+        match self.value.sub(other.value) {
+            x if x >= 0.0
+                => LogProb { value: x },
+            x if x <  0.0
+                => panic!(format!("{} is not a probability (i.e. not in the interval [0,1]).", x)),
+            _   => unreachable!(),
         }
     }
 }
