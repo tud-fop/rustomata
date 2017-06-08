@@ -39,7 +39,7 @@ impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
               current_val: &A,
               old_val: Option<&A>,
               new_val: &A)
-              -> Option<TreeStack<A>> {
+              -> Vec<TreeStack<A>> {
         let mut new_pointer = self.pointer.clone();
         new_pointer.push(n);
 
@@ -47,19 +47,16 @@ impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
             (Some(val), o_val) if val == current_val && o_val == old_val => {
                 let mut new_tree = self.tree.clone();
                 new_tree.insert(new_pointer.clone(), new_val.clone());
-                Some(TreeStack {
-                    tree: new_tree,
-                    pointer: new_pointer,
-                })
+                vec![TreeStack { tree: new_tree, pointer: new_pointer }]
             }
-            _ => None,
+            _ => Vec::new(),
         }
     }
 
     /// Moves the `pointer` to the parent node if one exists and returns `None` otherwise.
-    pub fn down(&self, current_val: &A, old_val: &A, new_val: &A) -> Option<TreeStack<A>> {
+    pub fn down(&self, current_val: &A, old_val: &A, new_val: &A) -> Vec<TreeStack<A>> {
         if self.pointer.is_empty() {
-            None
+            Vec::new()
         } else {
             let mut new_pointer = self.pointer.clone();
             new_pointer.pop();
@@ -67,12 +64,9 @@ impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
                 (Some(c_val), Some(o_val)) if c_val == current_val && o_val == old_val => {
                     let mut new_tree = self.tree.clone();
                     new_tree.insert(new_pointer.clone(), new_val.clone());
-                    Some(TreeStack {
-                        tree: new_tree,
-                        pointer: new_pointer,
-                    })
-                }
-                _ => None,
+                    vec![TreeStack { tree: new_tree, pointer: new_pointer }]
+                },
+                _ => Vec::new(),
             }
         }
     }

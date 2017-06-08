@@ -19,7 +19,7 @@ pub use self::transition::Transition;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
-    fn apply(&self, A) -> Option<A>;
+    fn apply(&self, A) -> Vec<A>;
 }
 
 /// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
@@ -65,7 +65,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
     active: &mut BinaryHeap<C>,
     configuration_characteristic: &Fn(&C) -> &K,
     filtered_rules: &HashMap<K, BinaryHeap<R>>,
-    apply: &Fn(&C, &R) -> Option<C>,
+    apply: &Fn(&C, &R) -> Vec<C>,
     accepting: &Fn(&C) -> bool)
     -> Option<C> {
     let mut i;
@@ -86,12 +86,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
 
         for rs in filtered_rules.get(&configuration_characteristic(&i)) {
             for r in rs {
-                match apply(&i, &r) {
-                    Some(c1) =>{
-                        active.push(c1);
-                    }
-                    _ => (),
-                }
+                active.extend(apply(&i, &r))
             }
         }
     }

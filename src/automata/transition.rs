@@ -17,21 +17,24 @@ pub struct Transition<A, I: Instruction<A>, T, W> {
 
 
 impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Copy> Transition<A, I, T, W> {
-    pub fn apply(&self, c: &Configuration<A, T, W>) -> Option<Configuration<A, T, W>> {
+    pub fn apply(&self, c: &Configuration<A, T, W>) -> Vec<Configuration<A, T, W>> {
         if !c.word.starts_with(&self.word[..]) {
-            return None;
+            return Vec::new()
         }
 
-        match self.instruction.apply(c.storage.clone()) {
-            Some(t1) => {
-                Some(Configuration {
+
+        let mut confs = Vec::new();
+        for s1 in self.instruction.apply(c.storage.clone()) {
+            confs.push(
+                Configuration {
                     word: c.word.clone().split_off(self.word.len()),
-                    storage: t1,
+                    storage: s1,
                     weight: c.weight * self.weight,
-                })
-            }
-            _ => None,
+                }
+            )
         }
+
+        confs
     }
 }
 

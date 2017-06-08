@@ -7,26 +7,36 @@ use std::str::FromStr;
 use std::ops::{Add, Sub, Mul, Div};
 use self::num_traits::{One, Zero};
 
+
+/// A struct that represents probabilities.
+/// A probability is internally represented as its negative natural logarithm.
+/// Probabilities greater than 1 are allowed during calculations.
 #[derive(PartialOrd, Debug, Default, Clone, Copy)]
 pub struct LogProb {
     value: f64
 }
 
 impl LogProb {
+    /// Creates a new `LogProb` from a given value in the interval [0,1].
     pub fn new(value: f64) -> Result<Self, String> {
-        if 0.0 <= value && value <= 1.0 {
-            Ok(LogProb { value: - value.ln() })
+        if 0.0 <= value {
+            Ok(LogProb { value: value.ln() })
         } else {
-            Err(format!("{} is not a probability (i.e. not in the interval [0,1]).", value))
+            Err(format!("{} is not a probability, i.e. not in the interval [0,∞).", value))
         }
     }
 
+    /// Same as `new` but without bounds check.
+    pub fn new_unchecked(value: f64) -> Self {
+        LogProb { value: value.ln() }
+    }
+
+    /// Probability that is represented by the given `LogProb`.
     pub fn probability(&self) -> f64 {
-        (- &self.value).exp()
+        self.value.exp()
     }
 }
 
-/// Flipped instance to reflect that a probability of ``0.25`` is "more expensive" than ``0.5``.
 impl Ord for LogProb {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.partial_cmp(&other) {
@@ -53,7 +63,7 @@ impl PartialEq for LogProb {
         } else if other.value.is_nan() {
             false
         } else {
-            self.value - other.value < f64::EPSILON
+            (self.value - other.value).abs() <= f64::EPSILON
         }
     }
 }
@@ -72,10 +82,7 @@ impl Add for LogProb {
             (b, a)
         };
 
-        match x - (x - y).exp().ln_1p() {
-            s if s >= 0.0 => LogProb { value: s },
-            _             => panic!(format!("exp(-{}) + exp(-{}) is not a probability, i.e. not in the interval [0,1].", x, y)),
-        }
+        LogProb { value: x + (y - x).exp().ln_1p() }
     }
 }
 
@@ -84,21 +91,25 @@ impl Sub for LogProb {
 
     fn sub(self, other: Self) -> Self {
         match (self.value, other.value) {
-            (x, y) if x <= y => LogProb { value: (x - (-(x - y).exp_m1()).ln()) },
-            (x, y) if x >  y => panic!(format!("exp(-{}) - exp(-{}) is not a probability, i.e. not on the interval [0,1].", x, y)),
+            (x, y) if x >= y => LogProb { value: x + (-(y - x).exp_m1()).ln() },
+            (x, y) if x <  y => panic!("exp({}) - exp({}) is less than zero", x, y),
             _                => unreachable!(),
         }
     }
 }
 
 #[test]
-fn test_add_sub() {
+fn test_arithmetic() {
     match (LogProb::new(0.5), LogProb::new(0.25), LogProb::new(0.75)) {
         (Ok(x), Ok(y), Ok(z)) => {
             assert_eq!(x + y, z);
             assert_eq!(y + x, z);
             assert_eq!(z - x, y);
             assert_eq!(z - y, x);
+            assert_eq!(x * x, y);
+            assert_eq!(y / x, x);
+            assert_eq!(z / z, LogProb::one());
+            assert!(z > y);
         },
         _ => panic!(),
     }
@@ -116,13 +127,7 @@ impl Div for LogProb {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        match self.value.sub(other.value) {
-            x if x >= 0.0
-                => LogProb { value: x },
-            x if x <  0.0
-                => panic!(format!("{} is not a probability (i.e. not in the interval [0,1]).", x)),
-            _   => unreachable!(),
-        }
+        LogProb { value: self.value.sub(other.value) }
     }
 }
 
@@ -152,11 +157,11 @@ impl  Div<f64> for LogProb {
 
 impl Zero for LogProb {
     fn zero() -> LogProb {
-        LogProb { value: f64::INFINITY }
+        LogProb { value: f64::NEG_INFINITY }
     }
 
     fn is_zero(&self) -> bool {
-        self.value.is_infinite()
+        self.value == f64::NEG_INFINITY
     }
 }
 

@@ -89,7 +89,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A>>
     for PushDownInstruction<A> {
-        fn apply(&self, p: PushDown<A>) -> Option<PushDown<A>> {
+        fn apply(&self, p: PushDown<A>) -> Vec<PushDown<A>> {
             match self {
                 &PushDownInstruction::Pop {ref current_val, ref new_val} => {
                     p.pop(current_val, new_val)
@@ -158,51 +158,60 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     }
 
     /// checks wheter stack is empty, meaning bottomsymbol is at top
-    pub fn is_bottom(&self) ->bool{
+    pub fn is_bottom(&self) -> bool{
         *self.current_symbol()==self.empty
     }
 
     /// Opertations for Instructions:
 
+    ///pushes new element at the top
+    pub fn push(&self,o: &A, n: &A) -> Vec<PushDown<A>>{
+        if !(o==self.current_symbol()){
+            return Vec::new()
+        }
+        let mut s=self.elements.clone();
+        s.push(n.clone());
+
+        vec![PushDown{
+            elements: s,
+            empty: self.empty.clone(),
+        }]
+    }
+
     ///pops uppermost element, returns `None` if empty
-    pub fn pop(&self, c: &A, d: &Option<A>)->Option<PushDown<A>>{
+    pub fn pop(&self, c: &A) -> Vec<PushDown<A>>{
         if self.is_bottom(){
-            return None;
+            return Vec::new()
         }
 
         if !(self.current_symbol()==c){
-            return None;
+            println!("nooo");
+            return Vec::new()
         }
 
         let mut b=self.elements.clone();
         b.pop();
-        if self.is_full(){
-            match d{
-                &Some(ref x) => (b.insert(1, x.clone())),
-                &None => (),
-            }
-        }
-
-        Some(PushDown{
+        vec![PushDown{
             elements: b,
             limit: self.limit,
             empty: self.empty.clone(),
-        })
+
+        }]
 
     }
 
     ///replaces uppermost element with the given elements, returns `None` if empty. Inverts the given Vector. Does Nothing when empty input.
-    pub fn replace(&self, c: &A,  a: &Vec<A>)->Option<PushDown<A>>{
-        if a.len()==0{
-            return Some(self.clone());
+    pub fn replace(&self, c: &A,  a: &Vec<A>) -> Vec<PushDown<A>>{
+        if a.len() == 0{
+            return vec![self.clone()]
         }
 
         if self.is_bottom(){
-            return None;
+            return Vec::new()
         }
 
         if !(self.current_symbol()==c){
-            return None;
+            return Vec::new()
         }
 
         let mut b=self.elements.clone();
@@ -219,20 +228,11 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         for x in inva{
             b.push(x.clone());
         }
-        if self.limit >= 0{
-            loop{
-                if (b.len() as i64) <= self.limit +1{
-                    break;
-                }
-                b.remove(1);
-            }
-        }
-
-        Some(PushDown{
+        vec![PushDown{
             elements: b,
             limit: self.limit.clone(),
             empty: self.empty.clone(),
-        })
+        }]
     }
 }
 
