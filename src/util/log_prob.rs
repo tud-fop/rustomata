@@ -138,13 +138,15 @@ impl  Div<f64> for LogProb {
     type Output = Self;
 
     fn div(self, other: f64) -> Self{
-        let mut c=self.probability()/ other;
-        c = c * 1000.0;
-        c= c.round()/1000.0;
-        match LogProb::new(c) {
-            Ok(p) => p,
+        println!("div fault");
+        let o;
+        match LogProb::new(other) {
+            Ok(p) => o=p,
             Err(e) => panic!(e)
         }
+        println!("not div fault");
+        self/o
+
     }
 }
 

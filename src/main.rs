@@ -206,7 +206,7 @@ fn main() {
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
-
+                    
                     let a = PushDownAutomaton::from(g);
 
                     println!("{}", a);

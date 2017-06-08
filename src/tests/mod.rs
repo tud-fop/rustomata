@@ -7,6 +7,8 @@ use approximation::*;
 use util::integeriser::*;
 use util::log_prob::*;
 
+use num_traits::One;
+
 
 #[test]
 fn test_from_str_automaton() {
@@ -222,7 +224,7 @@ fn test_from_str_cfg() {
     let r0: CFGRule<String, String, LogProb> = CFGRule {
         head: "S".to_string(),
         composition: c0.clone(),
-        weight: LogProb::new(1.0).unwrap(),
+        weight: LogProb::one(),
     };
 
     let r1: CFGRule<String, String, LogProb> = CFGRule {
@@ -240,7 +242,7 @@ fn test_from_str_cfg() {
     let r3: CFGRule<String, String, LogProb> = CFGRule {
         head: "B".to_string(),
         composition: c3.clone(),
-        weight: LogProb::new(1.0).unwrap(),
+        weight: LogProb::one(),
     };
 
     let r0_string = "S → [Nt A] # 1";
