@@ -56,10 +56,10 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                 match v{
                     cfg::LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
-                        st.push(PushState::T(x.clone()));
+                        st.insert(0,PushState::T(x.clone()));
                     },
                     cfg::LetterT::Label(x) => {
-                        st.push(PushState::Nt(x.clone()));
+                        st.insert(0,PushState::Nt(x.clone()));
                     },
                 }
             }
@@ -72,6 +72,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::Nt(r.head.clone()),
                         new_val: st.clone(),
+                        limit: None,
                     }
                 }
             );
@@ -89,6 +90,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::T(t.clone()),
                         new_val: Vec::new(),
+                        limit: None,
                     }
                 }
             );
@@ -108,6 +110,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::Initial,
                         new_val: tvec,
+                        limit: None,
                     }
                 }
             );

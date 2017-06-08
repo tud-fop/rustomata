@@ -77,7 +77,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
         }
 
         count += 1;
-        println!("{:?}", i);
+
         if accepting(&i) {
             println!("Considered {} configurations.", count);
             return Some(i);
@@ -85,7 +85,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
 
         for rs in filtered_rules.get(&configuration_characteristic(&i)) {
             for r in rs {
-                println!("{:?}", r);
+
                 active.extend(apply(&i, &r))
             }
         }

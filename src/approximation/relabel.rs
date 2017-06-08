@@ -32,24 +32,23 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     }
 
     fn approximate_transition(self, t :  automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
-        Vec<automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
+        automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>{
         match t.instruction{
-            PushDownInstruction::Replace {ref current_val, ref new_val} => {
+            PushDownInstruction::Replace {ref current_val, ref new_val, ref limit} => {
                 let mut st = Vec::new();
                 for nt in new_val{
                     st.push(nt.relabel(self.func));
                 }
-                let mut b = Vec::new();
-                b.push(automata::Transition {
+                automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::Replace {
                         current_val: current_val.relabel(self.func),
                         new_val: st.clone(),
+                        limit: limit.clone(),
                     }
-                });
-                b
+                }
             }
         }
     }

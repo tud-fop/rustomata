@@ -229,7 +229,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let size = parse_matches.value_of("size").unwrap().parse::<i64>().unwrap();
+                            let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
                             let a = PushDownAutomaton::from(g);
 
@@ -255,7 +255,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let size = parse_matches.value_of("size").unwrap().parse::<i64>().unwrap();
+                            let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
                             let a = PushDownAutomaton::from(g);
 

@@ -29,7 +29,7 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum PushDownInstruction<A> {
-    Replace { current_val: A, new_val : Vec<A>},
+    Replace { current_val: A, new_val : Vec<A>, limit : Option<usize>},
 }
 
 /// Stack with Elements of type `A`
@@ -88,8 +88,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A
     for PushDownInstruction<A> {
         fn apply(&self, p: PushDown<A>) -> Vec<PushDown<A>> {
             match self {
-                &PushDownInstruction::Replace {ref current_val, ref new_val} => {
-                    p.replace(current_val, new_val)
+                &PushDownInstruction::Replace {ref current_val, ref new_val, ref limit} => {
+                    p.replace(current_val, new_val, limit)
                 }
             }
         }
@@ -103,9 +103,10 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         type Key = A;
 
         fn extract_key(c: &automata::Configuration<PushDown<A>, T, W>) -> &A {
-            match c.storage.current_symbol(){
-                Some( o) => o,
-                None => &c.storage.empty,
+            if c.storage.is_bottom(){
+                return &c.storage.empty;
+            }else{
+                return c.storage.current_symbol();
             }
         }
 
@@ -133,16 +134,9 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         }
     }
 
-    pub fn current_symbol(&self) -> Option<&A> {
-        match self.elements{
-            _ if !self.elements.is_empty() =>{
-                let n= self.elements.len();
-                Some(&self.elements[n-1])
-            },
-            _ => None,
-        }
-
-
+    pub fn current_symbol(&self) -> &A {
+        let n= self.elements.len();
+        &self.elements[n-1]
     }
 
     /// checks wheter stack is empty, meaning bottomsymbol is at top
@@ -152,60 +146,39 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
 
     /// Opertations for Instructions:
 
-    ///pushes new element at the top
-    pub fn push(&self, c: &A, n: &A) -> Vec<PushDown<A>>{
-        match self.current_symbol(){
-            None =>  return Vec::new(),
-            Some(o) => if !(*o==*c){return Vec::new()},
-        }
-        let mut s=self.elements.clone();
-        s.push(n.clone());
-
-        vec![PushDown{
-            elements: s,
-            empty: self.empty.clone(),
-        }]
-    }
-
-    ///pops uppermost element, returns `None` if empty
-    pub fn pop(&self, c: &A) -> Vec<PushDown<A>>{
-        match self.current_symbol(){
-            None =>  return Vec::new(),
-            Some(o) => if !(*o==*c){return Vec::new()},
-        }
-
-        let mut b=self.elements.clone();
-        b.pop();
-        vec![PushDown{
-            elements: b,
-            empty: self.empty.clone(),
-        }]
-
-    }
-
     ///replaces uppermost element with the given elements.
-    pub fn replace(&self, c: &A,  a: &Vec<A>) -> Vec<PushDown<A>>{
-        match self.current_symbol(){
-            None =>  return Vec::new(),
-            Some(o) => if !(*o==*c){return Vec::new()},
-        }
+    pub fn replace(&self, cur_sym: &A,  new_sym: &Vec<A>, limit: &Option<usize>) -> Vec<PushDown<A>>{
+        let mut new_elements=self.elements.clone();
 
-        let mut b=self.elements.clone();
-        b.pop();
-        let mut inva = Vec::new();
-        let mut copa = a.clone();
-        loop{
-            if copa.len()==0{
-                break;
+        if !(*cur_sym == self.empty){
+            if self.is_bottom(){
+                match limit{
+                    &Some(_) => (),
+                    &None => return Vec::new(),
+                }
+            }else{
+                if !(*self.current_symbol()==*cur_sym){
+                    return Vec::new();
+                }else{
+                    new_elements.pop();
+                }
             }
-            inva.push(copa.pop().unwrap());
         }
-
-        for x in inva{
-            b.push(x.clone());
+        for e in new_sym{
+            new_elements.push(e.clone());
+        }
+        match limit{
+            &Some(l) =>{
+                let n = new_elements.len();
+                if n>l{
+                    let last_elements = new_elements.split_off(n-l);
+                    new_elements = last_elements;
+                }
+            }
+            &None => (),
         }
         vec![PushDown{
-            elements: b,
+            elements: new_elements,
             empty: self.empty.clone(),
         }]
     }
@@ -215,7 +188,7 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
 impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &PushDownInstruction::Replace { ref current_val, ref new_val } => {
+            &PushDownInstruction::Replace { ref current_val, ref new_val , ref limit} => {
                 let mut buffer = "".to_string();
 
                 let mut iter = new_val.iter().peekable();
@@ -243,6 +216,6 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
                 formatted_transitions.push_str(&t.to_string());
                 formatted_transitions.push_str("\n");
             }
-            write!(f, "initial: {}\n\n{}", self.initial.current_symbol().unwrap(), formatted_transitions)
+            write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
         }
     }

@@ -320,7 +320,7 @@ fn test_equivalence(a : String)->String{
     }
 }
 
-#[test]
+
 fn test_relabel_pushdown() {
 
     //create (and test) initial push down automata
@@ -385,6 +385,8 @@ fn test_topk() {
         dummy : PhantomData,
         size : 4,
     };
+
+    println!("{}", a);
 
     let b = a.clone().approximation(ptk).unwrap();
 

@@ -21,7 +21,7 @@ pub use self::ptk::*;
 pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn approximate_initial(self, A1) -> A2;
 
-    fn approximate_transition(self, T1) -> Vec<T2>;
+    fn approximate_transition(self, T1) -> T2;
 }
 
 //Approximates automaton using Strategy-Element
@@ -46,10 +46,8 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 
         for (_, value) in self.transitions{
             for t in &value{
-                let b = strat.clone().approximate_transition(t.clone()).clone();
-                for l in b{
-                    transitions.push(l);
-                }
+                let b = strat.clone().approximate_transition(t.clone());
+                transitions.push(b);
             }
         }
 
