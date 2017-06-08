@@ -51,24 +51,6 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                 });
                 b
             }
-            PushDownInstruction::Pop {ref current_val, ref new_val} => {
-                let mut b = Vec::new();
-                let ne;
-                match new_val{
-                    &Some(ref x) => (ne = Some(x.relabel(self.func))),
-                    &None => ne = None,
-                }
-                b.push(automata::Transition {
-                    _dummy: PhantomData,
-                    word: t.word.clone(),
-                    weight: t.weight.clone(),
-                    instruction: PushDownInstruction::Pop {
-                        current_val: current_val.relabel(self.func),
-                        new_val: ne.clone(),
-                    }
-                });
-                b
-            }
         }
     }
 }

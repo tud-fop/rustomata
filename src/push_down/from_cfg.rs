@@ -86,9 +86,9 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     _dummy: PhantomData,
                     word: tvec.clone(),
                     weight: W::one(),
-                    instruction: PushDownInstruction::Pop {
+                    instruction: PushDownInstruction::Replace {
                         current_val: PushState::T(t.clone()),
-                        new_val: None,
+                        new_val: Vec::new(),
                     }
                 }
             );
@@ -115,7 +115,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
         PushDownAutomaton::new(
             transitions,
-            PushDown::new(PushState::Designated, PushState::Initial, -1),
+            PushDown::new(PushState::Initial, PushState::Designated),
         )
     }
 }

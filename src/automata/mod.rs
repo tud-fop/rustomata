@@ -50,7 +50,6 @@ pub trait Automaton<S: Clone + Debug + Eq,
         };
         let mut init_heap = BinaryHeap::new();
         init_heap.push(i);
-
         explore(&mut init_heap,
                 &(|c| Self::extract_key(&c)),
                 self.transitions(),
@@ -78,7 +77,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
         }
 
         count += 1;
-
+        println!("{:?}", i);
         if accepting(&i) {
             println!("Considered {} configurations.", count);
             return Some(i);
@@ -86,6 +85,7 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
 
         for rs in filtered_rules.get(&configuration_characteristic(&i)) {
             for r in rs {
+                println!("{:?}", r);
                 active.extend(apply(&i, &r))
             }
         }

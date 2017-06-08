@@ -278,6 +278,8 @@ fn test_from_str_cfg() {
 
     let a = PushDownAutomaton::from(g);
 
+    println!("{}", a);
+
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
 }
 
@@ -382,7 +384,6 @@ fn test_topk() {
     let ptk = PDTopKElement{
         dummy : PhantomData,
         size : 4,
-        reach: a.states(),
     };
 
     let b = a.clone().approximation(ptk).unwrap();

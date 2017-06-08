@@ -29,7 +29,6 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum PushDownInstruction<A> {
-    Pop { current_val: A , new_val : Option<A>},
     Replace { current_val: A, new_val : Vec<A>},
 }
 
@@ -37,22 +36,20 @@ pub enum PushDownInstruction<A> {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct PushDown<A: Ord> {
     pub elements: Vec<A>,
-    pub limit: i64,
     pub empty: A,
 }
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
     W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero +One> PushDownAutomaton<A, T, W> {
-    pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>,initial: PushDown<A>)
+    pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
-        let mut transition_map: HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();
+        let mut transition_map: HashMap< A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();
 
         for t in transitions {
             let a =
                 match t.instruction {
-                    PushDownInstruction::Pop { ref current_val, ..} => current_val.clone(),
                     PushDownInstruction::Replace { ref current_val, ..} => current_val.clone(),
                 };
 
@@ -91,9 +88,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A
     for PushDownInstruction<A> {
         fn apply(&self, p: PushDown<A>) -> Vec<PushDown<A>> {
             match self {
-                &PushDownInstruction::Pop {ref current_val, ref new_val} => {
-                    p.pop(current_val, new_val)
-                }
                 &PushDownInstruction::Replace {ref current_val, ref new_val} => {
                     p.replace(current_val, new_val)
                 }
@@ -109,7 +103,10 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         type Key = A;
 
         fn extract_key(c: &automata::Configuration<PushDown<A>, T, W>) -> &A {
-            c.storage.current_symbol()
+            match c.storage.current_symbol(){
+                Some( o) => o,
+                None => &c.storage.empty,
+            }
         }
 
         fn transitions(&self) -> &HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>> {
@@ -121,53 +118,45 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         }
 
         fn is_terminal(&self, c: &automata::Configuration<PushDown<A>, T, W>) -> bool{
-            c.word.is_empty() && (c.storage.elements.len() == 1)
+            c.word.is_empty() && c.storage.elements.is_empty()
         }
 }
 
 impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     ///new `PushDown<A>` stack with empty-symbol of type `A` and initial symbol of type `A`
-    pub fn new(a: A, b : A, l: i64)->PushDown<A>{
+    pub fn new(a: A, empty: A)->PushDown<A>{
         let mut ele : Vec<A> = Vec::new();
         ele.push(a.clone());
-        ele.push(b.clone());
-        let li;
-        if l < 0{
-            li = -1;
-        }else{
-            li = l;
-        }
         PushDown{
             elements : ele,
-            limit: li,
-            empty: a,
+            empty : empty,
         }
     }
 
-    pub fn current_symbol(&self) -> &A {
-        let n= self.elements.len();
-        &self.elements[n-1]
-    }
-
-    //checks wheter stack has reached limit
-    pub fn is_full(&self) ->bool{
-        if self.limit < 0{
-            return false;
+    pub fn current_symbol(&self) -> Option<&A> {
+        match self.elements{
+            _ if !self.elements.is_empty() =>{
+                let n= self.elements.len();
+                Some(&self.elements[n-1])
+            },
+            _ => None,
         }
-        (self.elements.len() as i64) >= (self.limit+1)
+
+
     }
 
     /// checks wheter stack is empty, meaning bottomsymbol is at top
     pub fn is_bottom(&self) -> bool{
-        *self.current_symbol()==self.empty
+        self.elements.is_empty()
     }
 
     /// Opertations for Instructions:
 
     ///pushes new element at the top
-    pub fn push(&self,o: &A, n: &A) -> Vec<PushDown<A>>{
-        if !(o==self.current_symbol()){
-            return Vec::new()
+    pub fn push(&self, c: &A, n: &A) -> Vec<PushDown<A>>{
+        match self.current_symbol(){
+            None =>  return Vec::new(),
+            Some(o) => if !(*o==*c){return Vec::new()},
         }
         let mut s=self.elements.clone();
         s.push(n.clone());
@@ -180,38 +169,25 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
 
     ///pops uppermost element, returns `None` if empty
     pub fn pop(&self, c: &A) -> Vec<PushDown<A>>{
-        if self.is_bottom(){
-            return Vec::new()
-        }
-
-        if !(self.current_symbol()==c){
-            println!("nooo");
-            return Vec::new()
+        match self.current_symbol(){
+            None =>  return Vec::new(),
+            Some(o) => if !(*o==*c){return Vec::new()},
         }
 
         let mut b=self.elements.clone();
         b.pop();
         vec![PushDown{
             elements: b,
-            limit: self.limit,
             empty: self.empty.clone(),
-
         }]
 
     }
 
-    ///replaces uppermost element with the given elements, returns `None` if empty. Inverts the given Vector. Does Nothing when empty input.
+    ///replaces uppermost element with the given elements.
     pub fn replace(&self, c: &A,  a: &Vec<A>) -> Vec<PushDown<A>>{
-        if a.len() == 0{
-            return vec![self.clone()]
-        }
-
-        if self.is_bottom(){
-            return Vec::new()
-        }
-
-        if !(self.current_symbol()==c){
-            return Vec::new()
+        match self.current_symbol(){
+            None =>  return Vec::new(),
+            Some(o) => if !(*o==*c){return Vec::new()},
         }
 
         let mut b=self.elements.clone();
@@ -230,21 +206,15 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         }
         vec![PushDown{
             elements: b,
-            limit: self.limit.clone(),
             empty: self.empty.clone(),
         }]
     }
 }
 
+
 impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &PushDownInstruction::Pop { ref current_val, ref new_val} => {
-                match new_val{
-                    &Some( ref x) => write!(f, "(Pop {}, uncover {})", current_val, x),
-                    &None => write!(f, "(Pop {})", current_val)
-                }
-            },
             &PushDownInstruction::Replace { ref current_val, ref new_val } => {
                 let mut buffer = "".to_string();
 
@@ -273,6 +243,6 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
                 formatted_transitions.push_str(&t.to_string());
                 formatted_transitions.push_str("\n");
             }
-            write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
+            write!(f, "initial: {}\n\n{}", self.initial.current_symbol().unwrap(), formatted_transitions)
         }
     }

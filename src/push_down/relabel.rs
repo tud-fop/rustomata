@@ -14,10 +14,8 @@ impl<A : Relabel<N1, N2, B> +Ord + Clone,
             for el in self.elements.clone(){
                 new_elements.push(el.relabel(func));
             }
-
             PushDown{
-                elements: new_elements.clone(),
-                limit: self.limit,
+                elements: new_elements,
                 empty: self.empty.relabel(func),
             }
 
@@ -34,11 +32,11 @@ impl<N1: Clone, N2: Clone, T: Clone> Relabel<N1, N2, PushState<N2, T>> for PushS
                 &PushState::T(ref x) => {
                     PushState::T(x.clone())
                 }
-                &PushState::Designated => {
-                    PushState::Designated
-                }
                 &PushState::Initial => {
                     PushState::Initial
+                }
+                &PushState::Designated => {
+                    PushState::Designated
                 }
             }
 

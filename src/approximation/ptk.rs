@@ -14,7 +14,6 @@ pub use push_down::*;
 pub struct PDTopKElement<A>{
     pub dummy: PhantomData<A>,
     pub size: i64,
-    pub reach: Vec<A>,
 }
 
 impl <A : Ord + PartialEq + Debug + Clone + Hash,
@@ -27,8 +26,9 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
     fn approximate_initial(self, a : PushDown<A>)-> PushDown<A>{
         let mut b = a.elements.clone();
         b.remove(0);
-        let pushdown = PushDown::new(a.empty, b[0].clone(), self.size);
-        pushdown.replace(&b[0],&b).unwrap()
+        let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
+        let ps=pushdown.replace(&b[0],&b);
+        ps[0].clone()
 
     }
 
@@ -44,8 +44,6 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
                     }
                     new_vec.pop();
                 }
-
-
                 b.push(automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
@@ -55,32 +53,6 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
                         new_val: new_vec.clone(),
                     }
                 });
-                b
-            }
-            PushDownInstruction::Pop {ref current_val, ref new_val} => {
-                let mut b = Vec::new();
-
-                //simple Pop
-                b.push(automata::Transition {
-                    _dummy: PhantomData,
-                    word: t.word.clone(),
-                    weight: t.weight.clone(),
-                    instruction: PushDownInstruction::Pop {
-                        current_val: current_val.clone(),
-                        new_val: new_val.clone(),
-                    }
-                });
-                for r in self.reach{
-                    b.push(automata::Transition {
-                        _dummy: PhantomData,
-                        word: t.word.clone(),
-                        weight: t.weight.clone(),
-                        instruction: PushDownInstruction::Pop {
-                            current_val: current_val.clone(),
-                            new_val: Some(r.clone()),
-                        }
-                    });
-                }
                 b
             }
         }

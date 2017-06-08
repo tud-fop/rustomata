@@ -41,7 +41,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
             for (tk, tv) in c_map{
                 let mut nw = W::zero();
                 for w in tv.clone(){
-                    println!("add fault");
                     nw = nw + (w*norm.clone());
                 }
                 let new_t = automata::Transition{

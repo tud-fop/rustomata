@@ -143,13 +143,11 @@ impl  Div<f64> for LogProb {
     type Output = Self;
 
     fn div(self, other: f64) -> Self{
-        println!("div fault");
         let o;
         match LogProb::new(other) {
             Ok(p) => o=p,
             Err(e) => panic!(e)
         }
-        println!("not div fault");
         self/o
 
     }
