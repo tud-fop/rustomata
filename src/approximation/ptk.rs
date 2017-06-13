@@ -24,10 +24,11 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
       for PDTopKElement<A>{
 
     fn approximate_initial(self, a : PushDown<A>)-> PushDown<A>{
-        let b = a.elements.clone();
+        let mut b = a.elements.clone();
+        b.remove(0);
         let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
         println!("{:?}", pushdown);
-        let ps=pushdown.replace(&b[0], &b, &Some(self.size.clone()));
+        let ps=pushdown.replacek(&b[0], &b, &self.size.clone());
                 println!("{:?}", ps[0]);
         ps[0].clone()
 
@@ -37,18 +38,30 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
     fn approximate_transition(self, t :  automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
         match t.instruction{
-            PushDownInstruction::Replace {ref current_val, ref new_val, ref limit} => {
+            PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
-                    instruction: PushDownInstruction::Replace {
+                    instruction: PushDownInstruction::ReplaceK {
                         current_val: current_val.clone(),
                         new_val: new_val.clone(),
-                        limit: Some(self.size.clone()),
+                        limit: self.size.clone(),
                     }
                 }
-            }
+            },
+            PushDownInstruction::ReplaceK {ref current_val, ref new_val, ref limit} => {
+                automata::Transition {
+                    _dummy: PhantomData,
+                    word: t.word.clone(),
+                    weight: t.weight.clone(),
+                    instruction: PushDownInstruction::ReplaceK {
+                        current_val: current_val.clone(),
+                        new_val: new_val.clone(),
+                        limit: self.size.clone(),
+                    }
+                }
+            },
         }
     }
 }

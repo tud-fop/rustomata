@@ -71,11 +71,11 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
     let mut count = 0;
 
     loop {
+
         match active.pop() {
             Some(c) => i = c,
             _ => break,
         }
-
         count += 1;
 
         if accepting(&i) {
@@ -83,9 +83,11 @@ pub fn explore<C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq>(
             return Some(i);
         }
 
-        for rs in filtered_rules.get(&configuration_characteristic(&i)) {
-            for r in rs {
 
+
+        for rs in filtered_rules.get(&configuration_characteristic(&i)) {
+
+            for r in rs {
                 active.extend(apply(&i, &r))
             }
         }

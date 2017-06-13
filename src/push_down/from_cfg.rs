@@ -72,7 +72,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::Nt(r.head.clone()),
                         new_val: st.clone(),
-                        limit: None,
                     }
                 }
             );
@@ -90,7 +89,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::T(t.clone()),
                         new_val: Vec::new(),
-                        limit: None,
                     }
                 }
             );
@@ -110,7 +108,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     instruction: PushDownInstruction::Replace {
                         current_val: PushState::Initial,
                         new_val: tvec,
-                        limit: None,
                     }
                 }
             );
