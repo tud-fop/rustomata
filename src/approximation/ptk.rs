@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::vec::Vec;
 
 pub use automata::*;
 pub use approximation::*;
@@ -27,9 +26,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
         let mut b = a.elements.clone();
         b.remove(0);
         let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
-        println!("{:?}", pushdown);
         let ps=pushdown.replacek(&b[0], &b, &self.size.clone());
-                println!("{:?}", ps[0]);
         ps[0].clone()
 
 
@@ -50,7 +47,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
                     }
                 }
             },
-            PushDownInstruction::ReplaceK {ref current_val, ref new_val, ref limit} => {
+            PushDownInstruction::ReplaceK {ref current_val, ref new_val, ..} => {
                 automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
