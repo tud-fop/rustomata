@@ -1,15 +1,10 @@
 use std::marker::PhantomData;
-use nom::IResult;
 
-use tree_stack::*;
-use push_down::*;
 use automata::*;
-use cfg::*;
 use pmcfg::*;
 use approximation::*;
 use util::integeriser::*;
 use util::log_prob::*;
-use util::parsing::*;
 
 
 #[test]
@@ -202,7 +197,7 @@ fn test_from_str_pmcfg() {
 
     let a = TreeStackAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
 
 #[test]
@@ -280,7 +275,7 @@ fn test_from_str_cfg() {
 
     let a = PushDownAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
 
 #[test]
@@ -342,7 +337,7 @@ fn test_relabel_pushdown() {
 
     let a = PushDownAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 
     let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
 

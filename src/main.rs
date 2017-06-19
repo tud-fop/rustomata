@@ -58,7 +58,7 @@ fn test_relabel_pushdown() {
 
     let a = PushDownAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 
     let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
 
@@ -134,7 +134,7 @@ fn main() {
 
                     for sentence in corpus.lines() {
                         println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                  sentence);
                     }
                 },
@@ -167,7 +167,7 @@ fn main() {
 
                     for sentence in corpus.lines() {
                         println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                  sentence);
                     }
                 },
@@ -198,7 +198,7 @@ fn main() {
 
                     for sentence in corpus.lines() {
                         println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                  sentence);
                     }
                 },
