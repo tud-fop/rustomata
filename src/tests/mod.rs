@@ -289,11 +289,11 @@ fn test_integeriser () {
     let mut arr2i = Vec::new();
 
     for a in arr1 {
-        arr1i.push(integeriser.get_key(a));
+        arr1i.push(integeriser.integerise(a));
     }
 
     for a in arr2 {
-        arr2i.push(integeriser.get_key(a));
+        arr2i.push(integeriser.integerise(a));
     }
 
     assert_eq!(arr1i[0], arr2i[0]);
