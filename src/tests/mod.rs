@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use automata::*;
-use cfg::*;
 use pmcfg::*;
 use approximation::*;
 use util::integeriser::*;
@@ -200,7 +199,7 @@ fn test_from_str_pmcfg() {
 
     let a = TreeStackAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
 
 #[test]
@@ -278,9 +277,7 @@ fn test_from_str_cfg() {
 
     let a = PushDownAutomaton::from(g);
 
-    println!("{}", a);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]));
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
 
 #[test]
@@ -294,11 +291,11 @@ fn test_integeriser () {
     let mut arr2i = Vec::new();
 
     for a in arr1 {
-        arr1i.push(integeriser.get_key(a));
+        arr1i.push(integeriser.integerise(a));
     }
 
     for a in arr2 {
-        arr2i.push(integeriser.get_key(a));
+        arr2i.push(integeriser.integerise(a));
     }
 
     assert_eq!(arr1i[0], arr2i[0]);
