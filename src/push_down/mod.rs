@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use num_traits::{One, Zero};
-use std::ops::{Add, Mul, Div};
+use std::ops::{Add, Mul};
 
 use automata;
 
@@ -42,7 +42,7 @@ pub struct PushDown<A: Ord> {
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
-    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero +One> PushDownAutomaton<A, T, W> {
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero +One> PushDownAutomaton<A, T, W> {
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
@@ -243,7 +243,7 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
 
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero>
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Zero>
     fmt::Display for PushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let mut formatted_transitions = String::new();

@@ -6,8 +6,8 @@ use std::fmt::Debug;
 /// We always assume that `self.contains_key(pointer) == true`.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TreeStack<A: Ord> {
-    tree: HashMap<Vec<u8>, A>,
-    pointer: Vec<u8>,
+    pub tree: HashMap<Vec<u8>, A>,
+    pub pointer: Vec<u8>,
 }
 
 impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
@@ -71,4 +71,3 @@ impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
         }
     }
 }
-

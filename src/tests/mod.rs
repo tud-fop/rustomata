@@ -396,3 +396,40 @@ fn test_topk() {
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
 }
+
+#[test]
+fn test_tts() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
+    let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
+    let r2_string = "A → [[],  []                             ] (    )   # 0.5";
+    let r3_string = "B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5";
+    let r4_string = "B → [[],  []                             ] (    )   # 0.5";
+
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r4_string.clone());
+
+    let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = TreeStackAutomaton::from(g);
+
+    let tts = TTSElement{
+        dummy : PhantomData,
+    };
+
+    let b = a.clone().approximation(tts).unwrap();
+
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]));
+    assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]));
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]));
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]));
+}
