@@ -26,7 +26,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
         let mut b = a.elements.clone();
         b.remove(0);
         let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
-        let ps=pushdown.replacek(&b[0], &b, &self.size.clone());
+        let ps=pushdown.replacek(&b, &b, &self.size.clone());
         ps[0].clone()
 
 

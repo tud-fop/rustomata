@@ -38,38 +38,6 @@ fn test_equivalence(a : String)->String{
     }
 }
 
-fn test_relabel_pushdown() {
-
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
-    let r2_string = "A → [T a] # 0.4";
-    let r3_string = "B → [T b] # 1";
-
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-
-    let g: CFG<String, String, util::log_prob::LogProb> = g_string.parse().unwrap();
-
-    let a = PushDownAutomaton::from(g);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
-
-    let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
-
-    println!("{}", b.unwrap());
-
-
-
-}
-
-
 fn main() {
     let matches
         = App::new("rustomata")
@@ -138,6 +106,18 @@ fn main() {
                                                 .required(true))
                                         .arg(Arg::with_name("size")
                                                 .help("size of pushdown")
+                                                .index(1)
+                                                .required(true))))
+                    .subcommand(SubCommand::with_name("tts")
+                                .about("approximates tree-stack into pushdown automata")
+                                .subcommand(SubCommand::with_name("parse")
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
+                                                .index(1)
+                                                .required(true)))
+                                .subcommand(SubCommand::with_name("automaton")
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
                                                 .index(1)
                                                 .required(true)))))
         .get_matches();
@@ -276,7 +256,7 @@ fn main() {
 
                             for sentence in corpus.lines() {
                                 println!("{:?}: {}",
-                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()),
+                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                          sentence);
                             }
                         },
@@ -300,6 +280,54 @@ fn main() {
                             };
 
                             let b = a.approximation(ptk);
+                            println!("Approximated Automaton");
+                            println!("{}", b.unwrap());
+                        },
+                        _ => ()
+                    }
+
+                },
+                ("tts",Some(tts_matches)) => {
+                    match tts_matches.subcommand(){
+                        ("parse",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let a = TreeStackAutomaton::from(g);
+
+                            let tts = TTSElement{
+                                dummy : PhantomData,
+                            };
+                            let b = a.approximation(tts).unwrap();
+
+                            let mut corpus = String::new();
+                            let _ = std::io::stdin().read_to_string(&mut corpus);
+
+                            for sentence in corpus.lines() {
+                                println!("{:?}", sentence);
+                                println!("{:?}: {}",
+                                        b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
+                                        sentence);
+                            }
+                        },
+                        ("automaton",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let a = TreeStackAutomaton::from(g);
+                            println!("Original Automaton");
+                            println!("{}", a);
+
+                            let tts = TTSElement{
+                                dummy : PhantomData,
+                            };
+                            let b = a.approximation(tts);
                             println!("Approximated Automaton");
                             println!("{}", b.unwrap());
                         },

@@ -71,20 +71,40 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       where W : Add<Output = W>{
 
     fn approximation(self, strat : S) -> Result<PushDownAutomaton<B, T, W>, String>{
-        let initial = strat.clone().approximate_initial(self.initial);
+        let initial1 = strat.clone().approximate_initial(self.initial.clone());
+        let i = self.initial.tree.get(&Vec::new()).unwrap();
+        let mut fina = initial1.empty.clone();
 
         let mut transitions = Vec::new();
 
         for (_, value) in self.transitions{
             for t in &value{
-                let b = strat.clone().approximate_transition(t.clone());
-                transitions.push(b);
+                match t.instruction{
+                    TreeStackInstruction::Down { ref old_val, .. }=>{
+                        let b = strat.clone().approximate_transition(t.clone());
+                        transitions.push(b.clone());
+                        if *old_val == *i{
+                            match b.instruction{
+                                PushDownInstruction::Replace {ref new_val, ..} =>{
+                                    fina = new_val[0].clone();
+                                },
+                                _=>(),
+                            }
+                        }
+                    },
+                    _=> {
+                        let b = strat.clone().approximate_transition(t.clone());
+                        transitions.push(b);
+                    },
+                }
+
             }
         }
+        let initial2 = PushDown::new(initial1.empty, fina);
 
         Ok(PushDownAutomaton::new(
             transitions,
-            initial,
+            initial2
             ))
     }
 }

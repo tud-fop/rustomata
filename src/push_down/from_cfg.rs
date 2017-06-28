@@ -70,7 +70,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     word: Vec::new(),
                     weight: r.weight.clone(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: PushState::Nt(r.head.clone()),
+                        current_val: vec![PushState::Nt(r.head.clone())],
                         new_val: st.clone(),
                     }
                 }
@@ -87,7 +87,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     word: tvec.clone(),
                     weight: W::one(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: PushState::T(t.clone()),
+                        current_val: vec![PushState::T(t.clone())],
                         new_val: Vec::new(),
                     }
                 }
@@ -106,7 +106,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     word: Vec::new(),
                     weight: W::one(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: PushState::Initial,
+                        current_val: vec![PushState::Initial],
                         new_val: tvec,
                     }
                 }

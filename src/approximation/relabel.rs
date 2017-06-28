@@ -35,32 +35,40 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
         automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>{
         match t.instruction{
             PushDownInstruction::Replace {ref current_val, ref new_val} => {
-                let mut st = Vec::new();
+                let mut stc = Vec::new();
+                let mut stn = Vec::new();
+                for nt in current_val{
+                    stc.push(nt.relabel(self.func));
+                }
                 for nt in new_val{
-                    st.push(nt.relabel(self.func));
+                    stn.push(nt.relabel(self.func));
                 }
                 automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: current_val.relabel(self.func),
-                        new_val: st.clone(),
+                        current_val: stc.clone(),
+                        new_val: stn.clone(),
                     }
                 }
             },
             PushDownInstruction::ReplaceK {ref current_val, ref new_val, ref limit} => {
-                let mut st = Vec::new();
+                let mut stc = Vec::new();
+                let mut stn = Vec::new();
+                for nt in current_val{
+                    stc.push(nt.relabel(self.func));
+                }
                 for nt in new_val{
-                    st.push(nt.relabel(self.func));
+                    stn.push(nt.relabel(self.func));
                 }
                 automata::Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::ReplaceK {
-                        current_val: current_val.relabel(self.func),
-                        new_val: st.clone(),
+                        current_val: stc.clone(),
+                        new_val: stn.clone(),
                         limit: limit.clone(),
                     }
                 }
