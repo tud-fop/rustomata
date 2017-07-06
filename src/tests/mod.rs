@@ -6,6 +6,7 @@ use cfg::*;
 use approximation::*;
 use util::integeriser::*;
 use util::log_prob::*;
+use util::equivalence_classes::*;
 
 use num_traits::One;
 
@@ -310,14 +311,6 @@ fn test_integeriser () {
 }
 
 
-fn test_equivalence(a : String)->String{
-    match &*a{
-        "A" => "C".to_string() ,
-        "B" => "C".to_string() ,
-        _ => a.clone(),
-    }
-}
-
 #[test]
 fn test_relabel_pushdown() {
 
@@ -343,12 +336,18 @@ fn test_relabel_pushdown() {
 
     let a = PushDownAutomaton::from(g);
 
+    let mut e_string = String::from("S [S]\n");
+    e_string.push_str("N [A, B]\n");
+    e_string.push_str("R [*]\n");
+
+    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
+
     let rlb = RlbElement{
         dummy : PhantomData,
-        func : test_equivalence,
+        mapping : e,
     };
 
-    let b = a.approximation(rlb).unwrap();
+    let b = a.approximation(&rlb).unwrap();
 
     assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
     assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
@@ -384,7 +383,7 @@ fn test_topk() {
         size : 4,
     };
 
-    let b = a.clone().approximation(ptk).unwrap();
+    let b = a.clone().approximation(&ptk).unwrap();
 
     assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
@@ -422,7 +421,7 @@ fn test_tts() {
         dummy : PhantomData,
     };
 
-    let b = a.clone().approximation(tts).unwrap();
+    let b = a.clone().approximation(&tts).unwrap();
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());

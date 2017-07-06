@@ -22,7 +22,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
       for PDTopKElement<A>{
 
-    fn approximate_initial(self, a : PushDown<A>)-> PushDown<A>{
+    fn approximate_initial(&self, a : PushDown<A>)-> PushDown<A>{
         let mut b = a.elements.clone();
         b.remove(0);
         let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
@@ -32,7 +32,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
 
     }
 
-    fn approximate_transition(self, t :  automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
+    fn approximate_transition(&self, t :  automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
         match t.instruction{
             PushDownInstruction::Replace {ref current_val, ref new_val} => {

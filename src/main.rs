@@ -24,19 +24,11 @@ pub use tree_stack::*;
 pub use automata::*;
 pub use pmcfg::*;
 pub use util::*;
+use util::equivalence_classes::*;
 
 pub use push_down::*;
 pub use cfg::*;
 pub use approximation::*;
-
-
-fn test_equivalence(a : String)->String{
-    match &*a{
-        "A" => "C".to_string() ,
-        "B" => "C".to_string() ,
-        _ => a.clone(),
-    }
-}
 
 fn main() {
     let matches
@@ -100,12 +92,26 @@ fn main() {
                                      .required(false))))
         .subcommand(SubCommand::with_name("ctf")
                     .about("coarse to fine related functions")
-                    .subcommand(SubCommand::with_name("relabelp")
-                                .about("relabels automata with testfunction")
-                                .arg(Arg::with_name("grammar")
-                                        .help("grammar file to use")
-                                        .index(1)
-                                        .required(true)))
+                    .subcommand(SubCommand::with_name("relabel")
+                                .about("relabels automata with classes file")
+                                .subcommand(SubCommand::with_name("parse")
+                                        .arg(Arg::with_name("classes")
+                                                .help("classes file to use")
+                                                .index(1)
+                                                .required(true))
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
+                                                .index(2)
+                                                .required(true)))
+                                .subcommand(SubCommand::with_name("automaton")
+                                        .arg(Arg::with_name("classes")
+                                                .help("classes file to use")
+                                                .index(1)
+                                                .required(true))
+                                        .arg(Arg::with_name("grammar")
+                                                .help("grammar file to use")
+                                                .index(2)
+                                                .required(true))))
                     .subcommand(SubCommand::with_name("topk")
                                 .about("maps pushdown to its topmost k elements")
                                 .subcommand(SubCommand::with_name("parse")
@@ -239,25 +245,70 @@ fn main() {
         },
         ("ctf", Some(r_matches)) => {
             match r_matches.subcommand() {
-                ("relabelp",Some(test_matches)) => {
-                    let grammar_file_name = test_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                ("relabel",Some(relabel_matches)) => {
+                    match relabel_matches.subcommand(){
+                        ("parse",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                    let a = PushDownAutomaton::from(g);
+                            let a = PushDownAutomaton::from(g);
 
-                    println!("{}", a);
+                            let classes_file_name = parse_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement{
-                        dummy : PhantomData,
-                        func : test_equivalence,
-                    };
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
 
-                    let b = a.approximation(rlb);
+                            let b = a.approximation(&rlb).unwrap();
 
-                    println!("{}", b.unwrap());
+                            let mut corpus = String::new();
+                            let _ = std::io::stdin().read_to_string(&mut corpus);
+
+                            for sentence in corpus.lines() {
+                                println!("{:?}: {}",
+                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
+                                         sentence);
+                            }
+                        },
+                        ("automaton",Some(parse_matches)) => {
+                            let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let a = PushDownAutomaton::from(g);
+
+                            println!("Original Automaton");
+                            println!("{}", a);
+
+                            let classes_file_name = parse_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
+
+                            let b = a.approximation(&rlb).unwrap();
+
+                            println!("Approximated Automaton");
+                            println!("{}", b);
+                        },
+                        _ => ()
+                    }
+
                 },
                 ("topk",Some(topk_matches)) => {
                     match topk_matches.subcommand(){
@@ -276,7 +327,7 @@ fn main() {
                                 dummy : PhantomData,
                                 size : size,
                             };
-                            let b = a.approximation(ptk).unwrap();
+                            let b = a.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -306,7 +357,7 @@ fn main() {
                                 size : size,
                             };
 
-                            let b = a.approximation(ptk);
+                            let b = a.approximation(&ptk);
                             println!("Approximated Automaton");
                             println!("{}", b.unwrap());
                         },
@@ -328,7 +379,7 @@ fn main() {
                             let tts = TTSElement{
                                 dummy : PhantomData,
                             };
-                            let b = a.approximation(tts).unwrap();
+                            let b = a.approximation(&tts).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -354,7 +405,7 @@ fn main() {
                             let tts = TTSElement{
                                 dummy : PhantomData,
                             };
-                            let b = a.approximation(tts);
+                            let b = a.approximation(&tts);
                             println!("Approximated Automaton");
                             println!("{}", b.unwrap());
                         },

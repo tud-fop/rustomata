@@ -2,46 +2,46 @@ use std::marker::PhantomData;
 
 use automata;
 pub use approximation::*;
-pub use util::*;
+use util::equivalence_classes::*;
 
 pub use tree_stack::*;
 pub use push_down::*;
 
 // relabel function for configurations and states
 pub trait Relabel<N1, N2, O>{
-    fn relabel(&self, fn(N1)-> N2) -> O;
+    fn relabel(&self, &EquivalenceClass<N1, N2>) -> O;
 }
 
 //Strategy Element for Relabel
-#[derive(Clone)]
 pub struct RlbElement<A, N1, N2>{
     pub dummy: PhantomData<A>,
-    pub func: fn(N1)-> N2
+    pub mapping: EquivalenceClass<N1, N2>
 }
 
 impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
       A2:  Ord + PartialEq + Debug + Clone + Hash,
-      N1: Clone, N2: Clone,
+      N1: Clone + Eq + Hash,
+      N2: Clone + Eq + Hash,
       T: Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One> ApproximationStrategy<PushDown<A1>, PushDown<A2>,
         automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>,
         automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>
       for RlbElement<PushDown<A1>, N1, N2>{
-    fn approximate_initial(self, a : PushDown<A1>)-> PushDown<A2>{
-        a.relabel(self.func)
+    fn approximate_initial(&self, a : PushDown<A1>)-> PushDown<A2>{
+        a.relabel(&self.mapping)
     }
 
-    fn approximate_transition(self, t :  automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
+    fn approximate_transition(&self, t :  automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
         automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>{
         match t.instruction{
             PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 let mut stc = Vec::new();
                 let mut stn = Vec::new();
                 for nt in current_val{
-                    stc.push(nt.relabel(self.func));
+                    stc.push(nt.relabel(&self.mapping));
                 }
                 for nt in new_val{
-                    stn.push(nt.relabel(self.func));
+                    stn.push(nt.relabel(&self.mapping));
                 }
                 automata::Transition {
                     _dummy: PhantomData,
@@ -57,10 +57,10 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                 let mut stc = Vec::new();
                 let mut stn = Vec::new();
                 for nt in current_val{
-                    stc.push(nt.relabel(self.func));
+                    stc.push(nt.relabel(&self.mapping));
                 }
                 for nt in new_val{
-                    stn.push(nt.relabel(self.func));
+                    stn.push(nt.relabel(&self.mapping));
                 }
                 automata::Transition {
                     _dummy: PhantomData,

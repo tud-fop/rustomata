@@ -21,7 +21,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         automata::Transition<PushDown<PosState<A>>,  PushDownInstruction<PosState<A>>, T, W>>
       for TTSElement<A>{
 
-    fn approximate_initial(self, a : TreeStack<PosState<A>>)-> PushDown<PosState<A>>{
+    fn approximate_initial(&self, a : TreeStack<PosState<A>>)-> PushDown<PosState<A>>{
         let np = Vec::new();
         let nempty = a.tree.get(&np).unwrap();
         let ele = vec![nempty.clone()];
@@ -33,7 +33,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         }
     }
 
-    fn approximate_transition(self, t :  automata::Transition<TreeStack<PosState<A>>, TreeStackInstruction<PosState<A>>, T, W>) ->
+    fn approximate_transition(&self, t :  automata::Transition<TreeStack<PosState<A>>, TreeStackInstruction<PosState<A>>, T, W>) ->
         automata::Transition<PushDown<PosState<A>>, PushDownInstruction<PosState<A>>, T, W>{
         match t.instruction{
             TreeStackInstruction::Up { ref current_val, ref new_val, ..} => {

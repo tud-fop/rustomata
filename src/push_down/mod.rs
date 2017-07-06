@@ -68,7 +68,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
                 transition_map.insert(b.clone(), BinaryHeap::new());
                 ()
             }
-
             transition_map.get_mut(&b).unwrap().push(t);
         }
 
@@ -86,8 +85,10 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         keys.sort();
 
         for k in keys {
-            for t in self.transitions.get(k).unwrap() {
-                result.push(t);
+            if *k != self.initial.empty{
+                for t in self.transitions.get(k).unwrap() {
+                    result.push(t);
+                }
             }
         }
 
