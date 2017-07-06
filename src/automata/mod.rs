@@ -12,6 +12,7 @@ use self::num_traits::One;
 mod from_str;
 mod configuration;
 mod transition;
+pub mod red;
 
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
@@ -21,7 +22,6 @@ pub use self::transition::Transition;
 pub trait Instruction<A> {
     fn apply(&self, A) -> Vec<A>;
 }
-
 
 /// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
 pub trait Automaton<S: Clone + Debug + Eq,
@@ -34,6 +34,13 @@ pub trait Automaton<S: Clone + Debug + Eq,
     fn extract_key(&Configuration<S, T, W>) -> &Self::Key;
 
     fn transitions(&self) -> &HashMap<Self::Key, BinaryHeap<Transition<S, I, T, W>>>;
+    fn states(&self) -> Vec<Self::Key>{
+        let mut st=Vec::new();
+        for (k,_) in self.transitions(){
+            st.push(k.clone())
+        }
+        st
+    }
     fn initial(&self) -> S;
     fn is_terminal(&self, &Configuration<S, T, W>) -> bool;
     fn recognise<'a>(&'a self, word: Vec<T>) -> Recogniser<'a, Configuration<S, T, W>, Transition<S, I, T, W>, Self::Key> {

@@ -100,6 +100,7 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFGRu
            }
            buffer.push_str(")");
 
-        write!(f, "\"{}\" → {} {}  # {}", self.head, self.composition, buffer, self.weight)
+        //write!(f, "\"{}\" → {} {}  # {}", self.head, self.composition, buffer, self.weight)
+        write!(f, "\"{}\" → {}", self.head, self.composition)
     }
 }

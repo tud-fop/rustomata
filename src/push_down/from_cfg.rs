@@ -5,7 +5,8 @@ use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
-use self::num_traits::One;
+use std::ops::{Add, Mul, Div};
+use self::num_traits::{One, Zero};
 use std::str::FromStr;
 
 use std::marker::PhantomData;
@@ -39,7 +40,7 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
 
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr
+     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero
      > From<cfg::CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
     where <W as FromStr>::Err: Debug{
      fn from(g: cfg::CFG<N, T, W>) -> Self {
@@ -55,10 +56,10 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                 match v{
                     cfg::LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
-                        st.push(PushState::T(x.clone()));
+                        st.insert(0,PushState::T(x.clone()));
                     },
                     cfg::LetterT::Label(x) => {
-                        st.push(PushState::Nt(x.clone()));
+                        st.insert(0,PushState::Nt(x.clone()));
                     },
                 }
             }
@@ -69,7 +70,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     word: Vec::new(),
                     weight: r.weight.clone(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: PushState::Nt(r.head.clone()),
+                        current_val: vec![PushState::Nt(r.head.clone())],
                         new_val: st.clone(),
                     }
                 }
@@ -85,8 +86,9 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     _dummy: PhantomData,
                     word: tvec.clone(),
                     weight: W::one(),
-                    instruction: PushDownInstruction::Pop {
-                        current_val: PushState::T(t.clone()),
+                    instruction: PushDownInstruction::Replace {
+                        current_val: vec![PushState::T(t.clone())],
+                        new_val: Vec::new(),
                     }
                 }
             );
@@ -104,7 +106,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                     word: Vec::new(),
                     weight: W::one(),
                     instruction: PushDownInstruction::Replace {
-                        current_val: PushState::Initial,
+                        current_val: vec![PushState::Initial],
                         new_val: tvec,
                     }
                 }
@@ -113,7 +115,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
         PushDownAutomaton::new(
             transitions,
-            PushDown::new(PushState::Designated, PushState::Initial),
+            PushDown::new(PushState::Initial, PushState::Designated),
         )
     }
 }

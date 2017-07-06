@@ -2,9 +2,12 @@ use std::marker::PhantomData;
 
 use automata::*;
 use pmcfg::*;
+use cfg::*;
 use approximation::*;
 use util::integeriser::*;
 use util::log_prob::*;
+
+use num_traits::One;
 
 
 #[test]
@@ -221,7 +224,7 @@ fn test_from_str_cfg() {
     let r0: CFGRule<String, String, LogProb> = CFGRule {
         head: "S".to_string(),
         composition: c0.clone(),
-        weight: LogProb::new(1.0).unwrap(),
+        weight: LogProb::one(),
     };
 
     let r1: CFGRule<String, String, LogProb> = CFGRule {
@@ -239,7 +242,7 @@ fn test_from_str_cfg() {
     let r3: CFGRule<String, String, LogProb> = CFGRule {
         head: "B".to_string(),
         composition: c3.clone(),
-        weight: LogProb::new(1.0).unwrap(),
+        weight: LogProb::one(),
     };
 
     let r0_string = "S → [Nt A] # 1";
@@ -320,9 +323,10 @@ fn test_relabel_pushdown() {
 
     //create (and test) initial push down automata
     let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
-    let r2_string = "A → [T a] # 0.4";
-    let r3_string = "B → [T b] # 1";
+    let r1_string = "A → [T a, Nt A, Nt B  ] # 0.6";
+    let r2_string = "A → [T a              ] # 0.4";
+    let r3_string = "B → [T b, Nt B, Nt A  ] # 0.3";
+    let r4_string = "B → [T b              ] # 0.7";
 
     let mut g_string = String::from("initial: [S, B]\n\n");
     g_string.push_str(r0_string.clone());
@@ -332,17 +336,98 @@ fn test_relabel_pushdown() {
     g_string.push_str(r2_string.clone());
     g_string.push_str("\n");
     g_string.push_str(r3_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r4_string.clone());
 
     let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
 
     let a = PushDownAutomaton::from(g);
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
+    let rlb = RlbElement{
+        dummy : PhantomData,
+        func : test_equivalence,
+    };
 
-    let b = a.approximation(ApproximationStrategy::Relab, test_equivalence);
+    let b = a.approximation(rlb).unwrap();
 
-    println!("{:?}", b);
+    assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
+    assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string(), "b".to_string(), "a".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string() ]).next());
+
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+
+}
+
+#[test]
+fn test_topk() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [Nt A, Nt A, Nt A, Nt A, Nt A ] # 1";
+    let r1_string = "A → [T a                         ] # 0.6";
+    let r2_string = "A → [T b                         ] # 0.4";
 
 
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
 
+    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = PushDownAutomaton::from(g);
+
+    let ptk = PDTopKElement{
+        dummy : PhantomData,
+        size : 4,
+    };
+
+    let b = a.clone().approximation(ptk).unwrap();
+
+    assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+}
+
+#[test]
+fn test_tts() {
+
+    //create (and test) initial push down automata
+    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
+    let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
+    let r2_string = "A → [[],  []                             ] (    )   # 0.5";
+    let r3_string = "B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5";
+    let r4_string = "B → [[],  []                             ] (    )   # 0.5";
+
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r4_string.clone());
+
+    let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = TreeStackAutomaton::from(g);
+
+    let tts = TTSElement{
+        dummy : PhantomData,
+    };
+
+    let b = a.clone().approximation(tts).unwrap();
+
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_eq!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
 }

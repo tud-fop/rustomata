@@ -1,0 +1,6 @@
+initial: [S]
+
+S → [Nt A, Nt A, Nt A, Nt A             ] # 0.3
+S → [Nt A, Nt A, Nt A, Nt A, Nt A, Nt A ] # 0.7
+A → [T a                                ] # 0.4
+A → [T b                                ] # 0.6

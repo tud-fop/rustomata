@@ -1,8 +1,13 @@
-pub mod relabel;
-
-use std::fmt::Debug;
 use std::hash::Hash;
-use std::marker::PhantomData;
+use std::fmt::Debug;
+use std::ops::{Add, Mul, Div};
+use num_traits::{Zero, One};
+
+pub mod relabel;
+pub mod ptk;
+pub mod tts;
+
+pub use approximation::relabel::*;
 
 use automata;
 pub use util::*;
@@ -11,80 +16,95 @@ pub use tree_stack::*;
 pub use push_down::*;
 
 pub use self::relabel::*;
+pub use self::ptk::*;
+pub use self::tts::*;
 
-///Approximation strategy of configuration of type to type `C`
-pub enum ApproximationStrategy {
-    Relab,
-    Strat2,
-    Strat3,
+//functions that apply Strategys to Initial Configuration and Transitions
+pub trait ApproximationStrategy<A1, A2, T1, T2> {
+    fn approximate_initial(self, A1) -> A2;
+
+    fn approximate_transition(self, T1) -> T2;
 }
 
-/// Approximation of self via ApproximationStrategy `T`
-pub trait Approximation<T, P, N1, N2, O> {
-    fn approximation(self, T, P) -> Result<O, String>;
+//Approximates automaton using Strategy-Element
+pub trait Approximation<T, O> {
+    fn approximation(self, T) -> Result<O, String>;
 }
 
-impl <A: Ord + PartialEq + Debug + Clone + Hash +  Relabel<P, N1, N2, B>,
+impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
-      T: Eq + Clone,
-      W: Ord + Eq + Clone,
-      P: Copy, N1: Clone, N2: Clone> Approximation<ApproximationStrategy, P, N1, N2, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
-    where P: Fn(N1) -> N2{
+      T: Eq + Clone +Hash,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      S: Clone + ApproximationStrategy<PushDown<A>, PushDown<B>,
+        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+        automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+      Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
+      where W : Add<Output = W>{
 
-    fn approximation(self, strat : ApproximationStrategy, func : P) -> Result<PushDownAutomaton<B, T, W>, String>{
+    fn approximation(self, strat : S) -> Result<PushDownAutomaton<B, T, W>, String>{
+        let initial = strat.clone().approximate_initial(self.initial);
+
         let mut transitions = Vec::new();
 
-        match strat{
-            ApproximationStrategy::Relab => {
-                let initial = self.initial.relabel(func);
-                for (_,t) in self.transitions{
-                    for t2 in t{
-                        match t2.instruction{
-                            PushDownInstruction::Replace {ref current_val, ref new_val} => {
-                                let mut st = Vec::new();
-                                for nt in new_val{
-                                    st.push(nt.relabel(func));
-                                }
-                                transitions.push(
-                                    automata::Transition {
-                                        _dummy: PhantomData,
-                                        word: t2.word.clone(),
-                                        weight: t2.weight.clone(),
-                                        instruction: PushDownInstruction::Replace {
-                                            current_val: current_val.relabel(func),
-                                            new_val: st.clone(),
-                                        }
-                                    }
-                                );
-                            }
-                            PushDownInstruction::Pop {ref current_val} => {
-                                transitions.push(
-                                    automata::Transition {
-                                        _dummy: PhantomData,
-                                        word: t2.word.clone(),
-                                        weight: t2.weight.clone(),
-                                        instruction: PushDownInstruction::Pop {
-                                            current_val: current_val.relabel(func),
-                                        }
-                                    }
-                                );
-                            }
-                        }
-                    }
-
-
-                }
-
-
-                Ok(PushDownAutomaton::new(
-                    transitions,
-                    initial,
-                ))
-
-            },
-            ApproximationStrategy::Strat2 => return Err("strategy not implemented (yet?)".to_string()),
-            ApproximationStrategy::Strat3 => return Err("strategy not implemented (yet?)".to_string()),
+        for (_, value) in self.transitions{
+            for t in &value{
+                let b = strat.clone().approximate_transition(t.clone());
+                transitions.push(b);
+            }
         }
 
+        Ok(PushDownAutomaton::new(
+            transitions,
+            initial,
+            ))
+    }
+}
+
+impl <A: Ord + PartialEq + Debug + Clone + Hash,
+      B: Ord + PartialEq + Debug + Clone + Hash,
+      T: Eq + Clone +Hash,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
+        automata::Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>,
+        automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+      Approximation<S, PushDownAutomaton<B, T, W>> for TreeStackAutomaton<A, T, W>
+      where W : Add<Output = W>{
+
+    fn approximation(self, strat : S) -> Result<PushDownAutomaton<B, T, W>, String>{
+        let initial1 = strat.clone().approximate_initial(self.initial.clone());
+        let i = self.initial.tree.get(&Vec::new()).unwrap();
+        let mut fina = initial1.empty.clone();
+
+        let mut transitions = Vec::new();
+
+        for (_, value) in self.transitions{
+            for t in &value{
+                match t.instruction{
+                    TreeStackInstruction::Down { ref old_val, .. }=>{
+                        let b = strat.clone().approximate_transition(t.clone());
+                        transitions.push(b.clone());
+                        if *old_val == *i{
+                            match b.instruction{
+                                PushDownInstruction::Replace {ref new_val, ..} =>{
+                                    fina = new_val[0].clone();
+                                },
+                                _=>(),
+                            }
+                        }
+                    },
+                    _=> {
+                        let b = strat.clone().approximate_transition(t.clone());
+                        transitions.push(b);
+                    },
+                }
+
+            }
+        }
+        let initial2 = PushDown::new(initial1.empty, fina);
+
+        Ok(PushDownAutomaton::new(
+            transitions,
+            initial2
+            ))
     }
 }

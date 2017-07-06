@@ -131,6 +131,28 @@ impl Div for LogProb {
     }
 }
 
+impl Add<f64> for LogProb {
+    type Output = f64;
+
+    fn add(self, other: f64) -> f64 {
+        self.probability().add(other)
+    }
+}
+
+impl  Div<f64> for LogProb {
+    type Output = Self;
+
+    fn div(self, other: f64) -> Self{
+        let o;
+        match LogProb::new(other) {
+            Ok(p) => o=p,
+            Err(e) => panic!(e)
+        }
+        self/o
+
+    }
+}
+
 impl Zero for LogProb {
     fn zero() -> LogProb {
         LogProb { value: f64::NEG_INFINITY }

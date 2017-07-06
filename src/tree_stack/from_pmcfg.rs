@@ -16,6 +16,7 @@ use tree_stack::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum PosState<X> {
     Designated,
+    Initial,
     Position(X, u8, u8),
 }
 
@@ -24,6 +25,8 @@ impl<X: fmt::Display> fmt::Display for PosState<X> {
         match self {
             &PosState::Designated
                 => write!(f, "@"),
+            &PosState::Initial
+                => write!(f, "I"),
             &PosState::Position(ref x, i, j)
                 => write!(f, "({}, {}, {})", x, i, j)
         }
@@ -96,7 +99,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                     weight: r.weight.clone(),
                     instruction: TreeStackInstruction::Push {
                         n: 0,
-                        current_val: PosState::Designated,
+                        current_val: PosState::Initial,
                         new_val: PosState::Position(r.clone(), 0, 0)
                     }
                 }
@@ -111,7 +114,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                             weight: W::one(),
                             instruction: TreeStackInstruction::Down {
                                 current_val: PosState::Position(r.clone(), 0, j),
-                                old_val: PosState::Designated,
+                                old_val: PosState::Initial,
                                 new_val: PosState::Designated
                             }
                         }
@@ -210,7 +213,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
         TreeStackAutomaton::new(
             transitions,
-            TreeStack::new(PosState::Designated)
+            TreeStack::new(PosState::Initial)
         )
     }
 }
