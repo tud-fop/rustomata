@@ -3,6 +3,7 @@ extern crate num_traits;
 use std::cmp::Ord;
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::Hash;
+use std::io::{self,Write};
 use std::fmt::Debug;
 use std::ops::Mul;
 use std::vec::Vec;
@@ -42,7 +43,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
             weight: W::one(),
         };
         let mut init_heap = BinaryHeap::new();
-        init_heap.push((Vec::new(), i));
+        init_heap.push((i, Vec::new()));
 
         Recogniser {
             agenda: init_heap,
@@ -55,7 +56,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
 }
 
 pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
-    agenda: BinaryHeap<(Vec<R>, C)>,
+    agenda: BinaryHeap<(C, Vec<R>)>,
     configuration_characteristic: Box<FnMut(&C) -> &K>,
     filtered_rules: HashMap<K, BinaryHeap<R>>,
     apply: Box<FnMut(&C, &R) -> Vec<C>>,
@@ -63,24 +64,28 @@ pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
 }
 
 impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator for Recogniser<'a, C, R, K> {
-    type Item = (Vec<R>, C);
+    type Item = (C, Vec<R>);
 
-    fn next(&mut self) -> Option<(Vec<R>, C)> {
-        while let Some((run, c)) = self.agenda.pop() {
+    fn next(&mut self) -> Option<(C, Vec<R>)> {
+        let mut i = 0;
+        while let Some((c, run)) = self.agenda.pop() {
+            i = i + 1;
             for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
                 for r in rs {
                     for c1 in (self.apply)(&c, &r) {
                         let mut run1 = run.clone();
                         run1.push(r.clone());
-                        self.agenda.push((run1, c1))
+                        self.agenda.push((c1, run1))
                     }
                 }
             }
             if (self.accepting)(&c) {
-                return Some((run, c));
+                writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
+                return Some((c, run));
             }
         }
 
+        writeln!(io::stderr(), "No new successful configuration found after inspecting {} configurations.", i).unwrap();
         None
     }
 }

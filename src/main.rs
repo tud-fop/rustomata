@@ -82,7 +82,13 @@ fn main() {
                                 .arg(Arg::with_name("grammar")
                                      .help("grammar file to use")
                                      .index(1)
-                                     .required(true)))
+                                     .required(true))
+                                .arg(Arg::with_name("number-of-parses")
+                                     .help("number of parses that should be returned")
+                                     .short("n")
+                                     .long("number")
+                                     .default_value("1")
+                                     .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
                                 .arg(Arg::with_name("grammar")
@@ -94,9 +100,15 @@ fn main() {
                     .subcommand(SubCommand::with_name("parse")
                                 .about("parses a word given a multiple context-free grammar")
                                 .arg(Arg::with_name("grammar")
-                                        .help("grammar file to use")
-                                        .index(1)
-                                        .required(true)))
+                                     .help("grammar file to use")
+                                     .index(1)
+                                     .required(true))
+                                .arg(Arg::with_name("number-of-parses")
+                                     .help("number of parses that should be returned")
+                                     .short("n")
+                                     .long("number")
+                                     .default_value("1")
+                                     .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
                                 .arg(Arg::with_name("grammar")
@@ -110,7 +122,13 @@ fn main() {
                                 .arg(Arg::with_name("automaton")
                                      .help("automaton file to use")
                                      .index(1)
-                                     .required(true))))
+                                     .required(true))
+                                .arg(Arg::with_name("number-of-runs")
+                                     .help("number of runs that should be returned")
+                                     .short("n")
+                                     .long("number")
+                                     .default_value("1")
+                                     .required(false))))
         .subcommand(SubCommand::with_name("ctf")
                     .about("coarse to fine related functions")
                     .subcommand(SubCommand::with_name("test")
@@ -123,6 +141,7 @@ fn main() {
                 ("parse", Some(mcfg_parse_matches)) => {
                     let grammar_file_name = mcfg_parse_matches.value_of("grammar").unwrap();
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
+                    let n = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
@@ -133,9 +152,11 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
+                        println!("{}:", sentence);
+                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                            println!("{:?}", parse.0);
+                        }
+                        println!();
                     }
                 },
                 ("automaton", Some(mcfg_automaton_matches)) => {
@@ -156,6 +177,7 @@ fn main() {
                 ("parse", Some(cfg_parse_matches)) => {
                     let grammar_file_name = cfg_parse_matches.value_of("grammar").unwrap();
                     let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                    let n = cfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
@@ -166,9 +188,11 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
+                        println!("{}:", sentence);
+                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                            println!("{:?}", parse.0);
+                        }
+                        println!();
                     }
                 },
                 ("automaton", Some(cfg_automaton_matches)) => {
@@ -189,6 +213,7 @@ fn main() {
                 ("recognise", Some(tsa_recognise_matches)) => {
                     let automaton_file_name = tsa_recognise_matches.value_of("automaton").unwrap();
                     let mut automaton_file = File::open(automaton_file_name).unwrap();
+                    let n = tsa_recognise_matches.value_of("number-of-runs").unwrap().parse().unwrap();
                     let mut automaton_string = String::new();
                     let _ = automaton_file.read_to_string(&mut automaton_string);
                     let automaton: TreeStackAutomaton<String, String, util::log_prob::LogProb> = automaton_string.parse().unwrap();
@@ -197,9 +222,11 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
+                        println!("{}:", sentence);
+                        for run in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                            println!("{:?}", run.1);
+                        }
+                        println!();
                     }
                 },
                 _ => ()
