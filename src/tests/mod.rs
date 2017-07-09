@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use integerise::push_down::*;
 use automata::*;
 use pmcfg::*;
 use cfg::*;
@@ -199,7 +200,7 @@ fn test_from_str_pmcfg() {
 
     assert_eq!(Ok(g.clone()), g_string.parse());
 
-    let a = TreeStackAutomaton::from(g);
+    let a = IntTreeStackAutomaton::from(g);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
@@ -277,7 +278,7 @@ fn test_from_str_cfg() {
 
     assert_eq!(Ok(g.clone()), g_string.parse());
 
-    let a = PushDownAutomaton::from(g);
+    let a = IntPushDownAutomaton::from(g);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }

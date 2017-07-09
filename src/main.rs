@@ -11,6 +11,7 @@ mod util;
 mod push_down;
 mod cfg;
 mod approximation;
+mod integerise;
 
 #[cfg(test)]
 mod tests;
@@ -29,6 +30,7 @@ use util::equivalence_classes::*;
 pub use push_down::*;
 pub use cfg::*;
 pub use approximation::*;
+pub use integerise::*;
 
 fn main() {
     let matches

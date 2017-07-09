@@ -2,9 +2,10 @@ use std::hash::Hash;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
+#[derive(Clone)]
 pub struct Integeriser<A> {
-    map: HashMap<u64, A>,
-    rmap: HashMap<A, u64>,
+    pub map: HashMap<u64, A>,
+    pub rmap: HashMap<A, u64>,
     size: u64
 }
 
@@ -17,6 +18,7 @@ impl<A: Eq + Hash + Clone> Integeriser<A> {
         match self.rmap.entry(a) {
             Entry::Occupied(e) => *e.get(),
             Entry::Vacant(e) => {
+                self.map.insert(self.size, e.key().clone());
                 e.insert(self.size);
                 self.size += 1;
                 self.size - 1
