@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use integerise::push_down::*;
-use automata::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::*;
@@ -335,7 +334,7 @@ fn test_relabel_pushdown() {
 
     let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
 
-    let a = PushDownAutomaton::from(g);
+    let a = IntPushDownAutomaton::from(g);
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
@@ -377,7 +376,7 @@ fn test_topk() {
 
     let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
 
-    let a = PushDownAutomaton::from(g);
+    let a = IntPushDownAutomaton::from(g);
 
     let ptk = PDTopKElement{
         dummy : PhantomData,
@@ -416,7 +415,7 @@ fn test_tts() {
 
     let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
 
-    let a = TreeStackAutomaton::from(g);
+    let a = IntTreeStackAutomaton::from(g);
 
     let tts = TTSElement{
         dummy : PhantomData,

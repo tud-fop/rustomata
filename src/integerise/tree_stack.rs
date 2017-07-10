@@ -10,23 +10,26 @@ use pmcfg;
 
 pub use integerise::*;
 
+#[derive(Clone)]
 pub struct IntTreeStackAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq>{
     pub term_integeriser: Integeriser<T>,
     pub nterm_integeriser: Integeriser<A>,
     pub automaton: TreeStackAutomaton<u64,u64,W>,
+    pub old_automaton: TreeStackAutomaton<A, T, W>,
 }
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
     W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero +One> IntTreeStackAutomaton<A, T, W>{
-    fn new(transitions: Vec<automata::Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>, mut inter1: Integeriser<A>, mut inter2: Integeriser<T>)->IntTreeStackAutomaton<A, T, W> {
+    pub fn new(transitions: Vec<automata::Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>, mut inter1: Integeriser<A>, mut inter2: Integeriser<T>)->IntTreeStackAutomaton<A, T, W> {
         let mut new_transitions = Vec::new();
-        for t in transitions{
+        for t in transitions.clone(){
             new_transitions.push(t.integerise(&mut inter1, &mut inter2));
         }
         IntTreeStackAutomaton{
             term_integeriser: inter2,
-            automaton: TreeStackAutomaton::new(new_transitions, initial.integerise(&mut inter1)),
+            automaton: TreeStackAutomaton::new(new_transitions, initial.clone().integerise(&mut inter1)),
+            old_automaton: TreeStackAutomaton::new(transitions, initial),
             nterm_integeriser: inter1,
 
         }
@@ -225,5 +228,33 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
              storage: Integerisable::translate(s.storage, inter1),
              weight: s.weight.clone(),
          }
+     }
+ }
+
+
+ impl <A: Ord + PartialEq + Debug + Clone + Hash,
+       B: Ord + PartialEq + Debug + Clone + Hash,
+       T: Eq + Clone +Hash,
+       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+       S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
+         automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>,
+         automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+       Approximation<S, IntPushDownAutomaton<B, T, W>> for IntTreeStackAutomaton<A, T, W>
+       where W : Add<Output = W>{
+
+     fn approximation(&self, strat : &S) -> Result<IntPushDownAutomaton<B, T, W>, String>{
+         let new_automaton = self.old_automaton.approximation(strat);
+
+         match new_automaton{
+             Ok(a) =>{
+                 let mut transitions= Vec::new();
+                 for t in a.list_transitions(){
+                     transitions.push(t.clone());
+                 }
+                 Ok(IntPushDownAutomaton::new(transitions, a.initial, Integeriser::new(), Integeriser::new()))
+             }
+             Err(e) => Err(e)
+         }
+
      }
  }

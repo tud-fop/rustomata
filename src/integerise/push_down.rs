@@ -9,23 +9,26 @@ use cfg;
 
 pub use integerise::*;
 
+#[derive(Clone)]
 pub struct IntPushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq>{
     pub term_integeriser: Integeriser<T>,
     pub nterm_integeriser: Integeriser<A>,
     pub automaton: PushDownAutomaton<u64,u64,W>,
+    pub old_automaton: PushDownAutomaton<A, T, W>,
 }
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
     W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero +One> IntPushDownAutomaton<A, T, W>{
-    fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>, mut inter1: Integeriser<A>, mut inter2: Integeriser<T>)->IntPushDownAutomaton<A, T, W> {
+    pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>, mut inter1: Integeriser<A>, mut inter2: Integeriser<T>)->IntPushDownAutomaton<A, T, W> {
         let mut new_transitions = Vec::new();
-        for t in transitions{
+        for t in transitions.clone(){
             new_transitions.push(t.integerise(&mut inter1, &mut inter2));
         }
         IntPushDownAutomaton{
             term_integeriser: inter2,
-            automaton: PushDownAutomaton::new(new_transitions, initial.integerise(&mut inter1)),
+            automaton: PushDownAutomaton::new(new_transitions, initial.clone().integerise(&mut inter1)),
+            old_automaton: PushDownAutomaton::new(transitions, initial),
             nterm_integeriser: inter1,
 
         }
@@ -245,5 +248,32 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
             storage: Integerisable::translate(s.storage, inter1),
             weight: s.weight.clone(),
         }
+    }
+}
+
+impl <A: Ord + PartialEq + Debug + Clone + Hash,
+      B: Ord + PartialEq + Debug + Clone + Hash,
+      T: Eq + Clone +Hash,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      S: ApproximationStrategy<PushDown<A>, PushDown<B>,
+        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+        automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+      Approximation<S, IntPushDownAutomaton<B, T, W>> for IntPushDownAutomaton<A, T, W>
+      where W : Add<Output = W>{
+
+    fn approximation(&self, strat : &S) -> Result<IntPushDownAutomaton<B, T, W>, String>{
+        let new_automaton = self.old_automaton.approximation(strat);
+
+        match new_automaton{
+            Ok(a) =>{
+                let mut transitions= Vec::new();
+                for t in a.list_transitions(){
+                    transitions.push(t.clone());
+                }
+                Ok(IntPushDownAutomaton::new(transitions, a.initial, Integeriser::new(), Integeriser::new()))
+            }
+            Err(e) => Err(e)
+        }
+
     }
 }
