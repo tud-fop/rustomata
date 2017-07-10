@@ -159,7 +159,7 @@ fn main() {
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                    let automaton = TreeStackAutomaton::from(grammar);
+                    let automaton = IntTreeStackAutomaton::from(grammar);
 
                     let mut corpus = String::new();
                     let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -179,7 +179,7 @@ fn main() {
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                    let automaton = TreeStackAutomaton::from(grammar);
+                    let automaton = IntTreeStackAutomaton::from(grammar);
                     println!("{}", automaton);
                 }
                 _ => ()
@@ -195,7 +195,7 @@ fn main() {
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                    let automaton = PushDownAutomaton::from(grammar);
+                    let automaton = IntPushDownAutomaton::from(grammar);
 
                     let mut corpus = String::new();
                     let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -256,7 +256,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = PushDownAutomaton::from(g);
+                            let a = IntPushDownAutomaton::from(g);
 
                             let classes_file_name = parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -287,7 +287,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = PushDownAutomaton::from(g);
+                            let a = IntPushDownAutomaton::from(g);
 
                             println!("Original Automaton");
                             println!("{}", a);
@@ -323,7 +323,7 @@ fn main() {
 
                             let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
-                            let a = PushDownAutomaton::from(g);
+                            let a = IntPushDownAutomaton::from(g);
 
                             let ptk = PDTopKElement{
                                 dummy : PhantomData,
@@ -349,7 +349,7 @@ fn main() {
 
                             let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
-                            let a = PushDownAutomaton::from(g);
+                            let a = IntPushDownAutomaton::from(g);
 
                             println!("Original Automaton");
                             println!("{}", a);
@@ -376,7 +376,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = TreeStackAutomaton::from(g);
+                            let a = IntTreeStackAutomaton::from(g);
 
                             let tts = TTSElement{
                                 dummy : PhantomData,
@@ -400,7 +400,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = TreeStackAutomaton::from(g);
+                            let a = IntTreeStackAutomaton::from(g);
                             println!("Original Automaton");
                             println!("{}", a);
 

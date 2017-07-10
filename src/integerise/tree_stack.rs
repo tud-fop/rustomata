@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::fmt;
 use std::hash::Hash;
 use std::vec::Vec;
 use num_traits::{One, Zero};
@@ -257,4 +258,13 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
          }
 
      }
+ }
+
+ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
+      T: Clone + fmt::Debug + Eq + Hash,
+      W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Zero>
+     fmt::Display for IntTreeStackAutomaton<A, T, W> {
+         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self.old_automaton)
+         }
  }

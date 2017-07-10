@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::fmt;
 use std::hash::Hash;
 use std::vec::Vec;
 use num_traits::{One, Zero};
@@ -134,7 +135,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<PushDownInstructio
                 for e in new_val{
                     nnv.push(inter.integerise(e.clone()))
                 }
-                println!("{:?}", inter.rmap);
                 PushDownInstruction::Replace{
                     current_val:ncv,
                     new_val:nnv,
@@ -166,11 +166,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<PushDownInstructio
                 for e in current_val{
                     ncv.push(inter.find_value(*e).unwrap().clone())
                 }
-                println!("My Bad");
                 for e in new_val{
                     nnv.push(inter.find_value(*e).unwrap().clone())
                 }
-                println!("My Bad");
                 PushDownInstruction::Replace{
                     current_val:ncv,
                     new_val:nnv,
@@ -276,4 +274,13 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         }
 
     }
+}
+
+impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
+     T: Clone + fmt::Debug + Eq + Hash,
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Zero>
+    fmt::Display for IntPushDownAutomaton<A, T, W> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self.old_automaton)
+        }
 }
