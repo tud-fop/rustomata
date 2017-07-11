@@ -322,7 +322,7 @@ fn main() {
 
                             let b = a.approximation(&rlb).unwrap();
 
-                            let size = cfg_parse_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+                            let size = cfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
                             let ptk = PDTopKElement{
                                 dummy : PhantomData,
@@ -367,7 +367,7 @@ fn main() {
 
                             println!("Step 1 (relabel): \n\n{}", b);
 
-                            let size = cfg_automaton_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+                            let size = cfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
                             let ptk = PDTopKElement{
                                 dummy : PhantomData,
@@ -411,7 +411,7 @@ fn main() {
 
                             let b = a.approximation(&rlb).unwrap();
 
-                            let size = mcfg_parse_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+                            let size = mcfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
                             let ptk = PDTopKElement{
                                 dummy : PhantomData,
