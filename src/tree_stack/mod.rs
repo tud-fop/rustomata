@@ -13,6 +13,7 @@ mod from_pmcfg;
 mod from_str;
 mod tree_stack;
 mod tree_stack_instruction;
+mod relabel;
 
 pub use self::from_pmcfg::*;
 pub use self::tree_stack::*;
@@ -107,5 +108,3 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
             write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
         }
     }
-
-

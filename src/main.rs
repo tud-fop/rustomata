@@ -92,8 +92,82 @@ fn main() {
                                      .long("number")
                                      .default_value("1")
                                      .required(false))))
-        .subcommand(SubCommand::with_name("ctf")
-                    .about("coarse to fine related functions")
+        .subcommand(SubCommand::with_name("coarse-to-fine")
+                    .about("functions related to the coarse-to-fine recognise approach")
+                    .subcommand(SubCommand::with_name("cfg")
+                                .about("coarse-to-fine recognising using push-down automata")
+                                .subcommand(SubCommand::with_name("parse")
+                                            .about("parses a word given a context-free grammar")
+                                            .arg(Arg::with_name("grammar")
+                                                    .help("grammar file to use")
+                                                    .index(1)
+                                                    .required(true))
+                                            .arg(Arg::with_name("classes")
+                                                    .help("classes file to use")
+                                                    .index(2)
+                                                    .required(true))
+                                            .arg(Arg::with_name("topk-size")
+                                                    .help("size of the limited push-down")
+                                                    .index(3)
+                                                    .required(true))
+                                            .arg(Arg::with_name("number-of-parses")
+                                                    .help("number of parses that should be returned")
+                                                    .short("n")
+                                                    .long("number")
+                                                    .default_value("1")
+                                                    .required(false)))
+                                .subcommand(SubCommand::with_name("automaton")
+                                            .about("constructs a number of push-down automata from the given context-free grammar")
+                                            .arg(Arg::with_name("grammar")
+                                                    .help("grammar file to use")
+                                                    .index(1)
+                                                    .required(true))
+                                            .arg(Arg::with_name("classes")
+                                                    .help("classes file to use")
+                                                    .index(2)
+                                                    .required(true))
+                                            .arg(Arg::with_name("topk-size")
+                                                    .help("size of the limited push-down")
+                                                    .index(3)
+                                                    .required(true))))
+                    .subcommand(SubCommand::with_name("mcfg")
+                                .about("coarse-to-fine recognising using push-down and tree-stack automata")
+                                .subcommand(SubCommand::with_name("parse")
+                                            .about("parses a word given a context-free grammar")
+                                            .arg(Arg::with_name("grammar")
+                                                    .help("grammar file to use")
+                                                    .index(1)
+                                                    .required(true))
+                                            .arg(Arg::with_name("classes")
+                                                    .help("classes file to use")
+                                                    .index(2)
+                                                    .required(true))
+                                            .arg(Arg::with_name("topk-size")
+                                                    .help("size of the limited push-down")
+                                                    .index(3)
+                                                    .required(true))
+                                            .arg(Arg::with_name("number-of-parses")
+                                                    .help("number of parses that should be returned")
+                                                    .short("n")
+                                                    .long("number")
+                                                    .default_value("1")
+                                                    .required(false)))
+                                .subcommand(SubCommand::with_name("automaton")
+                                            .about("constructs a number of push-down automata from the given context-free grammar")
+                                            .arg(Arg::with_name("grammar")
+                                                    .help("grammar file to use")
+                                                    .index(1)
+                                                    .required(true))
+                                            .arg(Arg::with_name("classes")
+                                                    .help("classes file to use")
+                                                    .index(2)
+                                                    .required(true))
+                                            .arg(Arg::with_name("topk-size")
+                                                    .help("size of the limited push-down")
+                                                    .index(3)
+                                                    .required(true)))))
+        .subcommand(SubCommand::with_name("approximation")
+                    .about("functions related to single approximations")
                     .subcommand(SubCommand::with_name("relabel")
                                 .about("relabels automata with classes file")
                                 .subcommand(SubCommand::with_name("parse")
@@ -102,7 +176,7 @@ fn main() {
                                                 .index(1)
                                                 .required(true))
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("cfg-grammar file to use")
                                                 .index(2)
                                                 .required(true)))
                                 .subcommand(SubCommand::with_name("automaton")
@@ -111,14 +185,14 @@ fn main() {
                                                 .index(1)
                                                 .required(true))
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("cfg-grammar file to use")
                                                 .index(2)
                                                 .required(true))))
                     .subcommand(SubCommand::with_name("topk")
                                 .about("maps pushdown to its topmost k elements")
                                 .subcommand(SubCommand::with_name("parse")
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("cfg-grammar file to use")
                                                 .index(2)
                                                 .required(true))
                                         .arg(Arg::with_name("size")
@@ -127,7 +201,7 @@ fn main() {
                                                 .required(true)))
                                 .subcommand(SubCommand::with_name("automaton")
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("cfg-grammar file to use")
                                                 .index(2)
                                                 .required(true))
                                         .arg(Arg::with_name("size")
@@ -138,12 +212,12 @@ fn main() {
                                 .about("approximates tree-stack into pushdown automata")
                                 .subcommand(SubCommand::with_name("parse")
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("mcfg-grammar file to use")
                                                 .index(1)
                                                 .required(true)))
                                 .subcommand(SubCommand::with_name("automaton")
                                         .arg(Arg::with_name("grammar")
-                                                .help("grammar file to use")
+                                                .help("mcfg-grammar file to use")
                                                 .index(1)
                                                 .required(true)))))
         .get_matches();
@@ -215,12 +289,198 @@ fn main() {
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                    let automaton = PushDownAutomaton::from(grammar);
+                    let automaton = IntPushDownAutomaton::from(grammar);
                     println!("{}", automaton);
                 },
                 _ => ()
             }
-        }
+        },
+        ("coarse-to-fine", Some(ctf_matches)) => {
+            match ctf_matches.subcommand() {
+                ("cfg", Some(cfg_matches)) => {
+                    match cfg_matches.subcommand() {
+                        ("parse", Some(cfg_parse_matches)) => {
+                            let grammar_file_name = cfg_parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let n = cfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let a = IntPushDownAutomaton::from(grammar);
+
+                            let classes_file_name = cfg_parse_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
+
+                            let b = a.approximation(&rlb).unwrap();
+
+                            let size = cfg_parse_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                            };
+
+                            let c = b.approximation(&ptk).unwrap();
+
+                            let mut corpus = String::new();
+                            let _ = std::io::stdin().read_to_string(&mut corpus);
+
+                            for sentence in corpus.lines() {
+                                println!("{}:", sentence);
+                                for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!();
+                            }
+                        },
+                        ("automaton", Some(cfg_automaton_matches)) => {
+                            let grammar_file_name = cfg_automaton_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let a = IntPushDownAutomaton::from(grammar);
+                            println!("Original Automaton: \n\n{}", a);
+
+                            let classes_file_name = cfg_automaton_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
+
+                            let b = a.approximation(&rlb).unwrap();
+
+                            println!("Step 1 (relabel): \n\n{}", b);
+
+                            let size = cfg_automaton_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                            };
+
+                            let c = b.approximation(&ptk).unwrap();
+
+                            println!("Step 2 (restrict to size): \n\n{}", c);
+                        },
+                        _ => ()
+                    }
+                },
+                ("mcfg", Some(mcfg_matches)) => {
+                    match mcfg_matches.subcommand() {
+                        ("parse", Some(mcfg_parse_matches)) => {
+                            let grammar_file_name = mcfg_parse_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name).unwrap();
+                            let n = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let automaton = IntTreeStackAutomaton::from(grammar);
+
+                            let tts = TTSElement{
+                                dummy : PhantomData,
+                            };
+                            let a = automaton.approximation(&tts).unwrap();
+
+                            let classes_file_name = mcfg_parse_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
+
+                            let b = a.approximation(&rlb).unwrap();
+
+                            let size = mcfg_parse_matches.value_of("tobk-size").unwrap().parse::<usize>().unwrap();
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                            };
+
+                            let c = b.approximation(&ptk).unwrap();
+
+                            let mut corpus = String::new();
+                            let _ = std::io::stdin().read_to_string(&mut corpus);
+
+                            for sentence in corpus.lines() {
+                                println!("{}:", sentence);
+                                for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!();
+                            }
+                        },
+                        ("automaton", Some(mcfg_automaton_matches)) => {
+                            let grammar_file_name = mcfg_automaton_matches.value_of("grammar").unwrap();
+                            let mut grammar_file = File::open(grammar_file_name).unwrap();
+                            let mut grammar_string = String::new();
+                            let _ = grammar_file.read_to_string(&mut grammar_string);
+                            let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+
+                            let automaton = IntTreeStackAutomaton::from(grammar);
+                            println!("Original Automaton: \n\n{}", automaton);
+
+                            let tts = TTSElement{
+                                dummy : PhantomData,
+                            };
+                            let a = automaton.approximation(&tts).unwrap();
+
+                            println!("Step 1 (transform to push-down): \n\n{}", a);
+
+                            let classes_file_name = mcfg_automaton_matches.value_of("classes").unwrap();
+                            let mut classes_file = File::open(classes_file_name.clone()).unwrap();
+                            let mut classes_string = String::new();
+                            let _ = classes_file.read_to_string(&mut classes_string);
+                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+
+                            let rlb = RlbElement{
+                                dummy : PhantomData,
+                                mapping : e,
+                            };
+
+                            let b = a.approximation(&rlb).unwrap();
+
+                            println!("Step 2 (relabel): \n\n{}", b);
+
+                            let size = mcfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
+
+                            let ptk = PDTopKElement{
+                                dummy : PhantomData,
+                                size : size,
+                            };
+
+
+                            let c = b.approximation(&ptk).unwrap();
+
+                            println!("Step 3 (restrict to size): \n\n{}", c);
+                        }
+                        _ => ()
+                    }
+                },
+                _ => ()
+            }
+        },
         ("tsa", Some(tsa_matches)) => {
             match tsa_matches.subcommand() {
                 ("recognise", Some(tsa_recognise_matches)) => {
@@ -245,7 +505,7 @@ fn main() {
                 _ => ()
             }
         },
-        ("ctf", Some(r_matches)) => {
+        ("approximation", Some(r_matches)) => {
             match r_matches.subcommand() {
                 ("relabel",Some(relabel_matches)) => {
                     match relabel_matches.subcommand(){

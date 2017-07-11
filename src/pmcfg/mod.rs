@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 mod from_str;
+mod relabel;
 
 /// Variable or terminal symbol in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
