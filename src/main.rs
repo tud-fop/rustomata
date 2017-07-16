@@ -336,6 +336,15 @@ fn main() {
 
                             for sentence in corpus.lines() {
                                 println!("{}:", sentence);
+                                println!("\nLimited-Pushdown");
+                                for parse in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!("\nRelabeled-Pushdown");
+                                for parse in b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!("\nOriginal-Pushdown");
                                 for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
                                     println!("{:?}", parse.0);
                                 }
@@ -425,6 +434,19 @@ fn main() {
 
                             for sentence in corpus.lines() {
                                 println!("{}:", sentence);
+                                println!("\nLimited-Pushdown");
+                                for parse in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!("\nRelabeled-Pushdown");
+                                for parse in b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!("\nTransformed-Pushdown");
+                                for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
+                                    println!("{:?}", parse.0);
+                                }
+                                println!("\nOriginal-TreeStack");
                                 for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
                                     println!("{:?}", parse.0);
                                 }

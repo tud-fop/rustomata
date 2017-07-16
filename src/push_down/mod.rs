@@ -186,8 +186,8 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     pub fn replacek(&self, cur_sym: &Vec<A>,  new_sym: &Vec<A>, limit: &usize) -> Vec<PushDown<A>>{
         let mut new_elements=self.elements.clone();
 
-        if !(self.is_bottom()){
-            for c in cur_sym{
+        for c in cur_sym{
+            if !(new_elements.last() == Some(&self.empty)){
                 if !(new_elements.last()==Some(c)){
                     return Vec::new();
                 }

@@ -26,11 +26,13 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let nempty = a.tree.get(&np).unwrap();
         let ele = vec![nempty.clone()];
 
-
-        PushDown{
+        let p = PushDown{
             elements: ele.clone(),
             empty: ele[0].clone(),
-        }
+        };
+
+        println!("{:?}", p);
+        p
     }
 
     fn approximate_transition(&self, t :  automata::Transition<TreeStack<PosState<A>>, TreeStackInstruction<PosState<A>>, T, W>) ->

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::hash::Hash;
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Div};
@@ -80,14 +81,27 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                 match t.instruction{
                     TreeStackInstruction::Down { ref old_val, .. }=>{
                         let b = strat.approximate_transition(t.clone());
-                        transitions.push(b.clone());
+
                         if *old_val == *i{
                             match b.instruction{
-                                PushDownInstruction::Replace {ref new_val, ..} =>{
+                                PushDownInstruction::Replace {ref current_val, ref new_val} =>{
                                     fina = new_val[0].clone();
+                                    transitions.push(automata::Transition {
+                                        _dummy: PhantomData,
+                                        word: b.word.clone(),
+                                        weight: b.weight.clone(),
+                                        instruction: PushDownInstruction::Replace {
+                                            current_val: current_val.clone(),
+                                            new_val: Vec::new(),
+                                        }
+                                    })
                                 },
-                                _=>(),
+                                _=>{
+                                    transitions.push(b.clone());
+                                },
                             }
+                        }else{
+                            transitions.push(b.clone());
                         }
                     },
                     _=> {
