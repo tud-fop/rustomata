@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use num_traits::{One, Zero};
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Div};
 
 use automata;
 
@@ -42,11 +42,14 @@ pub struct PushDown<A: Ord> {
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
-    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero +One> PushDownAutomaton<A, T, W> {
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero +One> PushDownAutomaton<A, T, W> {
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
         let mut transition_map: HashMap< A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();
+        let emp_transitions = transitions.len();
+        let b = initial.empty.clone();
+
 
         for t in transitions {
             let a =
@@ -62,13 +65,22 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
             transition_map.get_mut(&a).unwrap().push(t.clone());
 
-            let b = initial.empty.clone();
+            let mut nw = W::one();
+            for _ in 2..emp_transitions{
+                nw = nw+W::one();
+            }
+            let nt = automata::Transition{
+                _dummy: t._dummy.clone(),
+                word: t.word.clone(),
+                instruction: t.instruction.clone(),
+                weight: t.weight/nw,
+            };
 
             if !transition_map.contains_key(&b) {
                 transition_map.insert(b.clone(), BinaryHeap::new());
                 ()
             }
-            transition_map.get_mut(&b).unwrap().push(t);
+            transition_map.get_mut(&b).unwrap().push(nt);
         }
 
         let p = PushDownAutomaton {
@@ -267,7 +279,7 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
 
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Zero>
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero>
     fmt::Display for PushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let mut formatted_transitions = String::new();

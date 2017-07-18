@@ -3,7 +3,7 @@ use std::fmt;
 use std::hash::Hash;
 use std::vec::Vec;
 use num_traits::{One, Zero};
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Div};
 
 use automata;
 use cfg;
@@ -20,7 +20,7 @@ pub struct IntPushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
-    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero +One> IntPushDownAutomaton<A, T, W>{
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero +One> IntPushDownAutomaton<A, T, W>{
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>, mut inter1: Integeriser<A>, mut inter2: Integeriser<T>)->IntPushDownAutomaton<A, T, W> {
         let mut new_transitions = Vec::new();
         for t in transitions.clone(){
@@ -38,7 +38,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Zero
+     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero
      > From<cfg::CFG<N, T, W>> for IntPushDownAutomaton<PushState<N,T>, T, W>
     where <W as FromStr>::Err: Debug{
     fn from(g: cfg::CFG<N, T, W>) -> Self {
@@ -252,7 +252,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: ApproximationStrategy<PushDown<A>, PushDown<B>,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
         automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
@@ -278,7 +278,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Zero>
+     W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero>
     fmt::Display for IntPushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             write!(f, "{}", self.old_automaton)

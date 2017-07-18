@@ -30,8 +30,6 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
             elements: ele.clone(),
             empty: ele[0].clone(),
         };
-
-        println!("{:?}", p);
         p
     }
 

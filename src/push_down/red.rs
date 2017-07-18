@@ -31,9 +31,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
             }
             //maps the new transitions.
             for (tk, tv) in c_map{
-                let mut nw = W::zero();
+                let mut nw = W::one();
                 for w in tv.clone(){
-                    nw = nw + w;
+                    nw = nw * w;
                 }
                 let new_t = automata::Transition{
                     _dummy : PhantomData,

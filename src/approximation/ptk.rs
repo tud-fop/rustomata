@@ -17,7 +17,7 @@ pub struct PDTopKElement<A>{
 
 impl <A : Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One> ApproximationStrategy<PushDown<A>, PushDown<A>,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A>, PushDown<A>,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
       for PDTopKElement<A>{

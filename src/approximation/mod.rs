@@ -35,7 +35,7 @@ pub trait Approximation<T, O> {
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: ApproximationStrategy<PushDown<A>, PushDown<B>,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
         automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
@@ -46,10 +46,12 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let initial = strat.approximate_initial(self.initial.clone());
         let mut transitions = Vec::new();
 
-        for (_, value) in self.transitions.clone(){
-            for t in &value{
-                let b = strat.approximate_transition(t.clone());
-                transitions.push(b);
+        for (k, value) in self.transitions.clone(){
+            if !(k == self.initial.empty){
+                for t in &value{
+                    let b = strat.approximate_transition(t.clone());
+                    transitions.push(b);
+                }
             }
         }
         Ok(PushDownAutomaton::new(
@@ -62,7 +64,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
         automata::Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>,
         automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>

@@ -17,7 +17,6 @@ pub mod red;
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
 
-
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
     fn apply(&self, A) -> Vec<A>;

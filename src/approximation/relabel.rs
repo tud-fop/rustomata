@@ -23,7 +23,7 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
       N1: Clone + Eq + Hash,
       N2: Clone + Eq + Hash,
       T: Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One> ApproximationStrategy<PushDown<A1>, PushDown<A2>,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A1>, PushDown<A2>,
         automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>,
         automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>
       for RlbElement<PushDown<A1>, N1, N2>{

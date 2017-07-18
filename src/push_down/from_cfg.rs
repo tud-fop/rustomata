@@ -5,7 +5,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Div};
 use self::num_traits::{One, Zero};
 use std::str::FromStr;
 
@@ -40,7 +40,7 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
 
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Zero
+     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero
      > From<cfg::CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
     where <W as FromStr>::Err: Debug{
      fn from(g: cfg::CFG<N, T, W>) -> Self {
