@@ -59,6 +59,31 @@ pub trait Automaton<S: Clone + Debug + Eq,
             accepting: Box::new(move |c| self.is_terminal(c))
         }
     }
+
+    fn check_run(&self, run: Vec<Transition<S, I, T, W>>, word: Vec<T>) -> bool{
+        let c = Configuration {
+            word: word,
+            storage: self.initial().clone(),
+            weight: W::one(),
+        };
+        self.check(c, &run)
+    }
+
+    fn check<'a>(&'a self, c: Configuration<S, T, W>, run: &Vec<Transition<S, I, T, W>>) -> bool {
+        match run.first(){
+            Some(t) => {
+                let mut run1 = run.clone();
+                run1.remove(0);
+                for c1 in t.apply(&c) {
+                    if self.check(c1, &run1){
+                        return true;
+                    }
+                }
+                false
+            },
+            None => true,
+        }
+    }
 }
 
 pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
