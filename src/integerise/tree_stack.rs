@@ -243,7 +243,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
        Approximation<S, IntPushDownAutomaton<B, T, W>> for IntTreeStackAutomaton<A, T, W>
        where W : Add<Output = W>{
 
-     fn approximation(&self, strat : &S) -> Result<IntPushDownAutomaton<B, T, W>, String>{
+     fn approximation(&self, strat : &mut S) -> Result<IntPushDownAutomaton<B, T, W>, String>{
          let new_automaton = self.old_automaton.approximation(strat);
 
          match new_automaton{

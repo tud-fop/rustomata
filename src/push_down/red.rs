@@ -18,12 +18,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         //for every configuration
         for (k,v) in tm{
             //samples Transitions into Key(Instruction, Word), Value(Vec<Weight>) pairs.
-            let mut c_map : HashMap<TransitionKey<PushDownInstruction<A>, T>,Vec<W>>  = HashMap::new();
+            let mut c_map : HashMap<TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>,Vec<W>>  = HashMap::new();
             for t in v{
-                let tkey = TransitionKey{
-                    instruction: t.instruction.clone(),
-                    word : t.word.clone(),
-                };
+                let tkey = TransitionKey::new(&t);
                 if !c_map.contains_key(&tkey) {
                     c_map.insert(tkey.clone(), Vec::new());
                 }

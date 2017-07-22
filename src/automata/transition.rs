@@ -7,7 +7,7 @@ use automata::Instruction;
 use automata::Configuration;
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Transition<A, I: Instruction<A>, T, W> {
     pub _dummy: PhantomData<A>,
     pub word: Vec<T>,
@@ -22,7 +22,7 @@ impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Cop
             return Vec::new()
         }
 
-        
+
         let mut confs = Vec::new();
         for s1 in self.instruction.apply(c.storage.clone()) {
             confs.push(

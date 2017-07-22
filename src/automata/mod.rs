@@ -60,28 +60,32 @@ pub trait Automaton<S: Clone + Debug + Eq,
         }
     }
 
-    fn check_run(&self, run: Vec<Transition<S, I, T, W>>, word: Vec<T>) -> bool{
+    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>, word: Vec<T>) -> Option<Configuration<S, T, W>>{
         let c = Configuration {
             word: word,
             storage: self.initial().clone(),
             weight: W::one(),
         };
-        self.check(c, &run)
+        self.check(c, run)
     }
 
-    fn check<'a>(&'a self, c: Configuration<S, T, W>, run: &Vec<Transition<S, I, T, W>>) -> bool {
+    //note: gives back the first configuration it finds
+    fn check<'a>(&'a self, c: Configuration<S, T, W>, run: &Vec<Transition<S, I, T, W>>) -> Option<Configuration<S, T, W>> {
         match run.first(){
             Some(t) => {
                 let mut run1 = run.clone();
                 run1.remove(0);
                 for c1 in t.apply(&c) {
-                    if self.check(c1, &run1){
-                        return true;
+                    match self.check(c1, &run1){
+                        Some(x) =>{
+                            return Some(x);
+                        },
+                        None =>(),
                     }
                 }
-                false
+                None
             },
-            None => true,
+            None => Some(c.clone()),
         }
     }
 }

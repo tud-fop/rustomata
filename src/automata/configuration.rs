@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::fmt;
 
 /// Configuration of an automaton containing sequence of symbols `word` to be read, a storage value `storage`, and a `weight`.
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -29,3 +30,20 @@ impl<S: Eq, T: Eq, W: Ord + Eq> Ord for Configuration<S, T, W> {
     }
 }
 
+impl<S: fmt::Display,
+     T: fmt::Display,
+     W: fmt::Display
+    >fmt::Display for Configuration<S, T, W> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let mut buffer = String::new();
+            let mut iter1 = self.word.iter().peekable();
+
+            while let Some(nt) = iter1.next() {
+                buffer.push_str(format!("{}", nt).as_str());
+                if iter1.peek().is_some() {
+                    buffer.push_str(" ");
+                }
+            }
+            write!(f, "Configuration:\nword:[{}]\nweight:{}\n{}\n", buffer, self.weight, self.storage)
+        }
+    }

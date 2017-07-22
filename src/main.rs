@@ -19,13 +19,13 @@ mod tests;
 use clap::{Arg, App, SubCommand};
 use std::io::prelude::*;
 use std::fs::File;
-use std::marker::PhantomData;
 
 pub use tree_stack::*;
 pub use automata::*;
 pub use pmcfg::*;
 pub use util::*;
 use util::equivalence_classes::*;
+pub use util::ctf::*;
 
 pub use push_down::*;
 pub use cfg::*;
@@ -307,7 +307,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = IntPushDownAutomaton::from(grammar);
+                            let a = PushDownAutomaton::from(grammar);
 
                             let classes_file_name = cfg_parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -315,40 +315,50 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             let size = cfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
+                            let mut ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&ptk).unwrap();
+                            let c = b.approximation(&mut ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
+                            let n1 = 100;
+                            let n2 = 10;
+                            let n3 = n;
+                            let mut c2 = 0;
+                            let mut c3 = 0;
+
                             for sentence in corpus.lines() {
-                                println!("{}:", sentence);
-                                println!("\nLimited-Pushdown");
-                                for parse in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
+                                println!("{}:\n", sentence);
+                                let sentence2 = sentence.clone();
+                                let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                                for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+                                    let s1 = ctf_level(&word, parse1.1, &ptk, &b);
+                                    for parse2 in s1{
+                                        let s2 = ctf_level(&word, parse2.1, &rlb, &a);
+                                        for parse3 in s2{
+                                            println!("{}", parse3.0);
+                                            println!("{}", Run::new(parse3.1));
+                                            c3=c3+1;
+                                            if c3>=n3{
+                                                break
+                                            }
+                                        }
+                                        c2=c2+1;
+                                        if c2>=n2||c3>=n3{
+                                            break;
+                                        }
+                                    }
+                                    if c2>=n2||c3>=n3{
+                                        break;
+                                    }
                                 }
-                                println!("\nRelabeled-Pushdown");
-                                for parse in b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
-                                }
-                                println!("\nOriginal-Pushdown");
-                                for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
-                                }
-                                println!();
                             }
                         },
                         ("automaton", Some(cfg_automaton_matches)) => {
@@ -367,23 +377,17 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             println!("Step 1 (relabel): \n\n{}", b);
 
                             let size = cfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
+                            let mut ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&ptk).unwrap();
+                            let c = b.approximation(&mut ptk).unwrap();
 
                             println!("Step 2 (restrict to size): \n\n{}", c);
                         },
@@ -402,10 +406,9 @@ fn main() {
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
 
-                            let tts = TTSElement{
-                                dummy : PhantomData,
-                            };
-                            let a = automaton.approximation(&tts).unwrap();
+                            let mut tts = TTSElement::new();
+
+                            let a = automaton.approximation(&mut tts).unwrap();
 
                             let classes_file_name = mcfg_parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -413,21 +416,15 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             let size = mcfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
+                            let mut ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&ptk).unwrap();
+                            let c = b.approximation(&mut ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -463,10 +460,9 @@ fn main() {
                             let automaton = IntTreeStackAutomaton::from(grammar);
                             println!("Original Automaton: \n\n{}", automaton);
 
-                            let tts = TTSElement{
-                                dummy : PhantomData,
-                            };
-                            let a = automaton.approximation(&tts).unwrap();
+                            let mut tts = TTSElement::new();
+
+                            let a = automaton.approximation(&mut tts).unwrap();
 
                             println!("Step 1 (transform to push-down): \n\n{}", a);
 
@@ -476,24 +472,18 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             println!("Step 2 (relabel): \n\n{}", b);
 
                             let size = mcfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
+                            let mut ptk = PDTopKElement::new(size);
 
 
-                            let c = b.approximation(&ptk).unwrap();
+                            let c = b.approximation(&mut ptk).unwrap();
 
                             println!("Step 3 (restrict to size): \n\n{}", c);
                         }
@@ -546,12 +536,9 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -580,12 +567,9 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let rlb = RlbElement{
-                                dummy : PhantomData,
-                                mapping : e,
-                            };
+                            let mut rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&rlb).unwrap();
+                            let b = a.approximation(&mut rlb).unwrap();
 
                             println!("Approximated Automaton");
                             println!("{}", b);
@@ -607,11 +591,9 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
-                            let b = a.approximation(&ptk).unwrap();
+                            let mut ptk = PDTopKElement::new(size);
+
+                            let b = a.approximation(&mut ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -636,12 +618,9 @@ fn main() {
                             println!("Original Automaton");
                             println!("{}", a);
 
-                            let ptk = PDTopKElement{
-                                dummy : PhantomData,
-                                size : size,
-                            };
+                            let mut ptk = PDTopKElement::new(size);
 
-                            let b = a.approximation(&ptk);
+                            let b = a.approximation(&mut ptk);
                             println!("Approximated Automaton");
                             println!("{}", b.unwrap());
                         },
@@ -660,10 +639,9 @@ fn main() {
 
                             let a = IntTreeStackAutomaton::from(g);
 
-                            let tts = TTSElement{
-                                dummy : PhantomData,
-                            };
-                            let b = a.approximation(&tts).unwrap();
+                            let mut tts = TTSElement::new();
+
+                            let b = a.approximation(&mut tts).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -686,10 +664,9 @@ fn main() {
                             println!("Original Automaton");
                             println!("{}", a);
 
-                            let tts = TTSElement{
-                                dummy : PhantomData,
-                            };
-                            let b = a.approximation(&tts);
+                            let mut tts = TTSElement::new();
+
+                            let b = a.approximation(&mut tts);
                             println!("Approximated Automaton");
                             println!("{}", b.unwrap());
                         },

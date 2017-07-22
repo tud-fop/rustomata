@@ -27,14 +27,14 @@ pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W
 }
 
 /// Instruction on `PushDown<A>`s.
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
     Replace { current_val: Vec<A>, new_val : Vec<A>},
     ReplaceK { current_val: Vec<A>, new_val : Vec<A>, limit : usize},
 }
 
 /// Stack with Elements of type `A`
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash, PartialOrd, Ord)]
 pub struct PushDown<A: Ord> {
     pub elements: Vec<A>,
     pub empty: A,
@@ -223,6 +223,22 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         }]
     }
 }
+
+
+impl<A: Ord + fmt::Display> fmt::Display for PushDown<A> {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let mut buffer = String::new();
+            let mut iter1 = self.elements.iter().peekable();
+
+            while let Some(nt) = iter1.next() {
+                buffer.push_str(format!("{}", nt).as_str());
+                if iter1.peek().is_some() {
+                    buffer.push_str(" ");
+                }
+            }
+            write!(f, "stack: [{}], empty:{}", buffer, self.empty)
+        }
+    }
 
 
 impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {

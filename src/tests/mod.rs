@@ -342,12 +342,9 @@ fn test_relabel_pushdown() {
 
     let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
-    let rlb = RlbElement{
-        dummy : PhantomData,
-        mapping : e,
-    };
+    let mut rlb = RlbElement::new(e);
 
-    let b = a.approximation(&rlb).unwrap();
+    let b = a.approximation(&mut rlb).unwrap();
 
     assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
     assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
@@ -378,12 +375,9 @@ fn test_topk() {
 
     let a = IntPushDownAutomaton::from(g);
 
-    let ptk = PDTopKElement{
-        dummy : PhantomData,
-        size : 4,
-    };
+    let mut ptk = PDTopKElement::new(4);
 
-    let b = a.clone().approximation(&ptk).unwrap();
+    let b = a.clone().approximation(&mut ptk).unwrap();
 
     assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
@@ -417,11 +411,9 @@ fn test_tts() {
 
     let a = IntTreeStackAutomaton::from(g);
 
-    let tts = TTSElement{
-        dummy : PhantomData,
-    };
+    let mut tts = TTSElement::new();
 
-    let b = a.clone().approximation(&tts).unwrap();
+    let b = a.clone().approximation(&mut tts).unwrap();
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
@@ -462,12 +454,9 @@ fn test_relabel_check() {
 
     let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
-    let rlb = RlbElement{
-        dummy : PhantomData,
-        mapping : e,
-    };
+    let mut rlb = RlbElement::new(e);
 
-    let b = a.approximation(&rlb).unwrap();
+    let b = a.approximation(&mut rlb).unwrap();
 
     let (_, run) = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
     assert_eq!(true, b.check_run(run, vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));

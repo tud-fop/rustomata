@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::collections::{BinaryHeap};
 use std::hash::Hash;
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Div};
@@ -24,12 +25,14 @@ pub use self::tts::*;
 pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn approximate_initial(&self, A1) -> A2;
 
-    fn approximate_transition(&self, T1) -> T2;
+    fn approximate_transition(&mut self, T1) -> T2;
+
+    fn translate_run(&self, Vec<T2>) -> BinaryHeap<Vec<T1>>;
 }
 
 //Approximates automaton using Strategy-Element
 pub trait Approximation<T, O> {
-    fn approximation(&self, &T) -> Result<O, String>;
+    fn approximation(&self, &mut T) -> Result<O, String>;
 }
 
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
@@ -42,7 +45,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
       where W : Add<Output = W>{
 
-    fn approximation(&self, strat : &S) -> Result<PushDownAutomaton<B, T, W>, String>{
+    fn approximation(&self, strat : &mut S) -> Result<PushDownAutomaton<B, T, W>, String>{
         let initial = strat.approximate_initial(self.initial.clone());
         let mut transitions = Vec::new();
 
@@ -71,7 +74,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       Approximation<S, PushDownAutomaton<B, T, W>> for TreeStackAutomaton<A, T, W>
       where W : Add<Output = W>{
 
-    fn approximation(&self, strat : &S) -> Result<PushDownAutomaton<B, T, W>, String>{
+    fn approximation(&self, strat : &mut S) -> Result<PushDownAutomaton<B, T, W>, String>{
         let initial1 = strat.approximate_initial(self.initial.clone());
         let i = self.initial.tree.get(&Vec::new()).unwrap();
         let mut fina = initial1.empty.clone();
