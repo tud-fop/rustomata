@@ -133,3 +133,16 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         BinaryHeap::from(res)
     }
 }
+
+impl<N1: Ord + PartialEq + Debug + Clone + Hash, T: Ord, W: Ord>
+    IntApproximationStrategy<N1, N1, TTSElement<u64, automata::Transition<TreeStack<u64>, TreeStackInstruction<u64>, T, W>,
+                                                        TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>>
+    for TTSElement<N1, automata::Transition<TreeStack<N1>, TreeStackInstruction<N1>, T, W>,
+                          TransitionKey<PushDown<N1>, PushDownInstruction<N1>, T, W>>{
+
+    fn integerise(&self, inter: &Integeriser<N1>)-> (Integeriser<N1>, TTSElement<u64, automata::Transition<TreeStack<u64>, TreeStackInstruction<u64>, T, W>,
+                                         TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>){
+
+         (inter.clone(), TTSElement::new())
+    }
+}

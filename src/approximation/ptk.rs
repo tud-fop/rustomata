@@ -6,12 +6,13 @@ pub use automata::*;
 pub use approximation::*;
 
 pub use util::*;
+pub use util::integeriser::*;
 
 pub use tree_stack::*;
 pub use push_down::*;
 
 //Strategy Element for mapping pushdown to its top most k elements
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PDTopKElement<A, T1, T2>{
     pub dummy: PhantomData<A>,
     pub trans_map: BTreeMap<T2,Vec<T1>>,
@@ -113,5 +114,17 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
             }
         }
         BinaryHeap::from(res)
+    }
+}
+
+impl<N1: Ord + PartialEq + Debug + Clone + Hash, T: Ord, W: Ord> IntApproximationStrategy<N1, N1, PDTopKElement<u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>,
+                                                                       TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>>
+    for PDTopKElement<N1, automata::Transition<PushDown<N1>, PushDownInstruction<N1>, T, W>,
+                          TransitionKey<PushDown<N1>, PushDownInstruction<N1>, T, W>>{
+
+    fn integerise(&self, inter: &Integeriser<N1>)-> (Integeriser<N1>, PDTopKElement<u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>,
+                                         TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>){
+
+         (inter.clone(), PDTopKElement::new(self.size))
     }
 }

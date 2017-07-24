@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use nom::{IResult, is_space};
 
 use util::parsing::*;
+use util::integeriser::*;
+use approximation::*;
 
 pub struct EquivalenceSet<A, B>{
     pub key: B,
@@ -12,6 +14,7 @@ pub struct EquivalenceSet<A, B>{
 }
 
 ///A struct containing a remapping of Nonterminals into their respective Equivalence classes.
+#[derive(Clone)]
 pub struct EquivalenceClass<A, B>{
     pub map: HashMap<A, B>,
     pub default: A
@@ -109,4 +112,19 @@ fn parse_heap<A:FromStr>(input: &[u8]) -> IResult<&[u8], Vec<A>>
     where <A as FromStr>::Err: Debug
 {
     parse_vec(input, parse_token, "[", "]", ",")
+}
+
+//fits the equivalenz labels for integerise
+pub fn in_fit<N: Relabel<A, B, N2> + Hash + Eq + Clone + Ord, N2: Hash + Eq + Clone + Ord, A, B>(eq: EquivalenceClass<A, B>, inter: &Integeriser<N>)-> (EquivalenceClass<u64, u64>, Integeriser<N2>){
+    let mut i2 = Integeriser::new();
+    let mut nmap = HashMap::new();
+    let keys = inter.values();
+    for k in keys{
+        nmap.insert(*inter.find_key(k.clone()).unwrap(), i2.integerise(k.relabel(&eq)));
+    }
+    let e = EquivalenceClass{
+        map: nmap,
+        default: 0 as u64,
+    };
+    (e, i2)
 }

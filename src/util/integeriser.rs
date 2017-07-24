@@ -2,8 +2,8 @@ use std::hash::Hash;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-#[derive(Clone)]
-pub struct Integeriser<A> {
+#[derive(Clone, Debug)]
+pub struct Integeriser<A: Hash + Eq> {
     pub map: HashMap<u64, A>,
     pub rmap: HashMap<A, u64>,
     size: u64
@@ -36,5 +36,13 @@ impl<A: Eq + Hash + Clone> Integeriser<A> {
 
     pub fn get_size(&self) -> u64 {
         self.size
+    }
+
+    pub fn values(&self) -> Vec<A>{
+        let mut v = Vec::new();
+        for k in self.rmap.keys(){
+            v.push(k.clone());
+        }
+        v
     }
 }

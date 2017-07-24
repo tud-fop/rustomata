@@ -30,22 +30,27 @@ pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn translate_run(&self, Vec<T2>) -> BinaryHeap<Vec<T1>>;
 }
 
+pub trait IntApproximationStrategy<N1: Hash + Eq, N2: Hash + Eq, S> {
+    fn integerise(&self, &Integeriser<N1>)->(Integeriser<N2>, S);
+}
+
 //Approximates automaton using Strategy-Element
 pub trait Approximation<T, O> {
-    fn approximation(&self, &mut T) -> Result<O, String>;
+    fn approximation(&self, &T) -> Result<(O, T), String>;
 }
 
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
-      S: ApproximationStrategy<PushDown<A>, PushDown<B>,
+      S: Clone + ApproximationStrategy<PushDown<A>, PushDown<B>,
         automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
         automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
       Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
       where W : Add<Output = W>{
 
-    fn approximation(&self, strat : &mut S) -> Result<PushDownAutomaton<B, T, W>, String>{
+    fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
+        let mut strat = strati.clone();
         let initial = strat.approximate_initial(self.initial.clone());
         let mut transitions = Vec::new();
 
@@ -57,10 +62,10 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                 }
             }
         }
-        Ok(PushDownAutomaton::new(
+        Ok((PushDownAutomaton::new(
             transitions,
             initial,
-            ))
+        ), strat))
     }
 }
 
@@ -74,7 +79,8 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       Approximation<S, PushDownAutomaton<B, T, W>> for TreeStackAutomaton<A, T, W>
       where W : Add<Output = W>{
 
-    fn approximation(&self, strat : &mut S) -> Result<PushDownAutomaton<B, T, W>, String>{
+    fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
+        let mut strat = strati.clone();
         let initial1 = strat.approximate_initial(self.initial.clone());
         let i = self.initial.tree.get(&Vec::new()).unwrap();
         let mut fina = initial1.empty.clone();
@@ -119,9 +125,9 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         }
         let initial2 = PushDown::new(initial1.empty, fina);
 
-        Ok(PushDownAutomaton::new(
+        Ok((PushDownAutomaton::new(
             transitions,
             initial2
-            ))
+        ),strat))
     }
 }

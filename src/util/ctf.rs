@@ -26,8 +26,8 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
     }
     for e in v{
         match automaton.check_run(&e, word.clone()){
-            Some(c) =>{
-                outp.push((c,e));
+            Some((c, e2)) =>{
+                outp.push((c,e2));
             },
             None =>(),
         }

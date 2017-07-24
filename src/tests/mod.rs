@@ -4,7 +4,6 @@ use integerise::push_down::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::*;
-use util::integeriser::*;
 use util::log_prob::*;
 use util::equivalence_classes::*;
 
@@ -342,9 +341,9 @@ fn test_relabel_pushdown() {
 
     let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
-    let mut rlb = RlbElement::new(e);
+    let rlb = RlbElement::new(e);
 
-    let b = a.approximation(&mut rlb).unwrap();
+    let (b, _) = a.approximation(&rlb).unwrap();
 
     assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
     assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
@@ -375,9 +374,9 @@ fn test_topk() {
 
     let a = IntPushDownAutomaton::from(g);
 
-    let mut ptk = PDTopKElement::new(4);
+    let ptk = PDTopKElement::new(4);
 
-    let b = a.clone().approximation(&mut ptk).unwrap();
+    let (b, _) = a.clone().approximation(&ptk).unwrap();
 
     assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
@@ -411,9 +410,9 @@ fn test_tts() {
 
     let a = IntTreeStackAutomaton::from(g);
 
-    let mut tts = TTSElement::new();
+    let tts = TTSElement::new();
 
-    let b = a.clone().approximation(&mut tts).unwrap();
+    let (b, _) = a.clone().approximation(&tts).unwrap();
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
@@ -446,7 +445,7 @@ fn test_relabel_check() {
 
     let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
 
-    let a = PushDownAutomaton::from(g);
+    let a = IntPushDownAutomaton::from(g);
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
@@ -454,11 +453,11 @@ fn test_relabel_check() {
 
     let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
-    let mut rlb = RlbElement::new(e);
+    let rlb = RlbElement::new(e);
 
-    let b = a.approximation(&mut rlb).unwrap();
+    let (b, _) = a.approximation(&rlb).unwrap();
 
-    let (_, run) = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
-    assert_eq!(true, b.check_run(run, vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
+    let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
+    assert_ne!(None, b.check_run(&itemb.give_up().1, vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
 
 }

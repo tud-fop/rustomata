@@ -60,13 +60,19 @@ pub trait Automaton<S: Clone + Debug + Eq,
         }
     }
 
-    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>, word: Vec<T>) -> Option<Configuration<S, T, W>>{
+    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>, word: Vec<T>) -> Option<(Configuration<S, T, W>, Vec<Transition<S, I, T, W>>)>{
         let c = Configuration {
             word: word,
             storage: self.initial().clone(),
             weight: W::one(),
         };
-        self.check(c, run)
+        match self.check(c, run){
+            Some(c2) => {
+                Some((c2, run.clone()))
+            },
+            None => None,
+        }
+
     }
 
     //note: gives back the first configuration it finds

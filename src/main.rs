@@ -241,7 +241,7 @@ fn main() {
                     for sentence in corpus.lines() {
                         println!("{}:", sentence);
                         for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.0);
+                            println!("{:?}", parse.translate().0);
                         }
                         println!();
                     }
@@ -277,7 +277,7 @@ fn main() {
                     for sentence in corpus.lines() {
                         println!("{}:", sentence);
                         for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.0);
+                            println!("{:?}", parse.translate().0);
                         }
                         println!();
                     }
@@ -315,15 +315,15 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             let size = cfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&mut ptk).unwrap();
+                            let (c, _) = b.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -377,17 +377,17 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             println!("Step 1 (relabel): \n\n{}", b);
 
                             let size = cfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&mut ptk).unwrap();
+                            let (c, _) = b.approximation(&ptk).unwrap();
 
                             println!("Step 2 (restrict to size): \n\n{}", c);
                         },
@@ -406,9 +406,9 @@ fn main() {
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
 
-                            let mut tts = TTSElement::new();
+                            let tts = TTSElement::new();
 
-                            let a = automaton.approximation(&mut tts).unwrap();
+                            let (a, _) = automaton.approximation(&tts).unwrap();
 
                             let classes_file_name = mcfg_parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -416,15 +416,15 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             let size = mcfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
-                            let c = b.approximation(&mut ptk).unwrap();
+                            let (c, _) = b.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -433,19 +433,19 @@ fn main() {
                                 println!("{}:", sentence);
                                 println!("\nLimited-Pushdown");
                                 for parse in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
+                                    println!("{:?}", parse.translate().0);
                                 }
                                 println!("\nRelabeled-Pushdown");
                                 for parse in b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
+                                    println!("{:?}", parse.translate().0);
                                 }
                                 println!("\nTransformed-Pushdown");
                                 for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
+                                    println!("{:?}", parse.translate().0);
                                 }
                                 println!("\nOriginal-TreeStack");
                                 for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.0);
+                                    println!("{:?}", parse.translate().0);
                                 }
                                 println!();
                             }
@@ -460,9 +460,9 @@ fn main() {
                             let automaton = IntTreeStackAutomaton::from(grammar);
                             println!("Original Automaton: \n\n{}", automaton);
 
-                            let mut tts = TTSElement::new();
+                            let tts = TTSElement::new();
 
-                            let a = automaton.approximation(&mut tts).unwrap();
+                            let (a, _) = automaton.approximation(&tts).unwrap();
 
                             println!("Step 1 (transform to push-down): \n\n{}", a);
 
@@ -472,18 +472,18 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             println!("Step 2 (relabel): \n\n{}", b);
 
                             let size = mcfg_automaton_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
 
-                            let c = b.approximation(&mut ptk).unwrap();
+                            let (c, _)= b.approximation(&ptk).unwrap();
 
                             println!("Step 3 (restrict to size): \n\n{}", c);
                         }
@@ -536,9 +536,9 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -567,9 +567,9 @@ fn main() {
                             let _ = classes_file.read_to_string(&mut classes_string);
                             let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                            let mut rlb = RlbElement::new(e);
+                            let rlb = RlbElement::new(e);
 
-                            let b = a.approximation(&mut rlb).unwrap();
+                            let (b, _) = a.approximation(&rlb).unwrap();
 
                             println!("Approximated Automaton");
                             println!("{}", b);
@@ -591,9 +591,9 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
-                            let b = a.approximation(&mut ptk).unwrap();
+                            let (b, _) = a.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -618,11 +618,11 @@ fn main() {
                             println!("Original Automaton");
                             println!("{}", a);
 
-                            let mut ptk = PDTopKElement::new(size);
+                            let ptk = PDTopKElement::new(size);
 
-                            let b = a.approximation(&mut ptk);
+                            let (b, _) = a.approximation(&ptk).unwrap();
                             println!("Approximated Automaton");
-                            println!("{}", b.unwrap());
+                            println!("{}", b);
                         },
                         _ => ()
                     }
@@ -639,9 +639,9 @@ fn main() {
 
                             let a = IntTreeStackAutomaton::from(g);
 
-                            let mut tts = TTSElement::new();
+                            let tts = TTSElement::new();
 
-                            let b = a.approximation(&mut tts).unwrap();
+                            let (b, _) = a.approximation(&tts).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -664,11 +664,11 @@ fn main() {
                             println!("Original Automaton");
                             println!("{}", a);
 
-                            let mut tts = TTSElement::new();
+                            let tts = TTSElement::new();
 
-                            let b = a.approximation(&mut tts);
+                            let (b, _) = a.approximation(&tts).unwrap();
                             println!("Approximated Automaton");
-                            println!("{}", b.unwrap());
+                            println!("{}", b);
                         },
                         _ => ()
                     }
