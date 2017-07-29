@@ -22,7 +22,6 @@ impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Cop
             return Vec::new()
         }
 
-
         let mut confs = Vec::new();
         for s1 in self.instruction.apply(c.storage.clone()) {
             confs.push(

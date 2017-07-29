@@ -25,6 +25,8 @@ pub use self::tts::*;
 pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn approximate_initial(&self, A1) -> A2;
 
+    fn add_transitions(&mut self, &T1, &T2);
+
     fn approximate_transition(&mut self, T1) -> T2;
 
     fn translate_run(&self, Vec<T2>) -> BinaryHeap<Vec<T1>>;

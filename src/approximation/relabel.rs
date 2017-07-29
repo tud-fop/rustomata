@@ -131,6 +131,15 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
         }
         BinaryHeap::from(res)
     }
+
+    fn add_transitions(&mut self, t1: &automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, t2: &automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>){
+        let tk = TransitionKey::new(t2);
+        if !self.trans_map.contains_key(&tk) {
+            self.trans_map.insert(tk.clone(), Vec::new());
+            ()
+        }
+        self.trans_map.get_mut(&tk).unwrap().push(t1.clone());
+    }
 }
 
 impl<A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,

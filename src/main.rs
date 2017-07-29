@@ -307,7 +307,7 @@ fn main() {
                             let _ = grammar_file.read_to_string(&mut grammar_string);
                             let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
-                            let a = PushDownAutomaton::from(grammar);
+                            let a = IntPushDownAutomaton::from(grammar);
 
                             let classes_file_name = cfg_parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -317,13 +317,13 @@ fn main() {
 
                             let rlb = RlbElement::new(e);
 
-                            let (b, _) = a.approximation(&rlb).unwrap();
+                            let (b, nrlb) = a.approximation(&rlb).unwrap();
 
                             let size = cfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
                             let ptk = PDTopKElement::new(size);
 
-                            let (c, _) = b.approximation(&ptk).unwrap();
+                            let (c, nptk) = b.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -339,12 +339,11 @@ fn main() {
                                 let sentence2 = sentence.clone();
                                 let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
                                 for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-                                    let s1 = ctf_level(&word, parse1.1, &ptk, &b);
+                                    let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
-                                        let s2 = ctf_level(&word, parse2.1, &rlb, &a);
+                                        let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
                                         for parse3 in s2{
-                                            println!("{}", parse3.0);
-                                            println!("{}", Run::new(parse3.1));
+                                            println!("{}", Run::new(parse3.translate().1));
                                             c3=c3+1;
                                             if c3>=n3{
                                                 break
@@ -408,7 +407,7 @@ fn main() {
 
                             let tts = TTSElement::new();
 
-                            let (a, _) = automaton.approximation(&tts).unwrap();
+                            let (a, ntts) = automaton.approximation(&tts).unwrap();
 
                             let classes_file_name = mcfg_parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -418,36 +417,56 @@ fn main() {
 
                             let rlb = RlbElement::new(e);
 
-                            let (b, _) = a.approximation(&rlb).unwrap();
+                            let (b, nrlb) = a.approximation(&rlb).unwrap();
 
                             let size = mcfg_parse_matches.value_of("topk-size").unwrap().parse::<usize>().unwrap();
 
                             let ptk = PDTopKElement::new(size);
 
-                            let (c, _) = b.approximation(&ptk).unwrap();
+                            let (c, nptk) = b.approximation(&ptk).unwrap();
 
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
+                            let n1 = 1000;
+                            let n2 = 100;
+                            let n3 = 10;
+                            let n4 = n;
+                            let mut c2 = 0;
+                            let mut c3 = 0;
+                            let mut c4 = 0;
+
                             for sentence in corpus.lines() {
-                                println!("{}:", sentence);
-                                println!("\nLimited-Pushdown");
-                                for parse in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.translate().0);
+                                println!("{}:\n", sentence);
+                                let sentence2 = sentence.clone();
+                                let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                                for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+                                    let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
+                                    for parse2 in s1{
+                                        let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
+                                        for parse3 in s2{
+                                            let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                                            for parse4 in s3{
+                                                println!("{}", Run::new(parse4.translate().1));
+                                                c4=c4+1;
+                                                if c4>=n4{
+                                                    break
+                                                }
+                                            }
+                                            c3=c3+1;
+                                            if c4>=n4||c3>=n3{
+                                                break;
+                                            }
+                                        }
+                                        c2=c2+1;
+                                        if c2>=n2||c3>=n3||c4>=n4{
+                                            break;
+                                        }
+                                    }
+                                    if c2>=n2||c3>=n3||c4>=n4{
+                                        break;
+                                    }
                                 }
-                                println!("\nRelabeled-Pushdown");
-                                for parse in b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.translate().0);
-                                }
-                                println!("\nTransformed-Pushdown");
-                                for parse in a.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.translate().0);
-                                }
-                                println!("\nOriginal-TreeStack");
-                                for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                                    println!("{:?}", parse.translate().0);
-                                }
-                                println!();
                             }
                         },
                         ("automaton", Some(mcfg_automaton_matches)) => {

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::fmt;
 
 
 /// Upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
@@ -69,5 +70,12 @@ impl<A: Ord + PartialEq + Clone + Debug> TreeStack<A> {
                 _ => Vec::new(),
             }
         }
+    }
+}
+
+impl<A: Ord + Clone + Debug + fmt::Display> fmt::Display for TreeStack<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+
+        write!(f, "current symbol:{}", self.current_symbol())
     }
 }

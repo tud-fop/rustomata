@@ -6,6 +6,7 @@ use cfg::*;
 use approximation::*;
 use util::log_prob::*;
 use util::equivalence_classes::*;
+use util::ctf::*;
 
 use num_traits::One;
 
@@ -460,4 +461,94 @@ fn test_relabel_check() {
     let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
     assert_ne!(None, b.check_run(&itemb.give_up().1, vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
 
+}
+
+#[test]
+fn test_ctf_scheme(){
+    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
+    let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
+    let r2_string = "A → [[],  []                             ] (    )   # 0.5";
+    let r3_string = "B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5";
+    let r4_string = "B → [[],  []                             ] (    )   # 0.5";
+
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r3_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r4_string.clone());
+
+    let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let automaton = IntTreeStackAutomaton::from(g);
+
+    let tts = TTSElement::new();
+
+    let (a, ntts) = automaton.approximation(&tts).unwrap();
+
+    let mut e_string = String::from("S [S]\n");
+    e_string.push_str("N [A, B]\n");
+    e_string.push_str("R [*]\n");
+
+    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
+
+    let rlb = RlbElement::new(e);
+
+    let (b, nrlb) = a.approximation(&rlb).unwrap();
+
+    let size = 5;
+
+    let ptk = PDTopKElement::new(size);
+
+    let (c, nptk) = b.approximation(&ptk).unwrap();
+
+    let mut corpus = String::from("a a e e b c c d");
+
+    let n1 = 1000;
+    let n2 = 100;
+    let n3 = 10;
+    let n4 = 1;
+    let mut c2 = 0;
+    let mut c3 = 0;
+    let mut c4 = 0;
+
+    let mut recog = Vec::new();
+
+    for sentence in corpus.lines() {
+        println!("{}:\n", sentence);
+        let sentence2 = sentence.clone();
+        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+        for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+            let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
+            for parse2 in s1{
+                let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
+                for parse3 in s2{
+                    let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                    for parse4 in s3{
+                        recog.push(parse4);
+                        c4=c4+1;
+                        if c4>=n4{
+                            break
+                        }
+                    }
+                    c3=c3+1;
+                    if c4>=n4||c3>=n3{
+                        break;
+                    }
+                }
+                c2=c2+1;
+                if c2>=n2||c3>=n3||c4>=n4{
+                    break;
+                }
+            }
+            if c2>=n2||c3>=n3||c4>=n4{
+                break;
+            }
+        }
+    }
+    assert_eq!(false, recog.is_empty());
 }

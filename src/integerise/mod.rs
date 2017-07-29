@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
+use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::fmt;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
@@ -78,11 +80,11 @@ impl<'a, S: Clone + Debug + Eq,
 }
 
 #[derive(Clone, Debug)]
-pub struct IntItem<'a, S: Clone + Eq + Debug,
-                   I: Debug + Clone + Eq + Instruction<S>,
-                   T: 'a + Clone+ Eq + Debug + Hash,
-                   A: 'a + Clone + Debug + Hash + Eq,
-                   W: Ord + Clone + Debug>{
+pub struct IntItem<'a, S: Clone + Eq,
+                   I: Clone + Eq + Instruction<S>,
+                   T: 'a + Clone+ Eq + Hash,
+                   A: 'a + Clone + Hash + Eq,
+                   W: Ord + Clone>{
     pub configuration: Configuration<S, u64, W>,
     pub run: Vec<Transition<S, I, u64, W>>,
     pub term_integeriser: &'a Integeriser<T>,
@@ -94,7 +96,33 @@ impl<'a,S: Clone + Eq + Debug,
                    T: 'a + Clone+ Eq + Debug + Hash,
                    A: 'a + Clone + Debug + Hash + Eq,
                    W: Ord + Clone + Debug> PartialEq for IntItem<'a, S, I, T, A, W>{
-    fn eq(&self, other: &IntItem<'a, S, I, T, A, W>) -> bool{
+    fn eq(&self, other: &Self) -> bool{
         self.configuration == other.configuration && self.run == other.run
+    }
+}
+
+impl<'a,S: Clone + Eq + Debug,
+                   I: Debug + Clone + Eq + Instruction<S>,
+                   T: 'a + Clone+ Eq + Debug + Hash,
+                   A: 'a + Clone + Debug + Hash + Eq,
+                   W: Ord + Clone + Debug> Eq for IntItem<'a, S, I, T, A, W>{ }
+
+impl<'a,S: Clone + Eq + Debug,
+                   I: Debug + Clone + Eq + Instruction<S>,
+                   T: 'a + Clone+ Eq + Debug + Hash,
+                   A: 'a + Clone + Debug + Hash + Eq,
+                   W: Ord + Clone + Debug> PartialOrd for IntItem<'a, S, I, T, A, W>{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>{
+        self.configuration.partial_cmp(&other.configuration)
+    }
+}
+
+impl<'a,S: Clone + Eq + Debug,
+                   I: Debug + Clone + Eq + Instruction<S>,
+                   T: 'a + Clone+ Eq + Debug + Hash,
+                   A: 'a + Clone + Debug + Hash + Eq,
+                   W: Ord + Clone + Debug> Ord for IntItem<'a, S, I, T, A, W>{
+    fn cmp(&self, other: &Self) -> Ordering{
+        self.configuration.cmp(&other.configuration)
     }
 }

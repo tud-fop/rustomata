@@ -292,7 +292,6 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
     }
 }
 
-
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
      T: Clone + fmt::Debug + Eq + Hash,
      W: One + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero>

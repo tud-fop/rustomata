@@ -1,12 +1,14 @@
 use std::collections::BinaryHeap;
 use std::cmp::Ord;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
 
 pub use automata::*;
 pub use approximation::*;
+pub use integerise::*;
 
 pub fn ctf_level<S1: Eq + Clone + Debug,
                  S2: Eq + Clone + Debug,
@@ -28,6 +30,33 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
         match automaton.check_run(&e, word.clone()){
             Some((c, e2)) =>{
                 outp.push((c,e2));
+            },
+            None =>(),
+        }
+    }
+    return outp;
+}
+
+pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
+                 S2: Eq + Clone + Debug,
+                 I1: Eq + Clone + Debug + Instruction<S1>,
+                 I2: Eq + Clone + Debug + Instruction<S2>,
+                 T1: Eq + Clone + Debug + Hash,
+                 A1: Eq + Clone + Debug + Hash,
+                 W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
+                 ST: ApproximationStrategy<S1, S2, Transition<S1, I1, u64, W>, Transition<S2, I2, u64, W>>,
+                 A: IntegerisedAutomaton<S1, I1, T1, A1, W>
+                 >(word : &Vec<T1>, run: Vec<Transition<S2, I2, u64, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
+
+    let mut outp = BinaryHeap::new();
+    let v = strat.translate_run(run);
+    if v.is_empty(){
+        return BinaryHeap::new();
+    }
+    for e in v{
+        match automaton.check_run(&e, word.clone()){
+            Some(x) =>{
+                outp.push(x);
             },
             None =>(),
         }

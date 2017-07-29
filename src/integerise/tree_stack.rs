@@ -80,6 +80,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                       None => {return None;},
                   }
               }
+
               let c = Configuration {
                   word: new_word,
                   storage: self.automaton.initial().clone(),
@@ -286,7 +287,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
                                    match b.instruction{
                                        PushDownInstruction::Replace {ref current_val, ref new_val} =>{
                                            fina = new_val[0].clone();
-                                           transitions.push(automata::Transition {
+                                           let st = automata::Transition {
                                                _dummy: PhantomData,
                                                word: b.word.clone(),
                                                weight: b.weight.clone(),
@@ -294,7 +295,9 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
                                                    current_val: current_val.clone(),
                                                    new_val: Vec::new(),
                                                }
-                                           })
+                                           };
+                                           strat.add_transitions(t, &st);
+                                           transitions.push(st);
                                        },
                                        _=>{
                                            transitions.push(b.clone());

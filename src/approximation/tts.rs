@@ -27,8 +27,8 @@ impl<A, T1, T2 : Ord> TTSElement<A, T1, T2>{
 }
 
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
-      T: Ord + Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One> ApproximationStrategy<TreeStack<A>,PushDown<A>,
+      T: Ord + Eq + Clone +Hash + Debug,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One + Debug> ApproximationStrategy<TreeStack<A>,PushDown<A>,
         automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>,
         automata::Transition<PushDown<A>,  PushDownInstruction<A>, T, W>>
       for TTSElement<A, automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>, TransitionKey<PushDown<A>,  PushDownInstruction<A>, T, W>>{
@@ -131,6 +131,15 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
             }
         }
         BinaryHeap::from(res)
+    }
+
+    fn add_transitions(&mut self, t1: &automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>, t2: &automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>){
+        let tk = TransitionKey::new(t2);
+        if !self.trans_map.contains_key(&tk) {
+            self.trans_map.insert(tk.clone(), Vec::new());
+            ()
+        }
+        self.trans_map.get_mut(&tk).unwrap().push(t1.clone());
     }
 }
 
