@@ -12,6 +12,7 @@ mod push_down;
 mod cfg;
 mod approximation;
 mod integerise;
+mod nfa;
 
 #[cfg(test)]
 mod tests;

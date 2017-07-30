@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::fmt;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
