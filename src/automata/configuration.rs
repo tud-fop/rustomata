@@ -10,7 +10,6 @@ pub struct Configuration<S, T, W> {
     pub weight: W,
 }
 
-
 impl<S: Hash, T: Hash, W> Hash for Configuration<S, T, W> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.word.hash(state);

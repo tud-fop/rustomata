@@ -7,6 +7,7 @@ use approximation::*;
 use util::log_prob::*;
 use util::equivalence_classes::*;
 use util::ctf::*;
+use nfa::*;
 
 use num_traits::One;
 
@@ -551,4 +552,45 @@ fn test_ctf_scheme(){
         }
     }
     assert_eq!(false, recog.is_empty());
+}
+
+#[test]
+fn test_ptk_to_NFA(){
+    //create (and test) initial push down automata
+    let r0_string = "S → [Nt A, Nt A, Nt A, Nt A, Nt A ] # 1";
+    let r1_string = "A → [T a                         ] # 0.6";
+    let r2_string = "A → [T b                         ] # 0.4";
+
+
+    let mut g_string = String::from("initial: [S]\n\n");
+    g_string.push_str(r0_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r1_string.clone());
+    g_string.push_str("\n");
+    g_string.push_str(r2_string.clone());
+
+    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+
+    let a = PushDownAutomaton::from(g);
+
+    let ptk = PDTopKElement::new(4);
+
+    let (b, _) = a.clone().approximation(&ptk).unwrap();
+
+    let n = from_pd(b);
+
+    match n{
+        Some((nfa, _))=>{
+            assert!(true);
+            assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+            assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+        },
+        None=>{
+            assert!(false);
+        },
+    }
+
 }
