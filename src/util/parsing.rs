@@ -6,7 +6,7 @@ use nom::{IResult, anychar, is_space};
 /// A *token* can be of one of the following two forms:
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
-/// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
+/// * It is delimited by the symbol `'#` on both sides and each occurrence of `'\\'` or `'#` inside the delimiters is escaped. TODO should maybe be fixed, but works for now
 pub fn parse_token<A: FromStr>(input: &[u8]) -> IResult<&[u8], A>
     where <A as FromStr>::Err: Debug
 {
@@ -15,9 +15,9 @@ pub fn parse_token<A: FromStr>(input: &[u8]) -> IResult<&[u8], A>
         map_res!(
             alt!(
                 delimited!(
-                    char!('"'),
-                    escaped!(is_not!("\\\""), '\\', anychar),
-                    char!('"')
+                    char!('#'),
+                    escaped!(is_not!("\\#"), '\\', anychar),
+                    char!('#')
                 ) |
                 is_not!(" \"-→,;)]")
             ),

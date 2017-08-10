@@ -34,7 +34,6 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W>
                 rules.push(try!(l.trim().parse()));
             }
         }
-
         Ok(PMCFG {
             _dummy: PhantomData,
             initial: initial,

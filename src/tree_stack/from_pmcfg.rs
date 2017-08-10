@@ -60,7 +60,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
         let mut initial_rules: Vec<pmcfg::PMCFGRule<N, T, W>>
             = Vec::new();
 
-
         for r in g.rules.clone() {
             if g.initial.contains(&r.head) {
                 initial_rules.push(r.clone())
@@ -122,7 +121,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 }
             }
         }
-
         // each [r, [r₁, …, rₖ]] on the agenda signifies that r(r₁(…), …, rₖ(…)) is a possible subderivation
         let mut agenda: Vec<(pmcfg::PMCFGRule<N, T, W>, Vec<Vec<pmcfg::PMCFGRule<N, T, W>>>)>
             = Vec::new();
