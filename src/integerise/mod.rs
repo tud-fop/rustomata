@@ -11,6 +11,7 @@ use push_down::*;
 
 pub mod push_down;
 pub mod tree_stack;
+pub mod from_pmcfg;
 
 pub use self::push_down::*;
 pub use self::tree_stack::*;

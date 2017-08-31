@@ -32,24 +32,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
     }
 }
 
-impl<N: Clone + Debug + Ord + PartialEq + Hash,
-     T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero
-     > From<pmcfg::PMCFG<N, T, W>> for IntTreeStackAutomaton<PosState<pmcfg::PMCFGRule<N, T, W>>, T, W>
-    where <W as FromStr>::Err: Debug{
-     fn from(g: pmcfg::PMCFG<N, T, W>) -> Self {
-         let mut inter1 = Integeriser::new();
-         let mut inter2 = Integeriser::new();
-         let a = TreeStackAutomaton::from(g);
-         let mut transitions= Vec::new();
-         for t in a.list_transitions(){
-             transitions.push(t.integerise(&mut inter1, &mut inter2));
-         }
-         IntTreeStackAutomaton::new(TreeStackAutomaton::new(transitions, a.initial.clone().integerise(&mut inter1)), inter1, inter2)
-     }
- }
-
-
  impl<A: Ord + Eq + Debug + Clone + Hash,
        T: Clone + Debug + Eq + Hash,
        W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord>

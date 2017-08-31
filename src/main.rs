@@ -254,7 +254,8 @@ fn main() {
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
                     println!("Ähhhh");
-                    let automaton = TreeStackAutomaton::from(grammar);
+                    let automaton = IntTreeStackAutomaton::from(grammar);
+                    println!("Automaton");
                     println!("{}", automaton);
                 }
                 _ => ()
