@@ -8,3 +8,4 @@ clap = "2.19"
 num-traits = "0.1.36"
 ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 nom = "^2.2"
+time = "0.1.38"

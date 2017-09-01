@@ -2,6 +2,7 @@ extern crate clap;
 #[macro_use]
 extern crate nom;
 extern crate num_traits;
+extern crate time;
 
 mod automata;
 mod tree_stack;
@@ -16,6 +17,8 @@ mod nfa;
 
 #[cfg(test)]
 mod tests;
+
+//mod benchmark;
 
 use clap::{Arg, App, SubCommand};
 use std::io::prelude::*;
@@ -434,14 +437,14 @@ fn main() {
                             let n2 = 100;
                             let n3 = 10;
                             let n4 = n;
-                            let mut c2 = 0;
-                            let mut c3 = 0;
-                            let mut c4 = 0;
 
                             for sentence in corpus.lines() {
                                 println!("{}:\n", sentence);
                                 let sentence2 = sentence.clone();
                                 let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                                let mut c2 = 0;
+                                let mut c3 = 0;
+                                let mut c4 = 0;
                                 for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
                                     let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
