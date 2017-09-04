@@ -126,7 +126,6 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
             }
         }
         let initial2 = PushDown::new(initial1.empty, fina);
-
         Ok((PushDownAutomaton::new(
             transitions,
             initial2

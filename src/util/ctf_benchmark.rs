@@ -19,9 +19,10 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
     write!(&mut f, "Benchmarking results \n\n");
-    let w = 10;
+    let w = 30;
 
     //Create initial PMCFG
+    println!("Start Initialisation");
     let grammar_start = PreciseTime::now();
     let grammar: PMCFG<String, String, log_prob::LogProb> = grammar_string.parse().unwrap();
     let grammar_end = PreciseTime::now();
@@ -41,30 +42,22 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let ap_end = PreciseTime::now();
 
     //creates all automata that are to be used
+    println!("Automaton");
     let at_start = PreciseTime::now();
     let automaton = IntTreeStackAutomaton::from(grammar);
     let at_1 = PreciseTime::now();
+    println!("TTS");
     let (app1, ntts) = automaton.approximation(&tts).unwrap();
     let at_2 = PreciseTime::now();
+    println!("RLB");
     let (app2, nrlb) = app1.approximation(&rlb).unwrap();
     let at_3 = PreciseTime::now();
+    println!("PTK");
     let (app3, nptk) = app2.approximation(&ptk).unwrap();
     let at_end = PreciseTime::now();
 
     //save times for initial startup
-    write!(&mut f, "Construction grammar: {}\n
-                    Construction equivalence-class: {}\n
-                    \n
-                    Construction TTS: {}\n
-                    Construction RLB: {}\n
-                    Construction PTK: {}\n
-                    \n
-                    Generation Automata: {}\n
-                    Approximation TTS: {}\n
-                    Approximation RLB: {}\n
-                    Approximation PTK: {}\n
-                    \n
-                    Recognition times:\n", grammar_start.to(grammar_end),
+    write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
                         eq_start.to(eq_end),
                         ap_start.to(ap_1),
                         ap_1.to(ap_2),
@@ -77,6 +70,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} \n",
     "Word", "3-Layers", "2-Layers", "1-Layer", "Normal", width = w);
 
+    println!("Start Test");
     //tests different combinations and takes individual times
     for sentence in corpus.lines() {
 
@@ -84,7 +78,63 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         println!("{}:\n", sentence);
         let sentence2 = sentence.clone();
         let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+        println!("{:?}", word);
 
+        //No approximation
+        println!("no Approximation");
+        let p4_start = PreciseTime::now();
+        for parse in automaton.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit) {
+            println!("{}", Run::new(parse.translate().1));
+        }
+        let p4_end = PreciseTime::now();
+
+        println!("1-Layer");
+        //TTS
+        let p3_start = PreciseTime::now();
+        let mut c = 0;
+        for parse3 in app1.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
+            let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+            for parse4 in s3{
+                println!("{}", Run::new(parse4.translate().1));
+                c=c+1;
+                if c>=limit{
+                    break
+                }
+            }
+            if c>=limit{
+                break;
+            }
+        }
+        let p3_end = PreciseTime::now();
+
+        println!("2-Layers");
+        //TTS -> RLB
+        let p2_start = PreciseTime::now();
+        let mut c = 0;
+        let mut c1 = 0;
+        for parse2 in app2.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
+            let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
+            for parse3 in s2{
+                let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                for parse4 in s3{
+                    println!("{}", Run::new(parse4.translate().1));
+                    c=c+1;
+                    if c>=limit{
+                        break
+                    }
+                }
+                c1=c1+1;
+                if c>=limit||c1>=limit1{
+                    break;
+                }
+            }
+            if c1>=limit1||c>=limit{
+                break;
+            }
+        }
+        let p2_end = PreciseTime::now();
+
+        println!("3-Layers");
         //TTS -> RLB -> PTK
         let p1_start = PreciseTime::now();
         let mut c = 0;
@@ -118,57 +168,6 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
             }
         }
         let p1_end = PreciseTime::now();
-
-        //TTS -> RLB
-        let p2_start = PreciseTime::now();
-        let mut c = 0;
-        let mut c1 = 0;
-        for parse2 in app2.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
-            let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
-            for parse3 in s2{
-                let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
-                for parse4 in s3{
-                    println!("{}", Run::new(parse4.translate().1));
-                    c=c+1;
-                    if c>=limit{
-                        break
-                    }
-                }
-                c1=c1+1;
-                if c>=limit||c1>=limit1{
-                    break;
-                }
-            }
-            if c1>=limit1||c>=limit{
-                break;
-            }
-        }
-        let p2_end = PreciseTime::now();
-
-        //TTS
-        let p3_start = PreciseTime::now();
-        let mut c = 0;
-        for parse3 in app1.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
-            let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
-            for parse4 in s3{
-                println!("{}", Run::new(parse4.translate().1));
-                c=c+1;
-                if c>=limit{
-                    break
-                }
-            }
-            if c>=limit{
-                break;
-            }
-        }
-        let p3_end = PreciseTime::now();
-
-        //No approximation
-        let p4_start = PreciseTime::now();
-        for parse in automaton.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit) {
-            println!("{}", Run::new(parse.translate().1));
-        }
-        let p4_end = PreciseTime::now();
 
         //save results and times for this sentence
         write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} \n",

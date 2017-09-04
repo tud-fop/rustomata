@@ -142,9 +142,13 @@ fn main() {
                                                 .help("classes file to use")
                                                 .index(2)
                                                 .required(true))
+                                        .arg(Arg::with_name("words")
+                                                .help("file containing the words to check")
+                                                .index(3)
+                                                .required(true))
                                         .arg(Arg::with_name("topk-size")
                                                 .help("size of the limited push-down")
-                                                .index(3)
+                                                .index(4)
                                                 .required(true))
                                         .arg(Arg::with_name("number-of-parses")
                                                 .help("number of parses that should be returned")
@@ -569,8 +573,10 @@ fn main() {
                     let limit2 = benchmark_matches.value_of("limit-RLB").unwrap().parse().unwrap();
                     let limit3 = benchmark_matches.value_of("limit-PTK").unwrap().parse().unwrap();
 
+                    let corpus_file_name = benchmark_matches.value_of("words").unwrap();
+                    let mut corpus_file = File::open(corpus_file_name).unwrap();
                     let mut corpus = String::new();
-                    let _ = std::io::stdin().read_to_string(&mut corpus);
+                    let _ = corpus_file.read_to_string(&mut corpus);
 
                     ctf_benchmark::benchmark(grammar_string, classes_string, size, limit, limit1, limit2, limit3, corpus)
                 },

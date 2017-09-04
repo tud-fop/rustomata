@@ -48,10 +48,16 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
         let mut transition_map: HashMap< A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();
         let emp_transitions = transitions.len();
+        let mut nw = W::one();
+        for _ in 2..emp_transitions{
+            nw = nw+W::one();
+        }
         let b = initial.empty.clone();
+        let mut count = 0;
 
 
         for t in transitions {
+            count = count +1;
             let a =
                 match t.instruction {
                     PushDownInstruction::Replace { ref current_val, ..} => current_val.first().unwrap().clone(),
@@ -65,15 +71,11 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
             transition_map.get_mut(&a).unwrap().push(t.clone());
 
-            let mut nw = W::one();
-            for _ in 2..emp_transitions{
-                nw = nw+W::one();
-            }
             let nt = automata::Transition{
                 _dummy: t._dummy.clone(),
                 word: t.word.clone(),
                 instruction: t.instruction.clone(),
-                weight: t.weight/nw,
+                weight: t.weight/nw.clone(),
             };
 
             if !transition_map.contains_key(&b) {

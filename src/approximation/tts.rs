@@ -37,7 +37,6 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let np = Vec::new();
         let nempty = a.tree.get(&np).unwrap();
         let ele = vec![nempty.clone()];
-
         let p = PushDown{
             elements: ele.clone(),
             empty: ele[0].clone(),

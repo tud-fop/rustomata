@@ -106,10 +106,12 @@ pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
 
 impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator for Recogniser<'a, C, R, K> {
     type Item = (C, Vec<R>);
-
     fn next(&mut self) -> Option<(C, Vec<R>)> {
         let mut i = 0;
         while let Some((c, run)) = self.agenda.pop() {
+            if i < 5 {
+                println!("{:?}", c);
+            }
             i = i + 1;
             for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
                 for r in rs {
