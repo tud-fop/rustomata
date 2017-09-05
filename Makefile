@@ -1,21 +1,18 @@
 default: benchmark-results.txt
 .PHONY: default
 
-GRAMMAR = ./corp create_lim_grammar.py
-NAME ?= corp/pmcfg-50.readable
+GRAMMAR = ./corp/create_lim_grammar.py
+NAME ?= corp/pmcfg-5.readable
 PTK ?= 10
 
 
-LOGS = logs
-TIME := $(shell date +"%y%m%d-%H%M")
+${NAME}.classes:
+	${GRAMMAR} ${NAME}
 
-%.classes:
-	${GRAMMAR} %
+${NAME}.gr:
+	${GRAMMAR} ${NAME}
 
-%.gr:
-	${GRAMMAR} %
-
-benchmark-results.txt:
+benchmark-results.txt: ${NAME}.gr ${NAME}.classes ${NAME}.txt
 	cargo run coarse-to-fine benchmark ${NAME}.gr ${NAME}.classes ${NAME}.txt ${PTK}
 
 .PHONY: clean clean-all

@@ -1,0 +1,19 @@
+Benchmarking results 
+
+Construction grammar: PT0.036107769S
+Construction equivalence-class: PT0.002581682S
+
+Construction TTS: PT0.000037069S
+Construction RLB: PT0.000004398S
+Construction PTK: PT0.000002285S
+
+Generation Automata: PT0.745506307S
+Approximation TTS: PT1.459856516S
+Approximation RLB: PT1.605242710S
+Approximation PTK: PT1.474362263S
+
+Recognition times:
+
+Word                           | 3-Layers                       | 2-Layers                       | 1-Layer                        | Normal                         
+
+Sie gehen gewagte Verbindungen und Risiken ein , versuchen ihre M\246glichkeiten auszureizen . | PT42.001876472S | PT40.763036881S | PT40.600583852S | PT3.562792402S 
