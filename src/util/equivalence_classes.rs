@@ -8,12 +8,13 @@ use util::parsing::*;
 use util::integeriser::*;
 use approximation::*;
 
+/// Structure containing the elements of type `A` in a equivalence class of type `B`
 pub struct EquivalenceSet<A, B>{
     pub key: B,
     pub set: Vec<A>,
 }
 
-///A struct containing a remapping of Nonterminals into their respective Equivalence classes.
+/// A struct containing a remapping of Nelements of type `A` into their respective Equivalence classes of type `B`.
 #[derive(Clone)]
 pub struct EquivalenceClass<A, B>{
     pub map: HashMap<A, B>,

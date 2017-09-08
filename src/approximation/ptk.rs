@@ -2,16 +2,16 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-pub use automata::*;
-pub use approximation::*;
+use automata::*;
+use approximation::*;
 
-pub use util::*;
-pub use util::integeriser::*;
+use util::*;
+use util::integeriser::*;
 
-pub use tree_stack::*;
-pub use push_down::*;
+use tree_stack::*;
+use push_down::*;
 
-//Strategy Element for mapping pushdown to its top most k elements
+/// `ApproximationStrategy`that limits a `PushDownAutomaton` to a certain height.
 #[derive(Clone, Debug)]
 pub struct PDTopKElement<A, T1, T2>{
     pub dummy: PhantomData<A>,

@@ -2,19 +2,19 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-use automata;
-pub use approximation::*;
+use automata::*;
+use approximation::*;
 use util::equivalence_classes::*;
 
-pub use tree_stack::*;
-pub use push_down::*;
+use tree_stack::*;
+use push_down::*;
 
-// relabel function for configurations and states
+/// Specifies how to relabel the internal values of the structure. Used for `Approximation` with the `RlbElement`
 pub trait Relabel<N1, N2, O>{
     fn relabel(&self, &EquivalenceClass<N1, N2>) -> O;
 }
 
-//Strategy Element for Relabel
+/// `ApproximationStrategy` that uses the `Relabel` trait to relabel internal values via a `EquivalenceClass`
 #[derive(Clone)]
 pub struct RlbElement<A, N1, N2, T1, T2>{
     pub dummy: PhantomData<A>,

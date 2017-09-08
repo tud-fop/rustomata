@@ -2,15 +2,15 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-pub use automata::*;
-pub use approximation::*;
+use automata::*;
+use approximation::*;
 
-pub use util::*;
+use util::*;
 
-pub use tree_stack::*;
-pub use push_down::*;
+use tree_stack::*;
+use push_down::*;
 
-//Strategy Element for mapping pushdown to its top most k elements
+/// `ÀpproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]
 pub struct TTSElement<A, T1, T2>{
     pub trans_map: BTreeMap<T2,Vec<T1>>,

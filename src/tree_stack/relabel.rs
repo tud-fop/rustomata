@@ -2,14 +2,13 @@ use std::clone::*;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-pub use util::*;
-pub use util::equivalence_classes::*;
+use util::*;
+use util::equivalence_classes::*;
+use approximation::relabel::*;
+use cfg::*;
+use tree_stack::*;
 
-pub use approximation::relabel::*;
-pub use cfg::*;
-pub use push_down::*;
-
-impl<A : Relabel<N1, N2, B> +Ord + Clone,
+impl<A: Relabel<N1, N2, B> +Ord + Clone,
      B: Ord + Clone,
      N1: Clone + Eq + Hash, N2: Clone + Eq + Hash> Relabel<N1, N2, TreeStack<B>> for TreeStack<A>{
         fn relabel(&self, mapping: &EquivalenceClass<N1, N2>) -> TreeStack<B> {

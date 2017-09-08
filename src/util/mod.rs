@@ -4,3 +4,5 @@ pub mod parsing;
 pub mod equivalence_classes;
 pub mod ctf;
 pub mod ctf_benchmark;
+
+pub use self::integeriser::*;

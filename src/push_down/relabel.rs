@@ -1,11 +1,11 @@
 use std::clone::*;
 
-pub use util::*;
-pub use util::equivalence_classes::*;
+use util::*;
+use util::equivalence_classes::*;
 
-pub use approximation::relabel::*;
-pub use cfg::*;
-pub use push_down::*;
+use approximation::relabel::*;
+use cfg::*;
+use push_down::*;
 
 impl<A : Relabel<N1, N2, B> +Ord + Clone,
      B: Ord + Clone,

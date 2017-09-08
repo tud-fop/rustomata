@@ -8,14 +8,17 @@ use num_traits::{One};
 use std::ops::{Mul};
 
 use push_down::*;
+use automata::*;
+use util::*;
 
-pub mod push_down;
-pub mod tree_stack;
-pub mod from_pmcfg;
+mod push_down;
+mod tree_stack;
+mod from_pmcfg;
 
 pub use self::push_down::*;
 pub use self::tree_stack::*;
 
+/// Integerised Version of `Automaton`.
 pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
                     I: Clone + Debug + Eq + Instruction<S>,
                     T: Clone + Debug + Eq + Hash,
@@ -32,22 +35,26 @@ pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
     fn int_word(&self, word: Vec<T>)-> Vec<u64>;
 }
 
+/// Integerised version of `Approximation`
 pub trait IntApproximation<T1, T2, O> {
     fn approximation(&self, &T1) -> Result<(O, T2), String>;
 }
 
+/// Trait that specifies whether a structure can be integerised using a `Ìntegeriser<A>`
 pub trait Integerisable<S, A: Hash + Eq>{
     fn integerise(&self, inter: &mut Integeriser<A>)-> S;
 
     fn translate(s: S, inter: &Integeriser<A>)-> Self;
 }
 
+///Trait that specifies whether a Structure can be integerised with two `Ìntegeriser`, `Ìntegeriser<A>` and `Ìntegeriser<B>`
 pub trait IntegerisableM<S, A: Hash + Eq, B: Hash + Eq>{
     fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)-> S;
 
     fn translate(s: S, inter1: &Integeriser<A>, inter2: &Integeriser<B>)-> Self;
 }
 
+///Integerised version of `Recogniser`. Creates `ÌntItems` as a result
 pub struct IntRecogniser<'a,
          S: Clone + Debug + Eq,
          I: Clone + Debug + Eq + Instruction<S>,
@@ -81,6 +88,7 @@ impl<'a, S: Clone + Debug + Eq,
     }
 }
 
+/// Structure holding the results of a `IntRecogniser`. Besides the created `run` and `configuration` also holds pointer to the two `Integeriser` used to create the initial `IntegerisedAutomaton`
 #[derive(Clone, Debug)]
 pub struct IntItem<'a, S: Clone + Eq,
                    I: Clone + Eq + Instruction<S>,

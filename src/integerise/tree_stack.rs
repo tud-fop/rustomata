@@ -6,10 +6,13 @@ use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 use std::collections::HashMap;
 
-use automata;
+use automata::*;
+use tree_stack::*;
+use approximation::*;
 
-pub use integerise::*;
+use integerise::*;
 
+/// Integerised version of the `TreeStackAutomaton`. Holds the two `Integeriser` used to encode the input and the resulting `TreeStackAutomaton`
 #[derive(Clone)]
 pub struct IntTreeStackAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq + Hash, W: Ord + Eq>{
     pub term_integeriser: Integeriser<T>,
@@ -51,9 +54,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
               match self.automaton.check(self.automaton.initial().clone(), run){
                   Some(s) => {
                       let c = Configuration {
-                          word: run_word(&run),
+                          word: ctf::run_word(&run),
                           storage: s,
-                          weight: run_weight(&run),
+                          weight: ctf::run_weight(&run),
                       };
                       Some(IntItem{
                           configuration: c,
@@ -165,7 +168,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
          for l in self.word.clone(){
              nword.push(inter2.integerise(l));
          }
-         automata::Transition {
+         Transition {
              _dummy: PhantomData,
              word: nword,
              weight: self.weight.clone(),
@@ -178,7 +181,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
          for l in s.word.clone(){
              nword.push(inter2.find_value(l).unwrap().clone());
          }
-         automata::Transition {
+         Transition {
              _dummy: PhantomData,
              word: nword,
              weight: s.weight.clone(),
@@ -194,7 +197,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
          for l in self.word.clone(){
              nword.push(inter2.integerise(l));
          }
-         automata::Configuration {
+         Configuration {
              word: nword,
              storage: self.storage.integerise(inter1),
              weight: self.weight.clone(),
@@ -206,7 +209,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
          for l in s.word.clone(){
              nword.push(inter2.find_value(l).unwrap().clone());
          }
-         automata::Configuration {
+         Configuration {
              word: nword,
              storage: Integerisable::translate(s.storage, inter1),
              weight: s.weight.clone(),
@@ -238,12 +241,12 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
        T: Eq + Clone +Hash,
        W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
        S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
-         automata::Transition<TreeStack<A>, TreeStackInstruction<A>, u64, W>,
-         automata::Transition<PushDown<B>, PushDownInstruction<B>, u64, W>> +
+         Transition<TreeStack<A>, TreeStackInstruction<A>, u64, W>,
+         Transition<PushDown<B>, PushDownInstruction<B>, u64, W>> +
          IntApproximationStrategy<A, B, S2>,
        S2: ApproximationStrategy<TreeStack<u64>, PushDown<u64>,
-         automata::Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>,
-         automata::Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
+         Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>,
+         Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
        IntApproximation<S, S2, IntPushDownAutomaton<B, T, W>> for IntTreeStackAutomaton<A, T, W>
        where W : Add<Output = W>{
 
@@ -264,7 +267,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
                                    match b.instruction{
                                        PushDownInstruction::Replace {ref current_val, ref new_val} =>{
                                            fina = new_val[0].clone();
-                                           let st = automata::Transition {
+                                           let st = Transition {
                                                _dummy: PhantomData,
                                                word: b.word.clone(),
                                                weight: b.weight.clone(),

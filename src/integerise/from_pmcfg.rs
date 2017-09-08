@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 
 use automata;
 use pmcfg;
-use tree_stack::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use tree_stack::*;
 use integerise::*;
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components

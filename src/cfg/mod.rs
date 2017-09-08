@@ -3,22 +3,22 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 mod from_str;
-pub mod from_pmcfg;
+mod from_pmcfg;
 
-/// Variable or terminal symbol in an CFG.
+/// Variable or terminal symbol in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum LetterT<N,T> {
     Label(N),
     Value(T),
 }
 
-/// Composition function in an CFG.
+/// Composition function in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct CFGComposition<N,T> {
     pub composition: Vec<LetterT<N,T>>,
 }
 
-/// Rule of a weighted CFG.
+/// Rule of a weighted `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFGRule<N, T, W> {
     pub head: N,
@@ -26,7 +26,7 @@ pub struct CFGRule<N, T, W> {
     pub weight: W,
 }
 
-/// A weighted CFG.
+/// A weighted `CFG`. Contains initial symbols and a set of `CFGRule`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFG<N, T, W> {
     pub _dummy: PhantomData<T>,

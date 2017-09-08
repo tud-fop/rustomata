@@ -9,14 +9,15 @@ use std::ops::Mul;
 use std::vec::Vec;
 use self::num_traits::One;
 
-mod from_str;
-mod configuration;
-mod transition;
+pub mod from_str;
+pub mod configuration;
+pub mod transition;
 pub mod red;
 
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
-pub use util::ctf::*;
+pub use self::red::TransitionKey;
+use util::ctf::*;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
@@ -97,6 +98,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
     }
 }
 
+/// Iterator for `recognise` that creates new solutions with every step
 pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
     agenda: BinaryHeap<(C, Vec<R>)>,
     configuration_characteristic: Box<FnMut(&C) -> &K>,

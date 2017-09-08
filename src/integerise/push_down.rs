@@ -5,11 +5,14 @@ use std::vec::Vec;
 use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 
-use automata;
-use cfg;
+use automata::*;
+use cfg::*;
+use approximation::*;
+use push_down::*;
 
-pub use integerise::*;
+use integerise::*;
 
+/// Integerised Version of `PushDownAutomaton`. Holds two `Integeriser` used to encode the input, and the resulting `PushDownAutomaton`
 #[derive(Clone)]
 pub struct IntPushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq + Hash, W: Ord + Eq>{
     pub term_integeriser: Integeriser<T>,
@@ -34,9 +37,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
      W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero
-     > From<cfg::CFG<N, T, W>> for IntPushDownAutomaton<PushState<N, T>, T, W>
+     > From<CFG<N, T, W>> for IntPushDownAutomaton<PushState<N, T>, T, W>
     where <W as FromStr>::Err: Debug{
-     fn from(g: cfg::CFG<N, T, W>) -> Self {
+     fn from(g: CFG<N, T, W>) -> Self {
          let mut inter1 = Integeriser::new();
          let mut inter2 = Integeriser::new();
          let a = PushDownAutomaton::from(g);
@@ -69,9 +72,9 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
              match self.automaton.check(self.automaton.initial().clone(), run){
                  Some(s) => {
                      let c = Configuration {
-                         word: run_word(&run),
+                         word: ctf::run_word(&run),
                          storage: s,
-                         weight: run_weight(&run),
+                         weight: ctf::run_weight(&run),
                      };
                      Some(IntItem{
                          configuration: c,
@@ -200,7 +203,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
         for l in self.word.clone(){
             nword.push(inter2.integerise(l));
         }
-        automata::Transition {
+        Transition {
             _dummy: PhantomData,
             word: nword,
             weight: self.weight.clone(),
@@ -213,7 +216,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
         for l in s.word.clone(){
             nword.push(inter2.find_value(l).unwrap().clone());
         }
-        automata::Transition {
+        Transition {
             _dummy: PhantomData,
             word: nword,
             weight: s.weight.clone(),
@@ -229,7 +232,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
         for l in self.word.clone(){
             nword.push(inter2.integerise(l));
         }
-        automata::Configuration {
+        Configuration {
             word: nword,
             storage: self.storage.integerise(inter1),
             weight: self.weight.clone(),
@@ -241,7 +244,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone,  W: Ord +
         for l in s.word.clone(){
             nword.push(inter2.find_value(l).unwrap().clone());
         }
-        automata::Configuration {
+        Configuration {
             word: nword,
             storage: Integerisable::translate(s.storage, inter1),
             weight: s.weight.clone(),
@@ -273,12 +276,12 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: ApproximationStrategy<PushDown<A>, PushDown<B>,
-        automata::Transition<PushDown<A>, PushDownInstruction<A>, u64, W>,
-        automata::Transition<PushDown<B>, PushDownInstruction<B>, u64, W>> +
+        Transition<PushDown<A>, PushDownInstruction<A>, u64, W>,
+        Transition<PushDown<B>, PushDownInstruction<B>, u64, W>> +
         IntApproximationStrategy<A, B, S2>,
       S2: ApproximationStrategy<PushDown<u64>, PushDown<u64>,
-        automata::Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>,
-        automata::Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
+        Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>,
+        Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
       IntApproximation<S, S2, IntPushDownAutomaton<B, T, W>> for IntPushDownAutomaton<A, T, W>
       where W : Add<Output = W>{
 

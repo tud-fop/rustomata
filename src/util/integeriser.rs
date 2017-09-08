@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
+/// Structure that maps to every element of type `A` a integer of type `u64`. Mapping goes both ways.
 #[derive(Clone, Debug)]
 pub struct Integeriser<A: Hash + Eq> {
     pub map: HashMap<u64, A>,

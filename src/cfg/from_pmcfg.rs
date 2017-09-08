@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-pub use pmcfg::*;
+use pmcfg::*;
 use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 
 

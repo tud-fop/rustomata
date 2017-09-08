@@ -22,17 +22,14 @@ use clap::{Arg, App, SubCommand};
 use std::io::prelude::*;
 use std::fs::File;
 
-pub use tree_stack::*;
-pub use automata::*;
-pub use pmcfg::*;
-pub use util::*;
-use util::equivalence_classes::*;
-pub use util::ctf::*;
-
-pub use push_down::*;
-pub use cfg::*;
 pub use approximation::*;
+pub use automata::*;
+pub use cfg::*;
 pub use integerise::*;
+pub use pmcfg::*;
+pub use push_down::*;
+pub use tree_stack::*;
+pub use util::*;
 
 fn main() {
     let matches
@@ -358,7 +355,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 
@@ -382,11 +379,11 @@ fn main() {
                             for sentence in corpus.lines() {
                                 println!("{}:\n", sentence);
                                 for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-                                    let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
+                                    let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
-                                        let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                                        let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &a);
                                         for parse3 in s2{
-                                            println!("{}", Run::new(parse3.translate().1));
+                                            println!("{}", ctf::Run::new(parse3.translate().1));
                                             c3=c3+1;
                                             if c3>=n3{
                                                 break
@@ -417,7 +414,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 
@@ -456,7 +453,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 
@@ -482,13 +479,13 @@ fn main() {
                                 let mut c3 = 0;
                                 let mut c4 = 0;
                                 for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-                                    let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
+                                    let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
-                                        let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                                        let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &a);
                                         for parse3 in s2{
-                                            let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                                            let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                                             for parse4 in s3{
-                                                println!("{}", Run::new(parse4.translate().1));
+                                                println!("{}", ctf::Run::new(parse4.translate().1));
                                                 c4=c4+1;
                                                 if c4>=n4{
                                                     break
@@ -530,7 +527,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 
@@ -619,7 +616,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 
@@ -650,7 +647,7 @@ fn main() {
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
                             let _ = classes_file.read_to_string(&mut classes_string);
-                            let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                            let e: equivalence_classes::EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
                             let rlb = RlbElement::new(e);
 

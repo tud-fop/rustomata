@@ -6,10 +6,11 @@ use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
 
-pub use automata::*;
-pub use approximation::*;
-pub use integerise::*;
+use automata::*;
+use approximation::*;
+use integerise::*;
 
+/// One level in the resukting coarse-to-fine scheme. Translates a `run` via a `ApproximationStrategy` and checks wheter the resulting runs are accepted by `Automaton` a.
 pub fn ctf_level<S1: Eq + Clone + Debug,
                  S2: Eq + Clone + Debug,
                  I1: Eq + Clone + Debug + Instruction<S1>,
@@ -37,6 +38,7 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
     return outp;
 }
 
+/// Same as `ctf_level`, but for `IntegerisedAutomaton`
 pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
                  S2: Eq + Clone + Debug,
                  I1: Eq + Clone + Debug + Instruction<S1>,
@@ -92,6 +94,7 @@ impl<A: fmt::Display> fmt::Display for Run<A> {
     }
 }
 
+/// rezurns the word recognised by a `run`
 pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &Vec<Transition<S, I, T, W>>)-> Vec<T>{
     let mut word = Vec::new();
     for t in v{
@@ -101,6 +104,7 @@ pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &Vec<Transition<S, I, T, W
     word
 }
 
+///returns the weight ammesed by the `run`
 pub fn run_weight<S, I: Instruction<S>, T, W: Mul<Output = W> + Copy + One>(v: &Vec<Transition<S, I, T, W>>)-> W{
     let mut weight = W::one();
     for t in v{

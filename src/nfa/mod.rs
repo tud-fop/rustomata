@@ -6,14 +6,17 @@ use num_traits::{One};
 use std::ops::{Mul};
 use std::io::{self,Write};
 
-pub use automata::*;
-pub use push_down::*;
+use automata::*;
+use push_down::*;
+use util::*;
 
+/// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`
 #[derive(Debug, PartialEq)]
 pub struct Dict<S, I: Instruction<S>, T: Eq + Hash, W: Eq + Ord>{
     map: HashMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>,
 }
 
+/// `Transition` equivalent for `NFA`
 #[derive(Debug, Clone)]
 pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
     from_state: S,
@@ -22,6 +25,7 @@ pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
     weight: W,
 }
 
+/// Structure encoding a Automaton without storage (i.e. not a `Automaton`).
 pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
     //states: HashSet<S>,
     transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
@@ -135,6 +139,7 @@ impl<S: Clone + Debug, I: Instruction<S> + Clone + Debug, T: Eq + Hash + Clone +
     }
 }
 
+/// `Recogniser` equivalent for `NFA`
 pub struct NFARecogniser<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> {
     agenda: BinaryHeap<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)>,
     filtered_rules: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
@@ -178,7 +183,7 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
     }
 }
 
-///Creates a NFA from a PushDownAutomaton including Dict to translate it back. Returns `None` when a Replace instruction is found
+/// Creates a `NFA` from a `PushDownAutomaton` including `Dict` to translate it back. Returns `None` when a `Replace` instruction is found
 pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                T: PartialEq + Eq + Hash + Clone + Debug,
                W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>)->Option<(NFA<u64, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{

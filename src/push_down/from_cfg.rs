@@ -12,9 +12,10 @@ use std::str::FromStr;
 use std::marker::PhantomData;
 
 use automata;
-use cfg;
+use cfg::*;
 use push_down::{PushDown, PushDownAutomaton, PushDownInstruction};
 
+/// Symbols of a `PushDown` created by an `CFG`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum PushState<X, Y> {
     Designated,
@@ -41,9 +42,9 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
 impl<N: Clone + Debug + Ord + PartialEq + Hash,
      T: Clone + Debug + Ord + PartialEq + Hash,
      W: Clone + Debug + Ord + PartialEq + One + FromStr + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero
-     > From<cfg::CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
+     > From<CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
     where <W as FromStr>::Err: Debug{
-     fn from(g: cfg::CFG<N, T, W>) -> Self {
+     fn from(g: CFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
 
         let mut t_buffer= HashSet::new();
@@ -54,11 +55,11 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             for v in r.composition.composition{
 
                 match v{
-                    cfg::LetterT::Value(x) => {
+                    LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
                         st.insert(0,PushState::T(x.clone()));
                     },
-                    cfg::LetterT::Label(x) => {
+                    LetterT::Label(x) => {
                         st.insert(0,PushState::Nt(x.clone()));
                     },
                 }

@@ -9,14 +9,19 @@ use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 
 use automata;
+use approximation::relabel::*;
+use automata::red::*;
+use push_down::red::*;
 
 pub mod from_cfg;
 pub mod relabel;
 pub mod red;
 
-pub use from_cfg::*;
-pub use approximation::relabel::*;
-pub use push_down::red::*;
+pub use self::from_cfg::*;
+pub use self::relabel::*;
+pub use self::red::*;
+
+
 
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.

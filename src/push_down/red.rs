@@ -5,9 +5,9 @@ use self::num_traits::{One, Zero};
 
 use automata;
 
-pub use automata::red::*;
-pub use util::*;
-pub use push_down::*;
+use automata::red::*;
+use util::*;
+use push_down::*;
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash,

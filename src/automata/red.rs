@@ -1,7 +1,8 @@
-pub use automata::*;
+use automata::*;
 use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
-//used to map the weight changes
+
+/// Structure used to map weight changes. Contains only an `Instruction` and a `Vec<T>`
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TransitionKey<A, I, T, W>{
     pub _dummy_a : PhantomData<A>,
@@ -17,7 +18,7 @@ impl <A, I: Clone + Hash + Instruction<A>, T: Clone + Hash , W> Hash for Transit
     }
 }
 
-//function to add up identical transitions
+/// Trait defining the ability to reduce redundancy in the structure. Until now only used by `PushDownAutomaton`
 pub trait Redundancy{
     fn reduce_redundancy(self) -> Self;
 }

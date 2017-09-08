@@ -2,20 +2,20 @@ use time::PreciseTime;
 use std::io::prelude::*;
 use std::fs::File;
 
-pub use tree_stack::*;
-pub use automata::*;
-pub use pmcfg::*;
-pub use util::*;
+use tree_stack::*;
+use automata::*;
+use pmcfg::*;
+use util::*;
 use util::equivalence_classes::*;
-pub use util::ctf::*;
-pub use nfa::*;
+use util::ctf::*;
+use nfa::*;
 
-pub use push_down::*;
-pub use cfg::*;
-pub use approximation::*;
-pub use integerise::*;
+use push_down::*;
+use cfg::*;
+use approximation::*;
+use integerise::*;
 
-//Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file
+/// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
 pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String){
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
@@ -94,7 +94,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let p3_start = PreciseTime::now();
         let mut c = 0;
         for parse3 in app1.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
-            let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+            let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
             for parse4 in s3{
                 println!("{}", Run::new(parse4.translate().1));
                 c=c+1;
@@ -114,9 +114,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c = 0;
         let mut c1 = 0;
         for parse2 in app2.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
-            let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+            let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
             for parse3 in s2{
-                let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                 for parse4 in s3{
                     println!("{}", Run::new(parse4.translate().1));
                     c=c+1;
@@ -142,11 +142,11 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c1 = 0;
         let mut c2 = 0;
         for parse1 in app3.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit3) {
-            let s1 = ctf_level_i(parse1.give_up().1, &nptk, &app2);
+            let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &app2);
             for parse2 in s1{
-                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         println!("{}", Run::new(parse4.translate().1));
                         c=c+1;
@@ -178,11 +178,11 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c2 = 0;
         for parsenfa in nfa.recognise(app3.int_word(sentence.split_whitespace().map(|x| x.to_string()).collect())).take(limit3) {
             let parse1 = nfa_dict.translate(parsenfa.1);
-            let s1 = ctf_level_i(parse1, &nptk, &app2);
+            let s1 = ctf::ctf_level_i(parse1, &nptk, &app2);
             for parse2 in s1{
-                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         println!("{}", Run::new(parse4.translate().1));
                         c=c+1;

@@ -9,19 +9,17 @@ pub mod relabel;
 pub mod ptk;
 pub mod tts;
 
-pub use approximation::relabel::*;
-
 use automata;
-pub use util::*;
+use util::*;
 
-pub use tree_stack::*;
-pub use push_down::*;
+use tree_stack::*;
+use push_down::*;
 
 pub use self::relabel::*;
 pub use self::ptk::*;
 pub use self::tts::*;
 
-//functions that apply Strategys to Initial Configuration and Transitions
+/// Object defining the strategies used for `approximation`
 pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn approximate_initial(&self, A1) -> A2;
 
@@ -32,11 +30,12 @@ pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn translate_run(&self, Vec<T2>) -> BinaryHeap<Vec<T1>>;
 }
 
+///Integerised form of the `ApproximationStrategy` trait
 pub trait IntApproximationStrategy<N1: Hash + Eq, N2: Hash + Eq, S> {
     fn integerise(&self, &Integeriser<N1>)->(Integeriser<N2>, S);
 }
 
-//Approximates automaton using Strategy-Element
+///Defines the approximation of `Automata`
 pub trait Approximation<T, O> {
     fn approximation(&self, &T) -> Result<(O, T), String>;
 }
