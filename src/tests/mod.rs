@@ -460,7 +460,7 @@ fn test_relabel_check() {
     let (b, _) = a.approximation(&rlb).unwrap();
 
     let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
-    assert_ne!(None, b.check_run(&itemb.give_up().1, vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]));
+    assert_ne!(None, b.check_run(&itemb.give_up().1));
 
 }
 
@@ -507,7 +507,7 @@ fn test_ctf_scheme(){
 
     let (c, nptk) = b.approximation(&ptk).unwrap();
 
-    let mut corpus = String::from("a a e e b c c d");
+    let corpus = String::from("a a e e b c c d");
 
     let n1 = 1000;
     let n2 = 100;
@@ -521,14 +521,12 @@ fn test_ctf_scheme(){
 
     for sentence in corpus.lines() {
         println!("{}:\n", sentence);
-        let sentence2 = sentence.clone();
-        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
-        for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-            let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
+        for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+            let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
             for parse2 in s1{
-                let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
+                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         recog.push(parse4);
                         c4=c4+1;
@@ -555,7 +553,7 @@ fn test_ctf_scheme(){
 }
 
 #[test]
-fn test_ptk_to_NFA(){
+fn test_ptk_to_nfa(){
     //create (and test) initial push down automata
     let r0_string = "S → [Nt A, Nt A, Nt A, Nt A, Nt A ] # 1";
     let r1_string = "A → [T a                         ] # 0.6";

@@ -27,7 +27,7 @@ pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
 
     fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, S, I, T, A, W>;
 
-    fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, u64, W>>, word: Vec<T>) -> Option<IntItem<'a, S, I, T, A, W>>;
+    fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, u64, W>>) -> Option<IntItem<'a, S, I, T, A, W>>;
 
     fn int_word(&self, word: Vec<T>)-> Vec<u64>;
 }

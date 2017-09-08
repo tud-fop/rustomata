@@ -19,7 +19,7 @@ pub use integerise::*;
 pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String){
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
-    write!(&mut f, "Benchmarking results \n\n");
+    let _ = write!(&mut f, "Benchmarking results \n\n");
     let w = 14;
 
     //Create initial PMCFG
@@ -60,7 +60,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let at_end = PreciseTime::now();
 
     //save times for initial startup
-    write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
+    let _ = write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
                         eq_start.to(eq_end),
                         ap_start.to(ap_1),
                         ap_1.to(ap_2),
@@ -71,7 +71,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         at_3.to(at_4),
                         at_4.to(at_end)
                     );
-    write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
+    let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
     "Word", "3-Layers", "2-Layers", "1-Layer", "Normal", "3-Layers + NFA", width = w);
     let mut outercount = 0;
     println!("Start Test");
@@ -80,14 +80,11 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
 
         //creates the word to be recognised
         println!("{}:\n", sentence);
-        let sentence2 = sentence.clone();
-        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
-        println!("{:?}", word);
 
         //No approximation
         println!("no Approximation");
         let p4_start = PreciseTime::now();
-        for parse in automaton.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit) {
+        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit) {
             println!("{}", Run::new(parse.translate().1));
         }
         let p4_end = PreciseTime::now();
@@ -96,8 +93,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         //TTS
         let p3_start = PreciseTime::now();
         let mut c = 0;
-        for parse3 in app1.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
-            let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+        for parse3 in app1.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
+            let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
             for parse4 in s3{
                 println!("{}", Run::new(parse4.translate().1));
                 c=c+1;
@@ -116,10 +113,10 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let p2_start = PreciseTime::now();
         let mut c = 0;
         let mut c1 = 0;
-        for parse2 in app2.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
-            let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
+        for parse2 in app2.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
+            let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
             for parse3 in s2{
-                let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                 for parse4 in s3{
                     println!("{}", Run::new(parse4.translate().1));
                     c=c+1;
@@ -144,12 +141,12 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c = 0;
         let mut c1 = 0;
         let mut c2 = 0;
-        for parse1 in app3.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(limit3) {
-            let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &app2);
+        for parse1 in app3.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit3) {
+            let s1 = ctf_level_i(parse1.give_up().1, &nptk, &app2);
             for parse2 in s1{
-                let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
+                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         println!("{}", Run::new(parse4.translate().1));
                         c=c+1;
@@ -179,14 +176,13 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c = 0;
         let mut c1 = 0;
         let mut c2 = 0;
-        for parsenfa in nfa.recognise(app3.int_word(sentence2.split_whitespace().map(|x| x.to_string()).collect())).take(limit3) {
+        for parsenfa in nfa.recognise(app3.int_word(sentence.split_whitespace().map(|x| x.to_string()).collect())).take(limit3) {
             let parse1 = nfa_dict.translate(parsenfa.1);
-            let s1 = ctf_level_i(&word, parse1, &nptk, &app2);
-            //print!("{:?}", s1);
+            let s1 = ctf_level_i(parse1, &nptk, &app2);
             for parse2 in s1{
-                let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
+                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         println!("{}", Run::new(parse4.translate().1));
                         c=c+1;
@@ -212,7 +208,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         outercount = outercount + 1;
 
         //save results and times for this sentence
-        write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$}| {5: <width$} \n",
+        let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$}| {5: <width$} \n",
         outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), width = w);
 
 

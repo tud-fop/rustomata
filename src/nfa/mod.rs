@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap, HashSet, BTreeMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
@@ -23,16 +23,16 @@ pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
 }
 
 pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
-    states: HashSet<S>,
+    //states: HashSet<S>,
     transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
     initial_states: HashSet<S>,
     final_states: HashSet<S>,
 }
 
 impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Ord + One + Clone + Debug> NFA<S, T, W>{
-    pub fn new(states: HashSet<S>, transitions: HashMap<S, BinaryHeap< NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
+    pub fn new(/*states: HashSet<S>,*/ transitions: HashMap<S, BinaryHeap< NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
         NFA{
-            states: states,
+            //states: states,
             transitions: transitions,
             initial_states: initial_states,
             final_states: final_states,
@@ -226,5 +226,5 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
             }
         }
     }
-    Some((NFA::new(states, transitions, initial_states, final_states),Dict::new(map)))
+    Some((NFA::new(/*states,*/ transitions, initial_states, final_states),Dict::new(map)))
 }

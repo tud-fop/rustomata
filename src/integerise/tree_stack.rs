@@ -7,7 +7,6 @@ use std::ops::{Add, Mul, Div};
 use std::collections::HashMap;
 
 use automata;
-use pmcfg;
 
 pub use integerise::*;
 
@@ -48,18 +47,16 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
               }
           }
 
-          fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>, word: Vec<T>) -> Option<IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>>{
-              let new_word = self.int_word(word);
-
-              let c = Configuration {
-                  word: new_word,
-                  storage: self.automaton.initial().clone(),
-                  weight: W::one(),
-              };
-              match self.automaton.check(c, run){
-                  Some(c2) => {
+          fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>) -> Option<IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>>{
+              match self.automaton.check(self.automaton.initial().clone(), run){
+                  Some(s) => {
+                      let c = Configuration {
+                          word: run_word(&run),
+                          storage: s,
+                          weight: run_weight(&run),
+                      };
                       Some(IntItem{
-                          configuration: c2,
+                          configuration: c,
                           run: run.clone(),
                           term_integeriser: &self.term_integeriser,
                           nterm_integeriser: &self.nterm_integeriser,

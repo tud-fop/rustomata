@@ -19,7 +19,7 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
                  W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
                  ST: ApproximationStrategy<S1, S2, Transition<S1, I1, T1, W>, Transition<S2, I2, T2, W>>,
                  A: Automaton<S1, I1, T1, W>
-                 >(word : &Vec<T1>, run: Vec<Transition<S2, I2, T2, W>>, strat: &ST, automaton: &A) -> BinaryHeap<(Configuration<S1, T1, W>, Vec<Transition<S1, I1, T1, W>>)>{
+                 >(run: Vec<Transition<S2, I2, T2, W>>, strat: &ST, automaton: &A) -> BinaryHeap<(Configuration<S1, T1, W>, Vec<Transition<S1, I1, T1, W>>)>{
 
     let mut outp = BinaryHeap::new();
     let v = strat.translate_run(run);
@@ -27,7 +27,7 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
         return BinaryHeap::new();
     }
     for e in v{
-        match automaton.check_run(&e, word.clone()){
+        match automaton.check_run(&e){
             Some((c, e2)) =>{
                 outp.push((c,e2));
             },
@@ -46,7 +46,7 @@ pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
                  W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
                  ST: ApproximationStrategy<S1, S2, Transition<S1, I1, u64, W>, Transition<S2, I2, u64, W>>,
                  A: IntegerisedAutomaton<S1, I1, T1, A1, W>
-                 >(word : &Vec<T1>, run: Vec<Transition<S2, I2, u64, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
+                 >(run: Vec<Transition<S2, I2, u64, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
 
     let mut outp = BinaryHeap::new();
     let v = strat.translate_run(run);
@@ -55,7 +55,7 @@ pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
         return BinaryHeap::new();
     }
     for e in v{
-        match automaton.check_run(&e, word.clone()){
+        match automaton.check_run(&e){
             Some(x) =>{
                 outp.push(x);
             },
@@ -90,4 +90,21 @@ impl<A: fmt::Display> fmt::Display for Run<A> {
         }
         write!(f, "[{}]", buffer)
     }
+}
+
+pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &Vec<Transition<S, I, T, W>>)-> Vec<T>{
+    let mut word = Vec::new();
+    for t in v{
+        let mut t2 = t. word.clone();
+        word.append(&mut t2);
+    }
+    word
+}
+
+pub fn run_weight<S, I: Instruction<S>, T, W: Mul<Output = W> + Copy + One>(v: &Vec<Transition<S, I, T, W>>)-> W{
+    let mut weight = W::one();
+    for t in v{
+        weight = weight * t.weight;
+    }
+    weight
 }

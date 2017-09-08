@@ -7,7 +7,7 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
 use num_traits::{One, Zero};
-use std::ops::{Add, Mul, Div};
+use std::ops::{Add, Div};
 use std::marker::PhantomData;
 
 use automata;
@@ -203,11 +203,11 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             }
         }
 
-        let tAuto = TreeStackAutomaton::new(
+        let t_auto = TreeStackAutomaton::new(
             transitions,
             TreeStack::new(inter1.integerise(PosState::Initial))
         );
 
-        IntTreeStackAutomaton::new(tAuto, inter1, inter2)
+        IntTreeStackAutomaton::new(t_auto, inter1, inter2)
     }
 }

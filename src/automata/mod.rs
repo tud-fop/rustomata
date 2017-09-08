@@ -16,6 +16,7 @@ pub mod red;
 
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
+pub use util::ctf::*;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
@@ -60,39 +61,38 @@ pub trait Automaton<S: Clone + Debug + Eq,
         }
     }
 
-    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>, word: Vec<T>) -> Option<(Configuration<S, T, W>, Vec<Transition<S, I, T, W>>)>{
-        let c = Configuration {
-            word: word,
-            storage: self.initial().clone(),
-            weight: W::one(),
-        };
-        match self.check(c, run){
-            Some(c2) => {
-                Some((c2, run.clone()))
+    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>) -> Option<(Configuration<S, T, W>, Vec<Transition<S, I, T, W>>)>{
+
+        match self.check(self.initial().clone(), run){
+            Some(s) => {
+                let c = Configuration {
+                    word: run_word(&run),
+                    storage: s,
+                    weight: run_weight(&run),
+                };
+                Some((c, run.clone()))
             },
             None => None,
         }
     }
 
     //note: gives back the first configuration it finds
-    fn check<'a>(&'a self, c: Configuration<S, T, W>, run: &Vec<Transition<S, I, T, W>>) -> Option<Configuration<S, T, W>> {
+    fn check<'a>(&'a self, storage: S, run: &Vec<Transition<S, I, T, W>>) -> Option<S> {
         match run.first(){
             Some(t) => {
                 let mut run1 = run.clone();
                 run1.remove(0);
-                for c1 in t.apply(&c) {
-                    match self.check(c1, &run1){
+                for s1 in t.instruction.apply(storage) {
+                    match self.check(s1, &run1){
                         Some(x) =>{
                             return Some(x);
                         },
                         None =>(),
                     }
                 }
-                println!("{:?}", t);
-                println!("{:?}", c);
                 None
             },
-            None => Some(c.clone()),
+            None => Some(storage.clone()),
         }
     }
 }

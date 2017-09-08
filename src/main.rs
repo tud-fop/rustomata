@@ -381,12 +381,10 @@ fn main() {
 
                             for sentence in corpus.lines() {
                                 println!("{}:\n", sentence);
-                                let sentence2 = sentence.clone();
-                                let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
-                                for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-                                    let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
+                                for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+                                    let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
-                                        let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
+                                        let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
                                         for parse3 in s2{
                                             println!("{}", Run::new(parse3.translate().1));
                                             c3=c3+1;
@@ -480,17 +478,15 @@ fn main() {
 
                             for sentence in corpus.lines() {
                                 println!("{}:\n", sentence);
-                                let sentence2 = sentence.clone();
-                                let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
                                 let mut c2 = 0;
                                 let mut c3 = 0;
                                 let mut c4 = 0;
-                                for parse1 in c.recognise(sentence2.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-                                    let s1 = ctf_level_i(&word, parse1.give_up().1, &nptk, &b);
+                                for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
+                                    let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
-                                        let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &a);
+                                        let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
                                         for parse3 in s2{
-                                            let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                                            let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                                             for parse4 in s3{
                                                 println!("{}", Run::new(parse4.translate().1));
                                                 c4=c4+1;
@@ -559,7 +555,6 @@ fn main() {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
 
                     let classes_file_name = benchmark_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name.clone()).unwrap();
