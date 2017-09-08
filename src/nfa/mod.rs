@@ -1,6 +1,6 @@
 use std::collections::{BinaryHeap, HashMap, HashSet, BTreeMap};
 use std::fmt::Debug;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 use num_traits::{One};
 use std::ops::{Mul};
@@ -11,11 +11,11 @@ pub use push_down::*;
 
 #[derive(Debug, PartialEq)]
 pub struct Dict<S, I: Instruction<S>, T: Eq + Hash, W: Eq + Ord>{
-    map: BTreeMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>,
+    map: HashMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct NFATransition<S, T, W>{
+#[derive(Debug, Clone)]
+pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
     from_state: S,
     to_state: S,
     word: Vec<T>,
@@ -29,7 +29,7 @@ pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
     final_states: HashSet<S>,
 }
 
-impl<S: Eq + Hash + Ord + Clone, T: Eq + Hash + Clone, W: Eq + Ord + One + Clone> NFA<S, T, W>{
+impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Ord + One + Clone + Debug> NFA<S, T, W>{
     pub fn new(states: HashSet<S>, transitions: HashMap<S, BinaryHeap< NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
         NFA{
             states: states,
@@ -49,8 +49,6 @@ impl<S: Eq + Hash + Ord + Clone, T: Eq + Hash + Clone, W: Eq + Ord + One + Clone
             };
             init_heap.push((c, Vec::new()));
         }
-
-
         NFARecogniser {
             agenda: init_heap,
             filtered_rules: self.transitions.clone(),
@@ -60,7 +58,7 @@ impl<S: Eq + Hash + Ord + Clone, T: Eq + Hash + Clone, W: Eq + Ord + One + Clone
     }
 }
 
-impl<S: Eq + Clone, T: Eq + Clone, W: Clone + Mul<Output=W>> NFATransition<S, T, W>{
+impl<S: Eq + Clone + Hash, T: Eq + Clone + Hash, W: Ord + Eq + Clone + Mul<Output=W>> NFATransition<S, T, W>{
     pub fn new(from: S, to: S, word: Vec<T>, weight: W)->Self{
         NFATransition{
             from_state: from,
@@ -83,20 +81,39 @@ impl<S: Eq + Clone, T: Eq + Clone, W: Clone + Mul<Output=W>> NFATransition<S, T,
     }
 }
 
-impl<S: Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for NFATransition<S, T, W> {
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + PartialOrd + Eq> PartialOrd for NFATransition<S, T, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.weight.partial_cmp(&other.weight)
     }
 }
 
-impl<S: Eq, T: Eq, W: Ord + Eq> Ord for NFATransition<S, T, W> {
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Ord for NFATransition<S, T, W> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.weight.cmp(&other.weight)
     }
 }
 
-impl<S: Clone, I: Instruction<S> + Clone, T: Eq + Hash + Clone, W: Eq + Clone + Ord> Dict<S, I, T, W>{
-    pub fn new(map : BTreeMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>)->Self{
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> PartialEq for NFATransition<S, T, W> {
+    fn eq(&self, other: &NFATransition<S, T, W>)-> bool{
+        (self.from_state == other.from_state) &
+        (self.to_state == other.to_state) &
+        (self.word == other.word) &
+        (self.weight == other.weight)
+    }
+}
+
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W>{
+    fn hash<H: Hasher>(&self, state: &mut H){
+        self.from_state.hash(state);
+        self.to_state.hash(state);
+        self.word.hash(state);
+    }
+}
+
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W>{}
+
+impl<S: Clone + Debug, I: Instruction<S> + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Clone + Ord + Debug> Dict<S, I, T, W>{
+    pub fn new(map : HashMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>)->Self{
         Dict{
             map: map,
         }
@@ -131,7 +148,7 @@ impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> NFARecogniser<S, T, 
     }
 }
 
-impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash + Clone, W: One + Mul<Output = W> + Clone + Eq + Ord> Iterator for NFARecogniser<S, T, W> {
+impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + Mul<Output = W> + Clone + Eq + Ord + Debug> Iterator for NFARecogniser<S, T, W> {
     type Item = (Configuration<S, T, W>, Vec<NFATransition<S, T, W>>);
 
     fn next(&mut self) -> Option<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)> {
@@ -164,9 +181,9 @@ impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash + Clone, W: One + Mul<Output = W> 
 ///Creates a NFA from a PushDownAutomaton including Dict to translate it back. Returns `None` when a Replace instruction is found
 pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                T: PartialEq + Eq + Hash + Clone + Debug,
-               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: PushDownAutomaton<A, T, W>)->Option<(NFA<u64, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{
+               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>)->Option<(NFA<u64, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{
     let mut integeriser : Integeriser<PushDown<A>> = Integeriser::new();
-    let mut map : BTreeMap<NFATransition<u64, T, W>, Transition<PushDown<A>, PushDownInstruction<A>, T, W>> = BTreeMap::new();
+    let mut map : HashMap<NFATransition<u64, T, W>, Transition<PushDown<A>, PushDownInstruction<A>, T, W>> = HashMap::new();
     let mut to_do = Vec::new();
     let mut states = HashSet::new();
     let mut initial_states = HashSet::new();
@@ -198,7 +215,9 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                             let t = NFATransition::new(ci, c1i, r.word.clone(), r.weight.clone());
                             transitions.get_mut(&ci).unwrap().push(t.clone());
                             map.insert(t, r.clone());
+
                             if !states.contains(&c1i){
+                                states.insert(c1i);
                                 to_do.push(c1);
                             }
                         }

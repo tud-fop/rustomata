@@ -51,6 +51,7 @@ pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
     let mut outp = BinaryHeap::new();
     let v = strat.translate_run(run);
     if v.is_empty(){
+        println!("Noooooooooo");
         return BinaryHeap::new();
     }
     for e in v{

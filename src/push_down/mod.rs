@@ -58,31 +58,38 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
         for t in transitions {
             count = count +1;
+            let mut emp = false;
             let a =
                 match t.instruction {
                     PushDownInstruction::Replace { ref current_val, ..} => current_val.first().unwrap().clone(),
-                    PushDownInstruction::ReplaceK { ref current_val, ..} => current_val.first().unwrap().clone(),
+                    PushDownInstruction::ReplaceK { ref current_val, ..} =>{
+                        emp = true;
+                        current_val.first().unwrap().clone()
+                     },
                 };
 
             if !transition_map.contains_key(&a) {
                 transition_map.insert(a.clone(), BinaryHeap::new());
                 ()
             }
-
             transition_map.get_mut(&a).unwrap().push(t.clone());
 
-            let nt = automata::Transition{
-                _dummy: t._dummy.clone(),
-                word: t.word.clone(),
-                instruction: t.instruction.clone(),
-                weight: t.weight/nw.clone(),
-            };
+            //Places all ReplaceK transitions also in for the empty symbol
+            if emp{
+                let nt = automata::Transition{
+                    _dummy: t._dummy.clone(),
+                    word: t.word.clone(),
+                    instruction: t.instruction.clone(),
+                    weight: t.weight/nw.clone(),
+                };
 
-            if !transition_map.contains_key(&b) {
-                transition_map.insert(b.clone(), BinaryHeap::new());
-                ()
+                if !transition_map.contains_key(&b) {
+                    transition_map.insert(b.clone(), BinaryHeap::new());
+                    ()
+                }
+                transition_map.get_mut(&b).unwrap().push(nt);
             }
-            transition_map.get_mut(&b).unwrap().push(nt);
+
         }
 
         let p = PushDownAutomaton {

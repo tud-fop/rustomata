@@ -39,13 +39,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
           type Key = A;
 
           fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>{
-              let mut new_word = Vec::new();
-              for e in word{
-                  match self.term_integeriser.find_key(e){
-                      Some(x) => new_word.push(x.clone()),
-                      None => (),
-                  }
-              }
+              let new_word = self.int_word(word);
 
               IntRecogniser{
                   term_integeriser: &self.term_integeriser,
@@ -55,13 +49,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
           }
 
           fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>, word: Vec<T>) -> Option<IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>>{
-              let mut new_word = Vec::new();
-              for e in word{
-                  match self.term_integeriser.find_key(e){
-                      Some(x) => new_word.push(x.clone()),
-                      None => {return None;},
-                  }
-              }
+              let new_word = self.int_word(word);
 
               let c = Configuration {
                   word: new_word,
@@ -79,6 +67,17 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
                   },
                   None => None,
               }
+          }
+
+          fn int_word(&self, word: Vec<T>)-> Vec<u64>{
+              let mut new_word = Vec::new();
+              for e in word{
+                  match self.term_integeriser.find_key(e){
+                      Some(x) => new_word.push(x.clone()),
+                      None => (),
+                  }
+              }
+              return new_word;
           }
  }
 

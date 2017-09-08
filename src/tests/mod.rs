@@ -577,16 +577,25 @@ fn test_ptk_to_NFA(){
 
     let (b, _) = a.clone().approximation(&ptk).unwrap();
 
-    let n = from_pd(b);
+    let n = from_pd(&b);
 
     match n{
-        Some((nfa, _))=>{
+        Some((nfa, nfa_dict))=>{
             assert!(true);
             assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
             assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
             assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
             assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
             assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+            let m_obj = match nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
+                Some(x) =>{Some(nfa_dict.translate(x.1))},
+                None => None,
+            };
+            let n_obj = match b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
+                Some(x) => Some(x.1),
+                None => None,
+            };
+            assert_eq!(n_obj, m_obj);
         },
         None=>{
             assert!(false);

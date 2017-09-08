@@ -56,13 +56,7 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
          type Key = A;
 
          fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>{
-             let mut new_word = Vec::new();
-             for e in word{
-                 match self.term_integeriser.find_key(e){
-                     Some(x) => new_word.push(x.clone()),
-                     None => (),
-                 }
-             }
+             let new_word = self.int_word(word);
 
              IntRecogniser{
                  term_integeriser: &self.term_integeriser,
@@ -72,18 +66,13 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
          }
 
          fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>, word: Vec<T>) -> Option<IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>>{
-             let mut new_word = Vec::new();
-             for e in word{
-                 match self.term_integeriser.find_key(e){
-                     Some(x) => new_word.push(x.clone()),
-                     None => {return None;},
-                 }
-             }
+             let new_word = self.int_word(word);
              let c = Configuration {
                  word: new_word,
                  storage: self.automaton.initial().clone(),
                  weight: W::one(),
              };
+
              match self.automaton.check(c, run){
                  Some(c2) => {
                      Some(IntItem{
@@ -95,6 +84,17 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
                  },
                  None => None,
              }
+         }
+
+         fn int_word(&self, word: Vec<T>)->Vec<u64>{
+             let mut new_word = Vec::new();
+             for e in word{
+                 match self.term_integeriser.find_key(e){
+                     Some(x) => new_word.push(x.clone()),
+                     None => (),
+                 }
+             }
+             return new_word;
          }
 }
 
@@ -301,7 +301,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
             transitions,
             initial,
         );
-        let b = IntPushDownAutomaton::new(a, n_int, self.term_integeriser.clone());///TODO actual integeriser
+        let b = IntPushDownAutomaton::new(a, n_int, self.term_integeriser.clone());
         Ok((b, strat))
     }
 }

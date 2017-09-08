@@ -8,6 +8,7 @@ pub use pmcfg::*;
 pub use util::*;
 use util::equivalence_classes::*;
 pub use util::ctf::*;
+pub use nfa::*;
 
 pub use push_down::*;
 pub use cfg::*;
@@ -19,7 +20,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
     write!(&mut f, "Benchmarking results \n\n");
-    let w = 30;
+    let w = 14;
 
     //Create initial PMCFG
     println!("Start Initialisation");
@@ -54,10 +55,12 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let at_3 = PreciseTime::now();
     println!("PTK");
     let (app3, nptk) = app2.approximation(&ptk).unwrap();
+    let at_4 = PreciseTime::now();
+    let (nfa, nfa_dict) = from_pd(&app3.automaton).unwrap();
     let at_end = PreciseTime::now();
 
     //save times for initial startup
-    write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
+    write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
                         eq_start.to(eq_end),
                         ap_start.to(ap_1),
                         ap_1.to(ap_2),
@@ -65,11 +68,12 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         at_start.to(at_1),
                         at_1.to(at_2),
                         at_2.to(at_3),
-                        at_3.to(at_end)
+                        at_3.to(at_4),
+                        at_4.to(at_end)
                     );
-    write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} \n",
-    "Word", "3-Layers", "2-Layers", "1-Layer", "Normal", width = w);
-
+    write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
+    "Word", "3-Layers", "2-Layers", "1-Layer", "Normal", "3-Layers + NFA", width = w);
+    let mut outercount = 0;
     println!("Start Test");
     //tests different combinations and takes individual times
     for sentence in corpus.lines() {
@@ -169,9 +173,47 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         }
         let p1_end = PreciseTime::now();
 
+        println!("3-Layers + NFA");
+        //TTS -> RLB -> PTK -> TO_NFA
+        let p5_start = PreciseTime::now();
+        let mut c = 0;
+        let mut c1 = 0;
+        let mut c2 = 0;
+        for parsenfa in nfa.recognise(app3.int_word(sentence2.split_whitespace().map(|x| x.to_string()).collect())).take(limit3) {
+            let parse1 = nfa_dict.translate(parsenfa.1);
+            let s1 = ctf_level_i(&word, parse1, &nptk, &app2);
+            //print!("{:?}", s1);
+            for parse2 in s1{
+                let s2 = ctf_level_i(&word, parse2.give_up().1, &nrlb, &app1);
+                for parse3 in s2{
+                    let s3 = ctf_level_i(&word, parse3.give_up().1, &ntts, &automaton);
+                    for parse4 in s3{
+                        println!("{}", Run::new(parse4.translate().1));
+                        c=c+1;
+                        if c>=limit{
+                            break
+                        }
+                    }
+                    c1=c1+1;
+                    if c>=limit||c1>=limit1{
+                        break;
+                    }
+                }
+                c2=c2+1;
+                if c2>=limit2||c1>=limit1||c>=limit{
+                    break;
+                }
+            }
+            if c2>=limit2||c1>=limit1||c>=limit{
+                break;
+            }
+        }
+        let p5_end = PreciseTime::now();
+        outercount = outercount + 1;
+
         //save results and times for this sentence
-        write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} \n",
-        sentence, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), width = w);
+        write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$}| {5: <width$} \n",
+        outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), width = w);
 
 
     }
