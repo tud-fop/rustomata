@@ -83,7 +83,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
             Some(t) => {
                 let mut run1 = run.clone();
                 run1.remove(0);
-                for s1 in t.instruction.apply(storage) {
+                for s1 in t.instruction.apply(storage.clone()) {
                     match self.check(s1, &run1){
                         Some(x) =>{
                             return Some(x);

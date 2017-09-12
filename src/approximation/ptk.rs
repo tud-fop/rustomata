@@ -4,11 +4,7 @@ use std::hash::Hash;
 
 use automata::*;
 use approximation::*;
-
 use util::*;
-use util::integeriser::*;
-
-use tree_stack::*;
 use push_down::*;
 
 /// `ApproximationStrategy`that limits a `PushDownAutomaton` to a certain height.

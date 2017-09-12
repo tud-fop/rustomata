@@ -2,16 +2,11 @@ use time::PreciseTime;
 use std::io::prelude::*;
 use std::fs::File;
 
-use tree_stack::*;
-use automata::*;
 use pmcfg::*;
 use util::*;
 use util::equivalence_classes::*;
-use util::ctf::*;
 use nfa::*;
 
-use push_down::*;
-use cfg::*;
 use approximation::*;
 use integerise::*;
 
@@ -56,6 +51,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     println!("PTK");
     let (app3, nptk) = app2.approximation(&ptk).unwrap();
     let at_4 = PreciseTime::now();
+    println!("NFA");
     let (nfa, nfa_dict) = from_pd(&app3.automaton).unwrap();
     let at_end = PreciseTime::now();
 
@@ -72,31 +68,37 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         at_4.to(at_end)
                     );
     let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
-    "Word", "3-Layers", "2-Layers", "1-Layer", "Normal", "3-Layers + NFA", width = w);
+     "Word", "Normal", "1-Layer", "2-Layers", "3-Layers", "3-Layers + NFA", width = w);
     let mut outercount = 0;
     println!("Start Test");
     //tests different combinations and takes individual times
     for sentence in corpus.lines() {
 
-        //creates the word to be recognised
-        println!("{}:\n", sentence);
+        //creates the word to be recognised, continues if empty
+        let word : Vec<String> = sentence.split_whitespace().map(|x| x.to_string()).collect();
+        if word.is_empty(){
+            continue;
+        }
+        println!("{}:", sentence);
 
         //No approximation
         println!("no Approximation");
-        let p4_start = PreciseTime::now();
-        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit) {
-            println!("{}", Run::new(parse.translate().1));
+        let p1_start = PreciseTime::now();
+        for parse in automaton.recognise(word.clone()).take(limit) {
+            //println!("{}", Run::new(parse.translate().1));
+            println!("Found run");
         }
-        let p4_end = PreciseTime::now();
+        let p1_end = PreciseTime::now();
 
         println!("1-Layer");
         //TTS
-        let p3_start = PreciseTime::now();
+        let p2_start = PreciseTime::now();
         let mut c = 0;
-        for parse3 in app1.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit1) {
+        for parse3 in app1.recognise(word.clone()).take(limit1) {
             let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
             for parse4 in s3{
-                println!("{}", Run::new(parse4.translate().1));
+                //println!("{}", Run::new(parse4.translate().1));
+                println!("Found run");
                 c=c+1;
                 if c>=limit{
                     break
@@ -106,19 +108,20 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 break;
             }
         }
-        let p3_end = PreciseTime::now();
+        let p2_end = PreciseTime::now();
 
         println!("2-Layers");
         //TTS -> RLB
-        let p2_start = PreciseTime::now();
+        let p3_start = PreciseTime::now();
         let mut c = 0;
         let mut c1 = 0;
-        for parse2 in app2.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit2) {
+        for parse2 in app2.recognise(word.clone()).take(limit2) {
             let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
             for parse3 in s2{
                 let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                 for parse4 in s3{
-                    println!("{}", Run::new(parse4.translate().1));
+                    //println!("{}", Run::new(parse4.translate().1));
+                    println!("Found run");
                     c=c+1;
                     if c>=limit{
                         break
@@ -133,22 +136,23 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 break;
             }
         }
-        let p2_end = PreciseTime::now();
+        let p3_end = PreciseTime::now();
 
         println!("3-Layers");
         //TTS -> RLB -> PTK
-        let p1_start = PreciseTime::now();
+        let p4_start = PreciseTime::now();
         let mut c = 0;
         let mut c1 = 0;
         let mut c2 = 0;
-        for parse1 in app3.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(limit3) {
+        for parse1 in app3.recognise(word.clone()).take(limit3) {
             let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &app2);
             for parse2 in s1{
                 let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
                 for parse3 in s2{
                     let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
-                        println!("{}", Run::new(parse4.translate().1));
+                        //println!("{}", Run::new(parse4.translate().1));
+                        println!("Found run");
                         c=c+1;
                         if c>=limit{
                             break
@@ -168,7 +172,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 break;
             }
         }
-        let p1_end = PreciseTime::now();
+        let p4_end = PreciseTime::now();
 
         println!("3-Layers + NFA");
         //TTS -> RLB -> PTK -> TO_NFA
@@ -176,7 +180,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         let mut c = 0;
         let mut c1 = 0;
         let mut c2 = 0;
-        for parsenfa in nfa.recognise(app3.int_word(sentence.split_whitespace().map(|x| x.to_string()).collect())).take(limit3) {
+        for parsenfa in nfa.recognise(app3.int_word(word.clone())).take(limit3) {
             let parse1 = nfa_dict.translate(parsenfa.1);
             let s1 = ctf::ctf_level_i(parse1, &nptk, &app2);
             for parse2 in s1{
@@ -184,7 +188,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 for parse3 in s2{
                     let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
-                        println!("{}", Run::new(parse4.translate().1));
+                        //println!("{}", Run::new(parse4.translate().1));
+                        println!("Found run");
                         c=c+1;
                         if c>=limit{
                             break
@@ -208,7 +213,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         outercount = outercount + 1;
 
         //save results and times for this sentence
-        let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$}| {5: <width$} \n",
+        let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
         outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), width = w);
 
 

@@ -57,7 +57,7 @@ impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + O
             agenda: init_heap,
             filtered_rules: self.transitions.clone(),
             accepting: self.final_states.clone(),
-            used: HashSet::new(),
+            //used: HashSet::new(),
         }
     }
 }
@@ -144,7 +144,7 @@ pub struct NFARecogniser<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> 
     agenda: BinaryHeap<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)>,
     filtered_rules: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
     accepting: HashSet<S>,
-    used: HashSet<Configuration<S, T, W>>,
+    //used: HashSet<Configuration<S, T, W>>,
 }
 
 impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> NFARecogniser<S, T, W>{
@@ -160,16 +160,16 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
         let mut i = 0;
         while let Some((c, run)) = self.agenda.pop() {
             i = i + 1;
-            self.used.insert(c.clone());
+            //self.used.insert(c.clone());
             for rs in self.filtered_rules.get(&(c.storage)){
                 for r in rs {
                     let cv = r.apply(&c);
                     for c1 in cv{
-                        if !self.used.contains(&c1){
-                            let mut run1 = run.clone();
-                            run1.push(r.clone());
-                            self.agenda.push((c1, run1))
-                        }
+                        //if !self.used.contains(&c1){
+                        let mut run1 = run.clone();
+                        run1.push(r.clone());
+                        self.agenda.push((c1, run1))
+                        //}
                     }
                 }
             }

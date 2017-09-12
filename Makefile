@@ -2,8 +2,8 @@ default: benchmark-results.txt
 .PHONY: default
 
 GRAMMAR = ./corp/create_lim_grammar.py
-NAME ?= corp/pmcfg-5.readable
-PTK ?= 10
+NAME ?= corp/pmcfg-5
+PTK ?= 5
 
 
 ${NAME}.classes:

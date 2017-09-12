@@ -1,10 +1,7 @@
 use std::clone::*;
 
-use util::*;
 use util::equivalence_classes::*;
-
 use approximation::relabel::*;
-use cfg::*;
 use push_down::*;
 
 impl<A : Relabel<N1, N2, B> +Ord + Clone,

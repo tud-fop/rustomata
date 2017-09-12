@@ -4,9 +4,7 @@ use std::ops::{Add, Mul};
 use self::num_traits::{One, Zero};
 
 use automata;
-
 use automata::red::*;
-use util::*;
 use push_down::*;
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,

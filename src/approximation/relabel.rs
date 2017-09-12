@@ -5,8 +5,6 @@ use std::hash::Hash;
 use automata::*;
 use approximation::*;
 use util::equivalence_classes::*;
-
-use tree_stack::*;
 use push_down::*;
 
 /// Specifies how to relabel the internal values of the structure. Used for `Approximation` with the `RlbElement`

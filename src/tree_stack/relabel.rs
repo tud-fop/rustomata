@@ -2,10 +2,8 @@ use std::clone::*;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use util::*;
 use util::equivalence_classes::*;
 use approximation::relabel::*;
-use cfg::*;
 use tree_stack::*;
 
 impl<A: Relabel<N1, N2, B> +Ord + Clone,

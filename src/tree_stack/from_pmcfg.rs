@@ -153,7 +153,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                     word: buffer.clone(),
                                     weight: match previous_component[usize::from(i1)] {
                                         None => ri.weight.clone(),
-                                        Some(_) => W::one()
+                                        Some(_) => W::one(),
                                     },
                                     instruction: match previous_component[usize::from(i1)] {
                                         None => {

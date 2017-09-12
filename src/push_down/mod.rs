@@ -9,9 +9,7 @@ use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 
 use automata;
-use approximation::relabel::*;
 use automata::red::*;
-use push_down::red::*;
 
 pub mod from_cfg;
 pub mod relabel;
