@@ -19,13 +19,23 @@ impl<S: Hash, T: Hash, W> Hash for Configuration<S, T, W> {
 
 impl<S: Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for Configuration<S, T, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.weight.partial_cmp(&other.weight)
+        if self.weight == other.weight{
+            other.word.len().partial_cmp(&self.word.len())
+        }
+        else{
+            self.weight.partial_cmp(&other.weight)
+        }
     }
 }
 
 impl<S: Eq, T: Eq, W: Ord + Eq> Ord for Configuration<S, T, W> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.weight.cmp(&other.weight)
+        if self.weight == other.weight{
+            other.word.len().cmp(&self.word.len())
+        }
+        else{
+            self.weight.cmp(&other.weight)
+        }
     }
 }
 

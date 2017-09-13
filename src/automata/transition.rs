@@ -39,13 +39,23 @@ impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Cop
 
 impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for Transition<A, I, T, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.weight.partial_cmp(&other.weight)
+        if self.weight == other.weight{
+            self.word.len().partial_cmp(&other.word.len())
+        }
+        else{
+            self.weight.partial_cmp(&other.weight)
+        }
     }
 }
 
 impl<A: Eq, I: Instruction<A> + Eq, T: Eq, W: Ord + Eq> Ord for Transition<A, I, T, W> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.weight.cmp(&other.weight)
+        if self.weight == other.weight{
+            self.word.len().cmp(&other.word.len())
+        }
+        else{
+            self.weight.cmp(&other.weight)
+        }
     }
 }
 
