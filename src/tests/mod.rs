@@ -1,13 +1,17 @@
 use std::marker::PhantomData;
 
-use integerise::push_down::*;
+use automata::*;
+use integerise::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::*;
 use util::log_prob::*;
 use util::equivalence_classes::*;
 use util::ctf::*;
+use util::integeriser::*;
 use nfa::*;
+use push_down::*;
+use tree_stack::*;
 
 use num_traits::One;
 
@@ -341,7 +345,7 @@ fn test_relabel_pushdown() {
     e_string.push_str("N [A, B]\n");
     e_string.push_str("R [*]\n");
 
-    let e: equivalence_classes::EquivalenceClass<String, String> = e_string.parse().unwrap();
+    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
     let rlb = RlbElement::new(e);
 
@@ -453,7 +457,7 @@ fn test_relabel_check() {
     e_string.push_str("N [A, B]\n");
     e_string.push_str("R [*]\n");
 
-    let e: equivalence_classes::EquivalenceClass<String, String> = e_string.parse().unwrap();
+    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
     let rlb = RlbElement::new(e);
 
@@ -495,7 +499,7 @@ fn test_ctf_scheme(){
     e_string.push_str("N [A, B]\n");
     e_string.push_str("R [*]\n");
 
-    let e: equivalence_classes::EquivalenceClass<String, String> = e_string.parse().unwrap();
+    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
 
     let rlb = RlbElement::new(e);
 
@@ -522,11 +526,11 @@ fn test_ctf_scheme(){
     for sentence in corpus.lines() {
         println!("{}:\n", sentence);
         for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-            let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &b);
+            let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
             for parse2 in s1{
-                let s2 = ctf::ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
                 for parse3 in s2{
-                    let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
                         recog.push(parse4);
                         c4=c4+1;

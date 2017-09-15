@@ -68,22 +68,21 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
          }
 
          fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>) -> Option<IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>>{
-             match self.automaton.check(self.automaton.initial().clone(), run){
-                 Some(s) => {
-                     let c = Configuration {
-                         word: ctf::run_word(&run),
-                         storage: s,
-                         weight: ctf::run_weight(&run),
-                     };
-                     Some(IntItem{
-                         configuration: c,
-                         run: run.clone(),
-                         term_integeriser: &self.term_integeriser,
-                         nterm_integeriser: &self.nterm_integeriser,
-                     })
-                 },
-                 None => None,
+             let heap = self.automaton.check(self.automaton.initial().clone(), run);
+             if heap.is_empty(){
+                 return None;
              }
+             let c = Configuration {
+                 word: ctf::run_word(&run),
+                 storage: heap[0].clone(),
+                 weight: ctf::run_weight(&run),
+             };
+             Some(IntItem{
+                 configuration: c,
+                 run: run.clone(),
+                 term_integeriser: &self.term_integeriser,
+                 nterm_integeriser: &self.nterm_integeriser,
+             })
          }
 
          fn int_word(&self, word: Vec<T>)->Vec<u64>{
