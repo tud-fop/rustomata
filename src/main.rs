@@ -3,6 +3,7 @@ extern crate clap;
 extern crate nom;
 extern crate num_traits;
 extern crate time;
+extern crate rand;
 
 mod automata;
 mod tree_stack;
@@ -170,6 +171,18 @@ fn main() {
                                                 .short("r")
                                                 .long("limit3")
                                                 .default_value("10000")
+                                                .required(false))
+                                        .arg(Arg::with_name("number-words")
+                                                .help("number of words that are filtered")
+                                                .short("w")
+                                                .long("wordlimit")
+                                                .default_value("1")
+                                                .required(false))
+                                        .arg(Arg::with_name("nfa")
+                                                .help("are we converting into nfa")
+                                                .short("b")
+                                                .long("nfabool")
+                                                .default_value("false")
                                                 .required(false)))
                     .subcommand(SubCommand::with_name("mcfg")
                                 .about("coarse-to-fine recognising using push-down and tree-stack automata")
@@ -564,13 +577,15 @@ fn main() {
                     let limit1 = benchmark_matches.value_of("limit-TTS").unwrap().parse().unwrap();
                     let limit2 = benchmark_matches.value_of("limit-RLB").unwrap().parse().unwrap();
                     let limit3 = benchmark_matches.value_of("limit-PTK").unwrap().parse().unwrap();
+                    let check = benchmark_matches.value_of("number-words").unwrap().parse().unwrap();
+                    let nfa : bool = benchmark_matches.value_of("nfa").unwrap().parse().unwrap();
 
                     let corpus_file_name = benchmark_matches.value_of("words").unwrap();
                     let mut corpus_file = File::open(corpus_file_name).unwrap();
                     let mut corpus = String::new();
                     let _ = corpus_file.read_to_string(&mut corpus);
 
-                    ctf_benchmark::benchmark(grammar_string, classes_string, size, limit, limit1, limit2, limit3, corpus)
+                    ctf_benchmark::benchmark(grammar_string, classes_string, size, limit, limit1, limit2, limit3, corpus, check, nfa)
                 },
                 _ => ()
             }
