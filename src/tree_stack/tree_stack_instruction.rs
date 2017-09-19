@@ -6,7 +6,7 @@ use tree_stack::TreeStack;
 
 
 /// Instruction on `TreeStack<A>`s.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum TreeStackInstruction<A> {
     Up {
         n: u8,

@@ -75,8 +75,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         at_3.to(at_4),
                         at_4.to(at_end)
                     );
-    let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
-     "Word", "Normal", "1-Layer", "2-Layers", "3-Layers", "3-Layers + NFA", width = w);
+    let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+     "Word", "Normal", "1-Layer", "2-Layers", "3-Layers", "3-Layers + NFA", "id. output", width = w);
     let mut outercount = 0;
     println!("Start Test");
 
@@ -108,14 +108,17 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     match no_nfa{
         true =>{
             for (sentence, word) in to_check {
-                println!("{}:", sentence);
 
+                println!("{}:", sentence);
+                let mut r_set = HashSet::new();
+                let mut same = true;
                 //No approximation
                 println!("no Approximation");
                 let p1_start = PreciseTime::now();
                 for parse in automaton.recognise(word.clone()).take(limit) {
                     //println!("{}", Run::new(parse.translate().1));
                     println!("Found run");
+                    r_set.insert(parse.translate().1);
                 }
                 let p1_end = PreciseTime::now();
 
@@ -128,6 +131,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                     for parse4 in s3{
                         //println!("{}", Run::new(parse4.translate().1));
                         println!("Found run");
+                        if !r_set.contains(&parse4.translate().1){
+                            same = false;
+                        }
                         c=c+1;
                         if c>=limit{
                             break
@@ -151,6 +157,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         for parse4 in s3{
                             //println!("{}", Run::new(parse4.translate().1));
                             println!("Found run");
+                            if !r_set.contains(&parse4.translate().1){
+                                same = false;
+                            }
                             c=c+1;
                             if c>=limit{
                                 break
@@ -182,6 +191,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                             for parse4 in s3{
                                 //println!("{}", Run::new(parse4.translate().1));
                                 println!("Found run");
+                                if !r_set.contains(&parse4.translate().1){
+                                    same = false;
+                                }
                                 c=c+1;
                                 if c>=limit{
                                     break
@@ -211,8 +223,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 outercount = outercount + 1;
 
                 //save results and times for this sentence
-                let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
-                outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), width = w);
+                let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+                outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), same, width = w);
 
 
             }
@@ -220,6 +232,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         false =>{
             let (nfa, nfa_dict) = nfa_s.unwrap();
             for (sentence, word) in to_check {
+                let mut r_set = HashSet::new();
+                let mut same = true;
                 println!("{}:", sentence);
 
                 //No approximation
@@ -228,6 +242,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 for parse in automaton.recognise(word.clone()).take(limit) {
                     //println!("{}", Run::new(parse.translate().1));
                     println!("Found run");
+                    r_set.insert(parse.translate().1);
                 }
                 let p1_end = PreciseTime::now();
 
@@ -240,6 +255,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                     for parse4 in s3{
                         //println!("{}", Run::new(parse4.translate().1));
                         println!("Found run");
+                        if !r_set.contains(&parse4.translate().1){
+                            same = false;
+                        }
                         c=c+1;
                         if c>=limit{
                             break
@@ -263,6 +281,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         for parse4 in s3{
                             //println!("{}", Run::new(parse4.translate().1));
                             println!("Found run");
+                            if !r_set.contains(&parse4.translate().1){
+                                same = false;
+                            }
                             c=c+1;
                             if c>=limit{
                                 break
@@ -294,6 +315,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                             for parse4 in s3{
                                 //println!("{}", Run::new(parse4.translate().1));
                                 println!("Found run");
+                                if !r_set.contains(&parse4.translate().1){
+                                    same = false;
+                                }
                                 c=c+1;
                                 if c>=limit{
                                     break
@@ -331,6 +355,9 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                             for parse4 in s3{
                                 //println!("{}", Run::new(parse4.translate().1));
                                 println!("Found run");
+                                if !r_set.contains(&parse4.translate().1){
+                                    same = false;
+                                }
                                 c=c+1;
                                 if c>=limit{
                                     break
@@ -354,8 +381,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 outercount = outercount + 1;
 
                 //save results and times for this sentence
-                let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} \n",
-                outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), width = w);
+                let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+                outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), same, width = w);
 
 
             }

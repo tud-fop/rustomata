@@ -2,12 +2,13 @@ use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::ops::Mul;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 use automata::Instruction;
 use automata::Configuration;
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Transition<A, I: Instruction<A>, T, W> {
     pub _dummy: PhantomData<A>,
     pub word: Vec<T>,
@@ -15,6 +16,12 @@ pub struct Transition<A, I: Instruction<A>, T, W> {
     pub instruction: I,
 }
 
+impl<A, I: Hash + Instruction<A>, T: Hash, W> Hash for Transition<A, I, T, W> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.word.hash(state);
+        self.instruction.hash(state);
+    }
+}
 
 impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Copy> Transition<A, I, T, W> {
     pub fn apply(&self, c: &Configuration<A, T, W>) -> Vec<Configuration<A, T, W>> {
