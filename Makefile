@@ -4,7 +4,7 @@ default: rustomata
 GRAMMAR = ./corp/create_lim_grammar.py
 NAME ?= corp/pmcfg-5
 PTK ?= 5
-WORDS ?= 5
+WORDS ?= 1
 NFA ?= false
 
 
