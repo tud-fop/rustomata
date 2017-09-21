@@ -14,6 +14,7 @@ use approximation::*;
 use integerise::*;
 
 /// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
+/// Does not test words that are longer than twenty
 pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String, check: usize, no_nfa: bool){
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
@@ -97,7 +98,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         //creates the word
         let word : Vec<String> = sentence.split_whitespace().map(|x| x.to_string()).collect();
         //pushes element in to check if word can be generated and sample not already in to_check
-        if word.is_empty() || in_to_check.contains(&i){
+        if word.is_empty() || in_to_check.contains(&i) || word.len() > 25{
             continue;
         }else{
             to_check.push((sentence, word));
