@@ -122,6 +122,7 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
             }
             if (self.accepting)(&c) {
                 writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
+                println!("Found run after {} Configurations", i);
                 return Some((c, run));
             }
         }

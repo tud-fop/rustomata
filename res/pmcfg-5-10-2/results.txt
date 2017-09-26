@@ -1,0 +1,24 @@
+Benchmarking results 
+
+Construction grammar: PT0.007130369S
+Construction equivalence-class: PT0.000777095S
+
+Construction TTS: PT0.000005183S
+Construction RLB: PT0.000000924S
+Construction PTK: PT0.000000520S
+
+Generation Automata: PT0.080653218S
+Approximation TTS: PT0.098484699S
+Approximation RLB: PT0.118266100S
+Approximation PTK: PT0.138424073S
+NFAs: PT0.000024308S
+
+Recognition times:
+
+Word           | Normal         | 1-Layer        | 2-Layers       | 3-Layers       | 3-Layers + NFA | id. output     
+
+1              | PT0.422866504S | PT0.433179151S | PT0.531215320S | PT0.686415197S | PT0.000000054S | true           
+
+2              | PT0.127998130S | PT0.282814003S | PT0.281250550S | PT0.377011189S | PT0.000000070S | true           
+
+3              | PT0.077693964S | PT0.191111899S | PT0.192512982S | PT0.259510515S | PT0.000000054S | true           

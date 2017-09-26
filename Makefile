@@ -4,20 +4,21 @@ default: rustomata
 GRAMMAR = ./corp/create_lim_grammar.py
 NAME ?= corp/pmcfg-5
 PTK ?= 5
+EQC ?= corp/pmcfg-5
 WORDS ?= 1
 NFA ?= false
 
 
-${NAME}.classes:
-	${GRAMMAR} ${NAME}
+${EQC}.classes:
+	${GRAMMAR} ${EQC}
 
 ${NAME}.gr:
 	${GRAMMAR} ${NAME}
 
-benchmark: benchmark-results.txt
+bench: benchmark-results.txt
 
 benchmark-results.txt: ${NAME}.gr ${NAME}.classes ${NAME}.txt
-	target/debug/rustomata coarse-to-fine benchmark ${NAME}.gr ${NAME}.classes ${NAME}.txt ${PTK} --wordlimit ${WORDS} --nfabool ${NFA}
+	target/debug/rustomata coarse-to-fine benchmark ${NAME}.gr ${EQC}.classes ${NAME}.txt ${PTK} --wordlimit ${WORDS} --nfabool ${NFA} > benchmark.log
 
 rustomata: target/debug/rustomata
 

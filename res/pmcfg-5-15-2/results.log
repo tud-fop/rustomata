@@ -1,0 +1,51 @@
+Start Initialisation
+Automaton
+TTS
+RLB
+PTK
+NFA
+Start Test
+ Mögen Puristen aller Musikbereiche auch die Nase rümpfen , die Zukunft der Musik liegt für viele junge Komponisten im Crossover-Stil . :
+no Approximation
+Found run after 3110 Configurations
+Found run
+1-Layer
+Found run after 5257 Configurations
+Found run
+2-Layers
+Found run after 5194 Configurations
+Found run
+3-Layers
+Found run after 5195 Configurations
+Found run
+3-Layers + NFA
+ Sie gehen gewagte Verbindungen und Risiken ein , versuchen ihre Möglichkeiten auszureizen . :
+no Approximation
+Found run after 1434 Configurations
+Found run
+1-Layer
+Found run after 3141 Configurations
+Found run
+2-Layers
+Found run after 2990 Configurations
+Found run
+3-Layers
+Found run after 2952 Configurations
+Found run
+3-Layers + NFA
+ Schade jedoch , daß kaum jemand daran teilhaben kann . :
+no Approximation
+Found run after 837 Configurations
+Found run
+1-Layer
+Found run after 2835 Configurations
+Found run after 8 Configurations
+Found run
+2-Layers
+Found run after 2766 Configurations
+Found run after 10 Configurations
+Found run
+3-Layers
+Found run after 2768 Configurations
+Found run
+3-Layers + NFA
