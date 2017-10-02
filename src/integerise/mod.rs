@@ -14,9 +14,11 @@ use util::*;
 mod push_down;
 mod tree_stack;
 mod from_pmcfg;
+mod approximation;
 
 pub use self::push_down::*;
 pub use self::tree_stack::*;
+pub use self::approximation::*;
 
 /// Integerised Version of `Automaton`.
 pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
@@ -33,11 +35,6 @@ pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
     fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, u64, W>>) -> Option<IntItem<'a, S, I, T, A, W>>;
 
     fn int_word(&self, word: Vec<T>)-> Vec<u64>;
-}
-
-/// Integerised version of `Approximation`
-pub trait IntApproximation<T1, T2, O> {
-    fn approximation(&self, &T1) -> Result<(O, T2), String>;
 }
 
 /// Trait that specifies whether a structure can be integerised using a `Ìntegeriser<A>`

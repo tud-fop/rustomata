@@ -140,20 +140,6 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     }
 }
 
-impl<A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
-     A2: Ord + PartialEq + Debug + Clone + Hash,
-     N1: Clone + Eq + Hash,
-     N2: Clone + Eq + Hash,
-     T: Ord,
-     W: Ord> IntApproximationStrategy<A1, A2, RlbElement<PushDown<u64>, u64, u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>, TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>>
-    for RlbElement<PushDown<A1>, N1, N2, automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, TransitionKey<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
-
-    fn integerise(&self, inter: &Integeriser<A1>)-> (Integeriser<A2>, RlbElement<PushDown<u64>, u64, u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>, TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>){
-        let (ne, inter2) = in_fit(self.mapping.clone(), inter);
-        (inter2, RlbElement::new(ne))
-    }
-}
-
 //needed for integerised values
 impl Relabel<u64, u64, u64> for u64{
     fn relabel(&self, map: &EquivalenceClass<u64, u64>) -> u64{

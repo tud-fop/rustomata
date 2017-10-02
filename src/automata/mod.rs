@@ -107,9 +107,6 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
     fn next(&mut self) -> Option<(C, Vec<R>)> {
         let mut i = 0;
         while let Some((c, run)) = self.agenda.pop() {
-            /*if i%100 == 0 {
-                println!("{:?}", self.agenda.len());
-            }*/
             i = i + 1;
             for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
                 for r in rs {
@@ -122,7 +119,6 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
             }
             if (self.accepting)(&c) {
                 writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
-                println!("Found run after {} Configurations", i);
                 return Some((c, run));
             }
         }

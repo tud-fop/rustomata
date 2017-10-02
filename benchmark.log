@@ -5,31 +5,21 @@ RLB
 PTK
 NFA
 Start Test
- Auch Philip Glass wurde auf seinen weltweiten Tourneen mit Kassetten und Tonbändern überschüttet . :
-no Approximation
-Found run after 11309 Configurations
-Found run
-1-Layer
-Found run after 11307 Configurations
-Found run
-2-Layers
-Found run after 11307 Configurations
-Found run
-3-Layers
-Found run after 11375 Configurations
-Found run after 41 Configurations
-Found run after 3 Configurations
-Found run after 8 Configurations
-Found run after 12 Configurations
-Found run after 11 Configurations
-Found run after 13 Configurations
-Found run
-3-Layers + NFA
  Mögen Puristen aller Musikbereiche auch die Nase rümpfen , die Zukunft der Musik liegt für viele junge Komponisten im Crossover-Stil . :
 no Approximation
-Found run after 15634 Configurations
+New successful configuration found after inspecting 3110 configurations.
 Found run
 1-Layer
-Found run after 73608 Configurations
+New successful configuration found after inspecting 5255 configurations.
 Found run
 2-Layers
+New successful configuration found after inspecting 5253 configurations.
+Found run
+3-Layers
+New successful configuration found after inspecting 14307 configurations.
+New successful configuration found after inspecting 3 configurations.
+New successful configuration found after inspecting 23 configurations.
+Found run
+3-Layers + NFA
+New successful configuration found after inspecting 14267 configurations.
+Found run

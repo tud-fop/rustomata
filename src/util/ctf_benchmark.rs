@@ -1,7 +1,7 @@
 use time::PreciseTime;
-use std::io::prelude::*;
+use std::io::{self,Write};
 use std::fs::File;
-use rand::{Rng, SeedableRng, StdRng};
+use rand::{SeedableRng, StdRng};
 use rand::distributions::{IndependentSample, Range};
 use std::collections::HashSet;
 
@@ -22,7 +22,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let w = 14;
 
     //Create initial PMCFG
-    println!("Start Initialisation");
+    writeln!(io::stderr(), "Start Initialisation").unwrap();
     let grammar_start = PreciseTime::now();
     let grammar: PMCFG<String, String, log_prob::LogProb> = grammar_string.parse().unwrap();
     let grammar_end = PreciseTime::now();
@@ -42,20 +42,20 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let ap_end = PreciseTime::now();
 
     //creates all automata that are to be used
-    println!("Automaton");
+    writeln!(io::stderr(), "Automaton").unwrap();
     let at_start = PreciseTime::now();
     let automaton = IntTreeStackAutomaton::from(grammar);
     let at_1 = PreciseTime::now();
-    println!("TTS");
+    writeln!(io::stderr(), "TTS").unwrap();
     let (app1, ntts) = automaton.approximation(&tts).unwrap();
     let at_2 = PreciseTime::now();
-    println!("RLB");
+    writeln!(io::stderr(), "RLB").unwrap();
     let (app2, nrlb) = app1.approximation(&rlb).unwrap();
     let at_3 = PreciseTime::now();
-    println!("PTK");
+    writeln!(io::stderr(), "PTK").unwrap();
     let (app3, nptk) = app2.approximation(&ptk).unwrap();
     let at_4 = PreciseTime::now();
-    println!("NFA");
+    writeln!(io::stderr(), "NFA").unwrap();
     let nfa_s = match no_nfa{
         true => { None }
         false => {
@@ -79,7 +79,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
      "Word", "Normal", "1-Layer", "2-Layers", "3-Layers", "3-Layers + NFA", "id. output", width = w);
     let mut outercount = 0;
-    println!("Start Test");
+    writeln!(io::stderr(), "Start Test").unwrap();
 
     let seed: &[_] = &[1, 2, 3, 4];
     let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -110,28 +110,28 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
         true =>{
             for (sentence, word) in to_check {
 
-                println!("{}:", sentence);
+                writeln!(io::stderr(), "{}:", sentence).unwrap();
                 let mut r_set = HashSet::new();
                 let mut same = true;
                 //No approximation
-                println!("no Approximation");
+                writeln!(io::stderr(), "no Approximation").unwrap();
                 let p1_start = PreciseTime::now();
                 for parse in automaton.recognise(word.clone()).take(limit) {
-                    //println!("{}", Run::new(parse.translate().1));
-                    println!("Found run");
+                    //writeln!(io::stderr(), "{}", Run::new(parse.translate().1));
+                    writeln!(io::stderr(), "Found run").unwrap();
                     r_set.insert(parse.translate().1);
                 }
                 let p1_end = PreciseTime::now();
 
-                println!("1-Layer");
+                writeln!(io::stderr(), "1-Layer").unwrap();
                 //TTS
                 let p2_start = PreciseTime::now();
                 let mut c = 0;
                 for parse3 in app1.recognise(word.clone()).take(limit1) {
                     let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
-                        //println!("{}", Run::new(parse4.translate().1));
-                        println!("Found run");
+                        //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                        writeln!(io::stderr(), "Found run").unwrap();
                         if !r_set.contains(&parse4.translate().1){
                             same = false;
                         }
@@ -146,7 +146,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p2_end = PreciseTime::now();
 
-                println!("2-Layers");
+                writeln!(io::stderr(), "2-Layers").unwrap();
                 //TTS -> RLB
                 let p3_start = PreciseTime::now();
                 let mut c = 0;
@@ -156,8 +156,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                     for parse3 in s2{
                         let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                         for parse4 in s3{
-                            //println!("{}", Run::new(parse4.translate().1));
-                            println!("Found run");
+                            //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                            writeln!(io::stderr(), "Found run").unwrap();
                             if !r_set.contains(&parse4.translate().1){
                                 same = false;
                             }
@@ -177,7 +177,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p3_end = PreciseTime::now();
 
-                println!("3-Layers");
+                writeln!(io::stderr(), "3-Layers").unwrap();
                 //TTS -> RLB -> PTK
                 let p4_start = PreciseTime::now();
                 let mut c = 0;
@@ -190,8 +190,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         for parse3 in s2{
                             let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                             for parse4 in s3{
-                                //println!("{}", Run::new(parse4.translate().1));
-                                println!("Found run");
+                                //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                                writeln!(io::stderr(), "Found run").unwrap();
                                 if !r_set.contains(&parse4.translate().1){
                                     same = false;
                                 }
@@ -216,7 +216,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p4_end = PreciseTime::now();
 
-                println!("3-Layers + NFA");
+                writeln!(io::stderr(), "3-Layers + NFA").unwrap();
                 //TTS -> RLB -> PTK -> TO_NFA
                 let p5_start = PreciseTime::now();
 
@@ -235,27 +235,27 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
             for (sentence, word) in to_check {
                 let mut r_set = HashSet::new();
                 let mut same = true;
-                println!("{}:", sentence);
+                writeln!(io::stderr(), "{}:", sentence).unwrap();
 
                 //No approximation
-                println!("no Approximation");
+                writeln!(io::stderr(), "no Approximation").unwrap();
                 let p1_start = PreciseTime::now();
                 for parse in automaton.recognise(word.clone()).take(limit) {
-                    //println!("{}", Run::new(parse.translate().1));
-                    println!("Found run");
+                    //writeln!(io::stderr(), "{}", Run::new(parse.translate().1));
+                    writeln!(io::stderr(), "Found run").unwrap();
                     r_set.insert(parse.translate().1);
                 }
                 let p1_end = PreciseTime::now();
 
-                println!("1-Layer");
+                writeln!(io::stderr(), "1-Layer").unwrap();
                 //TTS
                 let p2_start = PreciseTime::now();
                 let mut c = 0;
                 for parse3 in app1.recognise(word.clone()).take(limit1) {
                     let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                     for parse4 in s3{
-                        //println!("{}", Run::new(parse4.translate().1));
-                        println!("Found run");
+                        //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                        writeln!(io::stderr(), "Found run").unwrap();
                         if !r_set.contains(&parse4.translate().1){
                             same = false;
                         }
@@ -270,7 +270,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p2_end = PreciseTime::now();
 
-                println!("2-Layers");
+                writeln!(io::stderr(), "2-Layers").unwrap();
                 //TTS -> RLB
                 let p3_start = PreciseTime::now();
                 let mut c = 0;
@@ -280,8 +280,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                     for parse3 in s2{
                         let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                         for parse4 in s3{
-                            //println!("{}", Run::new(parse4.translate().1));
-                            println!("Found run");
+                            //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                            writeln!(io::stderr(), "Found run").unwrap();
                             if !r_set.contains(&parse4.translate().1){
                                 same = false;
                             }
@@ -301,7 +301,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p3_end = PreciseTime::now();
 
-                println!("3-Layers");
+                writeln!(io::stderr(), "3-Layers").unwrap();
                 //TTS -> RLB -> PTK
                 let p4_start = PreciseTime::now();
                 let mut c = 0;
@@ -314,8 +314,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         for parse3 in s2{
                             let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                             for parse4 in s3{
-                                //println!("{}", Run::new(parse4.translate().1));
-                                println!("Found run");
+                                //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                                writeln!(io::stderr(), "Found run").unwrap();
                                 if !r_set.contains(&parse4.translate().1){
                                     same = false;
                                 }
@@ -340,7 +340,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                 }
                 let p4_end = PreciseTime::now();
 
-                println!("3-Layers + NFA");
+                writeln!(io::stderr(), "3-Layers + NFA").unwrap();
                 //TTS -> RLB -> PTK -> TO_NFA
                 let p5_start = PreciseTime::now();
                 let mut c = 0;
@@ -354,8 +354,8 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
                         for parse3 in s2{
                             let s3 = ctf::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
                             for parse4 in s3{
-                                //println!("{}", Run::new(parse4.translate().1));
-                                println!("Found run");
+                                //writeln!(io::stderr(), "{}", Run::new(parse4.translate().1));
+                                writeln!(io::stderr(), "Found run").unwrap();
                                 if !r_set.contains(&parse4.translate().1){
                                     same = false;
                                 }

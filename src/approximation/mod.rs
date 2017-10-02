@@ -10,7 +10,6 @@ pub mod ptk;
 pub mod tts;
 
 use automata;
-use util::*;
 
 use tree_stack::*;
 use push_down::*;
@@ -28,11 +27,6 @@ pub trait ApproximationStrategy<A1, A2, T1, T2> {
     fn approximate_transition(&mut self, T1) -> T2;
 
     fn translate_run(&self, Vec<T2>) -> BinaryHeap<Vec<T1>>;
-}
-
-///Integerised form of the `ApproximationStrategy` trait
-pub trait IntApproximationStrategy<N1: Hash + Eq, N2: Hash + Eq, S> {
-    fn integerise(&self, &Integeriser<N1>)->(Integeriser<N2>, S);
 }
 
 ///Defines the approximation of `Automata`

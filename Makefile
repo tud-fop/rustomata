@@ -18,7 +18,7 @@ ${NAME}.gr:
 bench: benchmark-results.txt
 
 benchmark-results.txt: ${NAME}.gr ${NAME}.classes ${NAME}.txt
-	target/debug/rustomata coarse-to-fine benchmark ${NAME}.gr ${EQC}.classes ${NAME}.txt ${PTK} --wordlimit ${WORDS} --nfabool ${NFA} > benchmark.log
+	target/debug/rustomata coarse-to-fine benchmark ${NAME}.gr ${EQC}.classes ${NAME}.txt ${PTK} --wordlimit ${WORDS} --nfabool ${NFA} 2> benchmark.log
 
 rustomata: target/debug/rustomata
 

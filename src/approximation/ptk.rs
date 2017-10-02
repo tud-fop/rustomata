@@ -4,7 +4,6 @@ use std::hash::Hash;
 
 use automata::*;
 use approximation::*;
-use util::*;
 use push_down::*;
 
 /// `ApproximationStrategy`that limits a `PushDownAutomaton` to a certain height.
@@ -119,17 +118,5 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
             ()
         }
         self.trans_map.get_mut(&tk).unwrap().push(t1.clone());
-    }
-}
-
-impl<N1: Ord + PartialEq + Debug + Clone + Hash, T: Ord, W: Ord> IntApproximationStrategy<N1, N1, PDTopKElement<u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>,
-                                                                       TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>>
-    for PDTopKElement<N1, automata::Transition<PushDown<N1>, PushDownInstruction<N1>, T, W>,
-                          TransitionKey<PushDown<N1>, PushDownInstruction<N1>, T, W>>{
-
-    fn integerise(&self, inter: &Integeriser<N1>)-> (Integeriser<N1>, PDTopKElement<u64, automata::Transition<PushDown<u64>, PushDownInstruction<u64>, T, W>,
-                                         TransitionKey<PushDown<u64>, PushDownInstruction<u64>, T, W>>){
-
-         (inter.clone(), PDTopKElement::new(self.size))
     }
 }
