@@ -15,22 +15,13 @@ use integerise::*;
 
 /// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
 /// Does not test words that are longer than twenty
-pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String, check: usize, no_nfa: bool){
+pub fn benchmark(grammar: PMCFG<String, String, log_prob::LogProb>, eq: EquivalenceClass<String, String>, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String, check: usize, no_nfa: bool){
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
     let _ = write!(&mut f, "Benchmarking results \n\n");
     let w = 14;
 
-    //Create initial PMCFG
     writeln!(io::stderr(), "Start Initialisation").unwrap();
-    let grammar_start = PreciseTime::now();
-    let grammar: PMCFG<String, String, log_prob::LogProb> = grammar_string.parse().unwrap();
-    let grammar_end = PreciseTime::now();
-
-    //create initial EquivalenceClass
-    let eq_start = PreciseTime::now();
-    let eq: EquivalenceClass<String, String> = classes_string.parse().unwrap();
-    let eq_end = PreciseTime::now();
 
     //creates the initial approximation strategies
     let ap_start = PreciseTime::now();
@@ -65,8 +56,7 @@ pub fn benchmark(grammar_string: String, classes_string: String, ptk_size: usize
     let at_end = PreciseTime::now();
 
     //save times for initial startup
-    let _ = write!(&mut f, "Construction grammar: {}\nConstruction equivalence-class: {}\n\nConstruction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n", grammar_start.to(grammar_end),
-                        eq_start.to(eq_end),
+    let _ = write!(&mut f, "Construction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n",
                         ap_start.to(ap_1),
                         ap_1.to(ap_2),
                         ap_2.to(ap_end),
