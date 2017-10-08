@@ -145,7 +145,7 @@ Rustomata also allows for recognition using a coarse-to-fine scheme, where we cr
 cargo run coarse-to-fine mcfg automaton grammar.gr eq.classes k
 ```
 
-creates a tree-stack automaton from an MCFG and then three push-down automata using the implemented approximation functions. Prints all automata. Uses `k` and eq.classes for these approximations.
+creates a tree-stack automaton from an MCFG and then three push-down automata using the implemented approximation functions. Prints all automata. Uses `k` and `eq.classes` for these approximations.
 
 ```bash
 cargo run coarse-to-fine mcfg parse grammar.gr eq.classes k
