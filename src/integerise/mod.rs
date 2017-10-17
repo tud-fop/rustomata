@@ -22,10 +22,10 @@ pub use self::approximation::*;
 
 /// Integerised Version of `Automaton`.
 pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
-                    I: Clone + Debug + Eq + Instruction<S>,
-                    T: Clone + Debug + Eq + Hash,
-                    A: Clone + Debug + Eq + Hash,
-                    W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord>
+                               I: Clone + Debug + Eq + Instruction<S>,
+                               T: Clone + Debug + Eq + Hash,
+                               A: Clone + Debug + Eq + Hash,
+                               W: Clone + Debug + Mul<Output=W> + One + Ord>
     where Self::Key: Hash + Eq + Clone {
 
     type Key;

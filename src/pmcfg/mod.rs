@@ -101,7 +101,30 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFGRu
            }
            buffer.push_str(")");
 
-        //write!(f, "\"{}\" → {} {}  # {}", self.head, self.composition, buffer, self.weight)
-        write!(f, "\"{}\" → {}", self.head, self.composition)
+        write!(f, "\"{}\" → {} {}  # {}", self.head, self.composition, buffer, self.weight)
+        // write!(f, "\"{}\" → {}", self.head, self.composition)
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N, T, W> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut buffer = "".to_string();
+
+        let mut iter = self.initial.iter().peekable();
+
+        buffer.push_str("initial: [");
+        while let Some(nt) = iter.next() {
+            buffer.push_str(format!("\"{}\"", nt).as_str());
+            if iter.peek().is_some() {
+                buffer.push_str(", ");
+            }
+        }
+        buffer.push_str("]\n\n");
+
+        for ref r in &self.rules {
+            buffer.push_str(format!("{}\n", r).as_str());
+        }
+
+        write!(f, "{}", buffer)
     }
 }

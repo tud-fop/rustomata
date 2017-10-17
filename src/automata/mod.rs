@@ -6,6 +6,7 @@ use std::hash::Hash;
 use std::io::{self,Write};
 use std::fmt::Debug;
 use std::ops::Mul;
+use std::time::SystemTime;
 use std::vec::Vec;
 use self::num_traits::One;
 
@@ -106,6 +107,7 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
     type Item = (C, Vec<R>);
     fn next(&mut self) -> Option<(C, Vec<R>)> {
         let mut i = 0;
+        let now = SystemTime::now();
         while let Some((c, run)) = self.agenda.pop() {
             i = i + 1;
             for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
@@ -118,12 +120,26 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
                 }
             }
             if (self.accepting)(&c) {
-                writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
+                match now.elapsed() {
+                    Ok(elapsed) => {
+                        writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations in {:.3}s.", i, elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9).unwrap();
+                    },
+                    Err(_) => {
+                        writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
+                    },
+                };
                 return Some((c, run));
             }
         }
 
-        writeln!(io::stderr(), "No new successful configuration found after inspecting {} configurations.", i).unwrap();
+        match now.elapsed() {
+            Ok(elapsed) => {
+                writeln!(io::stderr(), "No new successful configuration found after inspecting {} configurations in {:.3}s.", i, elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9).unwrap();
+            },
+            Err(_) => {
+                writeln!(io::stderr(), "No new successful configuration found after inspecting {} configurations.", i).unwrap();
+            },
+        }
         None
     }
 }

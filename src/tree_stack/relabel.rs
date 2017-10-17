@@ -1,5 +1,4 @@
 use std::clone::*;
-use std::collections::HashMap;
 use std::hash::Hash;
 
 use util::equivalence_classes::*;
@@ -10,15 +9,7 @@ impl<A: Relabel<N1, N2, B> +Ord + Clone,
      B: Ord + Clone,
      N1: Clone + Eq + Hash, N2: Clone + Eq + Hash> Relabel<N1, N2, TreeStack<B>> for TreeStack<A>{
         fn relabel(&self, mapping: &EquivalenceClass<N1, N2>) -> TreeStack<B> {
-            let mut new_tree: HashMap<Vec<u8>, B> = HashMap::new();
-            for (p, v) in self.tree.clone(){
-                new_tree.insert(p, v.relabel(mapping));
-            }
-
-            TreeStack{
-                tree: new_tree,
-                pointer: self.pointer.clone(),
-            }
+            self.map(&|v| v.relabel(mapping))
         }
 }
 
