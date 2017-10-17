@@ -323,7 +323,6 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{}:", sentence);
                         for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
                             println!("{:?}", parse.translate().0);
                         }

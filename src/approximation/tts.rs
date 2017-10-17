@@ -30,15 +30,13 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         automata::Transition<PushDown<A>,  PushDownInstruction<A>, T, W>>
       for TTSElement<A, automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>, TransitionKey<PushDown<A>,  PushDownInstruction<A>, T, W>>{
 
-    fn approximate_initial(&self, a : TreeStack<A>)-> PushDown<A>{
-        let np = Vec::new();
-        let nempty = a.tree.get(&np).unwrap();
+    fn approximate_initial(&self, a: TreeStack<A>)-> PushDown<A>{
+        let nempty = a.current_symbol().clone();
         let ele = vec![nempty.clone()];
-        let p = PushDown{
+        PushDown{
             elements: ele.clone(),
-            empty: ele[0].clone(),
-        };
-        p
+            empty: nempty,
+        }
     }
 
     fn approximate_transition(&mut self, t :  automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>) ->
