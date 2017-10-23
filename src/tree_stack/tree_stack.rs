@@ -8,7 +8,7 @@ struct Node<A> {
     children: Vec<Option<Rc<Node<A>>>>,
 }
 
-impl<A: PartialEq> Node<A> {
+impl<A> Node<A> {
     pub fn new(a: A) -> Node<A>{
         Node { value: a, children: Vec::new(), parent: None }
     }
@@ -45,7 +45,7 @@ impl<A: PartialEq> PartialEq for Node<A> {
     }
 }
 
-impl<A: PartialEq> Eq for Node<A> {}
+impl<A: Eq> Eq for Node<A> {}
 
 
 /// Upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
@@ -60,7 +60,7 @@ impl<A: Clone> Clone for TreeStack<A> {
     }
 }
 
-impl<A: Clone + PartialEq> TreeStack<A> {
+impl<A: Clone> TreeStack<A> {
     /// Creates a new `TreeStack<A>` with root label `a`.
     pub fn new(a: A) -> TreeStack<A> {
         Self::from_node(Node::new(a))

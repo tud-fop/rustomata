@@ -15,11 +15,12 @@ pub mod from_cfg;
 pub mod relabel;
 pub mod red;
 
+mod push_down;
+
 pub use self::from_cfg::*;
 pub use self::relabel::*;
 pub use self::red::*;
-
-
+pub use self::push_down::*;
 
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.

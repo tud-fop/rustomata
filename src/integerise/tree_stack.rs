@@ -60,7 +60,7 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             };
             Some(IntItem{
                 configuration: c,
-                run: run.clone(),
+                run: Pushdown::from(run.clone()),
                 term_integeriser: &self.term_integeriser,
                 nterm_integeriser: &self.nterm_integeriser,
             })
@@ -308,13 +308,14 @@ impl<'a,
      W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>{
     pub fn translate(&self)->(Configuration<TreeStack<A>, T, W>, Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>){
         let mut nvec = Vec::new();
-        for t in self.run.clone(){
+        let vec: Vec<_> = self.run.clone().into();
+        for t in vec {
             nvec.push(IntegerisableM::translate(t, self.nterm_integeriser, self.term_integeriser));
         }
         (IntegerisableM::translate(self.configuration.clone(), self.nterm_integeriser, self.term_integeriser), nvec)
     }
 
     pub fn give_up(&self)->(Configuration<TreeStack<u64>, u64, W>, Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>){
-        (self.configuration.clone(), self.run.clone())
+        (self.configuration.clone(), self.run.clone().into())
     }
 }

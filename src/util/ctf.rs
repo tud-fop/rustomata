@@ -57,7 +57,7 @@ pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
         return BinaryHeap::new();
     }
     for e in v{
-        match automaton.check_run(&e){
+        match automaton.check_run(&e.into()){
             Some(x) =>{
                 outp.push(x);
             },

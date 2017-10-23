@@ -9,6 +9,7 @@ use std::ops::Mul;
 use std::time::SystemTime;
 use std::vec::Vec;
 use self::num_traits::One;
+use push_down::Pushdown;
 
 pub mod from_str;
 pub mod configuration;
@@ -52,7 +53,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
             weight: W::one(),
         };
         let mut init_heap = BinaryHeap::new();
-        init_heap.push((i, Vec::new()));
+        init_heap.push((i, Pushdown::new()));
 
         Recogniser {
             agenda: init_heap,
@@ -70,9 +71,9 @@ pub trait Automaton<S: Clone + Debug + Eq,
             return None;
         }
         let c = Configuration {
-            word: run_word(&run),
+            word: run_word(run),
             storage: heap[0].clone(),
-            weight: run_weight(&run),
+            weight: run_weight(run),
         };
         Some((c, run.clone()))
     }
@@ -81,7 +82,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
     fn check<'a>(&'a self, storage: S, run: &Vec<Transition<S, I, T, W>>) -> Vec<S> {
         let mut storage_heap = Vec::new();
         storage_heap.push(storage);
-        for t in run{
+        for t in run {
             let mut new_storage_heap = Vec::new();
             for s in storage_heap{
                 for s1 in t.instruction.apply(s) {
@@ -96,7 +97,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
 
 /// Iterator for `recognise` that creates new solutions with every step
 pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
-    agenda: BinaryHeap<(C, Vec<R>)>,
+    agenda: BinaryHeap<(C, Pushdown<R>)>,
     configuration_characteristic: Box<FnMut(&C) -> &K>,
     filtered_rules: HashMap<K, BinaryHeap<R>>,
     apply: Box<FnMut(&C, &R) -> Vec<C>>,
@@ -104,8 +105,8 @@ pub struct Recogniser<'a, C: Ord, R: Ord, K: Hash> {
 }
 
 impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator for Recogniser<'a, C, R, K> {
-    type Item = (C, Vec<R>);
-    fn next(&mut self) -> Option<(C, Vec<R>)> {
+    type Item = (C, Pushdown<R>);
+    fn next(&mut self) -> Option<Self::Item> {
         let mut i = 0;
         let now = SystemTime::now();
         while let Some((c, run)) = self.agenda.pop() {
@@ -113,8 +114,7 @@ impl<'a, C: Ord + Clone + Debug, R: Ord + Clone + Debug, K: Hash + Eq> Iterator 
             for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
                 for r in rs {
                     for c1 in (self.apply)(&c, &r) {
-                        let mut run1 = run.clone();
-                        run1.push(r.clone());
+                        let run1 = run.clone().push(r.clone());
                         self.agenda.push((c1, run1))
                     }
                 }

@@ -11,6 +11,8 @@ use push_down::*;
 use automata::*;
 use util::*;
 
+use push_down::PushDown;
+
 mod push_down;
 mod tree_stack;
 mod from_pmcfg;
@@ -93,7 +95,7 @@ pub struct IntItem<'a, S: Clone + Eq,
                    A: 'a + Clone + Hash + Eq,
                    W: Ord + Clone>{
     pub configuration: Configuration<S, u64, W>,
-    pub run: Vec<Transition<S, I, u64, W>>,
+    pub run: Pushdown<Transition<S, I, u64, W>>,
     pub term_integeriser: &'a Integeriser<T>,
     pub nterm_integeriser: &'a Integeriser<A>,
 }

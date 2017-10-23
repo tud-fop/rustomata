@@ -10,6 +10,8 @@ use cfg::*;
 use approximation::*;
 use integerise::*;
 
+use push_down::Pushdown;
+
 /// Integerised Version of `PushDownAutomaton`. Holds two `Integeriser` used to encode the input, and the resulting `PushDownAutomaton`
 #[derive(Clone)]
 pub struct IntPushDownAutomaton<A: Ord + PartialEq + Clone + Hash, T: Eq + Hash, W: Ord + Eq>{
@@ -70,7 +72,7 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
              }
          }
 
-         fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>) -> Option<IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>>{
+         fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>) -> Option<IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>> {
              let heap = self.automaton.check(self.automaton.initial().clone(), run);
              if heap.is_empty(){
                  return None;
@@ -82,7 +84,7 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
              };
              Some(IntItem{
                  configuration: c,
-                 run: run.clone(),
+                 run: Pushdown::from(run.clone()),
                  term_integeriser: &self.term_integeriser,
                  nterm_integeriser: &self.nterm_integeriser,
              })
@@ -331,13 +333,14 @@ impl<'a,
     IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>{
     pub fn translate(&self)->(Configuration<PushDown<A>, T, W>, Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>){
         let mut nvec = Vec::new();
-        for t in self.run.clone(){
+        let vec: Vec<_> = self.run.clone().into();
+        for t in vec {
             nvec.push(IntegerisableM::translate(t, self.nterm_integeriser, self.term_integeriser));
         }
         (IntegerisableM::translate(self.configuration.clone(), self.nterm_integeriser, self.term_integeriser), nvec)
     }
 
     pub fn give_up(&self)->(Configuration<PushDown<u64>, u64, W>, Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>){
-        (self.configuration.clone(), self.run.clone())
+        (self.configuration.clone(), self.run.clone().into())
     }
 }

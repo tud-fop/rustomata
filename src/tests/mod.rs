@@ -581,7 +581,7 @@ fn test_ptk_to_nfa(){
 
     let n = from_pd(&b);
 
-    match n{
+    match n {
         Some((nfa, nfa_dict))=>{
             assert!(true);
             assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
@@ -593,8 +593,8 @@ fn test_ptk_to_nfa(){
                 Some(x) =>{Some(nfa_dict.translate(x.1))},
                 None => None,
             };
-            let n_obj = match b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
-                Some(x) => Some(x.1),
+            let n_obj: Option<Vec<_>> = match b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
+                Some(x) => Some(x.1.into()),
                 None => None,
             };
             assert_eq!(n_obj, m_obj);
