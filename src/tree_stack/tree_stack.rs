@@ -1,38 +1,110 @@
-use std::ops::Deref;
 use std::rc::Rc;
 
+/// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
 #[derive(Debug, Clone)]
-struct Node<A> {
-    parent: Option<(u8, Rc<Node<A>>)>,
+pub struct TreeStack<A> {
+    parent: Option<(u8, Rc<TreeStack<A>>)>,
     value: A,
-    children: Vec<Option<Rc<Node<A>>>>,
+    children: Vec<Option<Rc<TreeStack<A>>>>,
 }
 
-impl<A> Node<A> {
-    pub fn new(a: A) -> Node<A>{
-        Node { value: a, children: Vec::new(), parent: None }
+impl<A> TreeStack<A> {
+    /// Creates a new `TreeStack<A>` with root label `a`.
+    pub fn new(a: A) -> Self {
+        TreeStack { value: a, children: Vec::new(), parent: None }
     }
 
-    pub fn map<B>(&self, f: &Fn(&A) -> B) -> Node<B> {
+    /// Applies a function `Fn(&A) -> B`to every node in a `TreeStack<A>`.
+    pub fn map<B>(&self, f: &Fn(&A) -> B) -> TreeStack<B> {
         let new_parent = match self.parent {
             Some((i, ref p)) => Some((i, Rc::new(p.map(f)))),
             None => None,
         };
         let new_children = self.children.iter().map(|o| o.clone().map(|v| Rc::new(v.map(f)))).collect();
-        Node { parent: new_parent, value: f(&self.value), children: new_children }
+        TreeStack { parent: new_parent, value: f(&self.value), children: new_children }
     }
 
-    pub fn map_mut<B: Clone>(&self, f: &mut FnMut(&A) -> B) -> Node<B> {
+    /// Applies a function `FnMut(&A) -> B`to every node in a `TreeStack<A>`.
+    pub fn map_mut<B: Clone>(&self, f: &mut FnMut(&A) -> B) -> TreeStack<B> {
         let new_parent = match self.parent {
             Some((i, ref p)) => Some((i, Rc::new(p.map_mut(f)))),
             None => None,
         };
         let new_children = self.children.iter().map(|o| o.clone().map(|v| Rc::new(v.map_mut(f)))).collect();
-        Node { parent: new_parent, value: f(&self.value), children: new_children }
+        TreeStack { parent: new_parent, value: f(&self.value), children: new_children }
+    }
+
+    /// Returns `True` if the stack pointer points to the bottom node.
+    pub fn is_at_bottom(&self) -> bool {
+        self.parent.is_none()
+    }
+
+    /// Returns a reference to label of the current node.
+    pub fn current_symbol(&self) -> &A {
+        &self.value
+    }
+
+    /// Replaces the current value by the given value.
+    pub fn set(mut self, a: A) -> Self {
+        self.value = a;
+        self
+    }
+
+    /// Writes a value to the specified child position (if the child position is vacant) and returns the resulting `TreeStack` in an `Ok`.
+    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
+    pub fn push(mut self, n: u8, a: A) -> Result<Self, Self> {
+        if {
+            let filler = &mut vec![None; usize::from(n) - self.children.len() + 1];
+            self.children.append(filler);
+
+            self.children[usize::from(n)].is_none()
+        } {
+            Ok(TreeStack { value: a,
+                           children: Vec::new(),
+                           parent: Some((n, Rc::new(self))) })
+        } else {
+            Err(self)
+        }
     }
 }
 
-impl<A: PartialEq> PartialEq for Node<A> {
+impl<A: Clone> TreeStack<A> {
+    /// Goes up to a specific child position (if this position is occupied) and returns the resulting `TreeStack` in an `Ok`.
+    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
+    pub fn up(mut self, n: u8) -> Result<Self, Self> {
+        match {
+            if self.children.len() > usize::from(n) {
+                self.children.push(None);
+                self.children.swap_remove(usize::from(n))
+            } else {
+                None
+            }
+        } {
+            Some(ref tn) => Ok(TreeStack { value: tn.value.clone(),
+                                           children: tn.children.clone(),
+                                           parent: Some((n, Rc::new(self))) }),
+            _ => Err(self),
+        }
+    }
+
+    /// Goes down to the parent position (if there is one) and returns the resulting `TreeStack` in an `Ok`.
+    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
+    pub fn down(mut self) -> Result<Self, Self> {
+        match self.parent.take() {
+            Some((n, pn)) => {
+                let mut new_pch = pn.children.clone();
+                new_pch[usize::from(n)] = Some(Rc::new(self));
+                Ok(TreeStack { value: pn.value.clone(),
+                               children: new_pch,
+                               parent: pn.parent.clone() })
+            },
+            None => Err(self),
+        }
+    }
+}
+
+
+impl<A: PartialEq> PartialEq for TreeStack<A> {
     fn eq(&self, other: &Self) -> bool {
         let comp = |p1, p2| Rc::ptr_eq(p1, p2) || p1 == p2;
         self.value == other.value
@@ -45,131 +117,7 @@ impl<A: PartialEq> PartialEq for Node<A> {
     }
 }
 
-impl<A: Eq> Eq for Node<A> {}
-
-
-/// Upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
-#[derive(Debug)]
-pub struct TreeStack<A> {
-    current_node: Rc<Node<A>>,  // TODO replace by unique pointer when std::ptr::Unique has landed
-}
-
-impl<A: Clone> Clone for TreeStack<A> {
-    fn clone(&self) -> Self {
-        Self { current_node: Rc::new(self.current_node.deref().clone()) }
-    }
-}
-
-impl<A: Clone> TreeStack<A> {
-    /// Creates a new `TreeStack<A>` with root label `a`.
-    pub fn new(a: A) -> TreeStack<A> {
-        Self::from_node(Node::new(a))
-    }
-
-    fn from_node(n: Node<A>) -> Self {
-        TreeStack { current_node: Rc::new(n) }
-    }
-
-    /// Returns `True` if the stack pointer points to the bottom node.
-    pub fn is_at_bottom(&self) -> bool {
-        self.current_node.parent.is_none()
-    }
-
-    /// Returns a reference to label of the current node.
-    pub fn current_symbol(&self) -> &A {
-        &self.current_node.value
-    }
-
-    /// Applies a function `Fn(&A) -> B`to every node in a `TreeStack<A>`.
-    pub fn map<B: Clone + PartialEq>(&self, f: &Fn(&A) -> B) -> TreeStack<B> {
-        TreeStack::from_node(self.current_node.map(f))
-    }
-
-    /// Applies a function `FnMut(&A) -> B`to every node in a `TreeStack<A>`.
-    pub fn map_mut<B: Clone + PartialEq>(&self, f: &mut FnMut(&A) -> B) -> TreeStack<B> {
-        TreeStack::from_node(self.current_node.map_mut(f))
-    }
-
-    /// Replaces the current value by the given value.
-    pub fn set(mut self, a: A) -> Self {
-        {
-            let mut cn = match Rc::get_mut(&mut self.current_node) {
-                Some(c) => c,
-                None => panic!("multiple pointers to the same `current_node`."),
-            };
-            cn.value = a;
-        }
-
-        self
-    }
-
-    /// Writes a value to the specified child position (if the child position is vacant) and returns the resulting `TreeStack` in an `Ok`.
-    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
-    pub fn push(mut self, n: u8, a: A) -> Result<Self, Self> {
-        if {
-            let mut cn = match Rc::get_mut(&mut self.current_node) {
-                Some(c) => c,
-                None => panic!("multiple pointers to the same `current_node`."),
-            };
-
-            let filler = &mut vec![None; usize::from(n) - cn.children.len() + 1];
-            cn.children.append(filler);
-
-            cn.children[usize::from(n)].is_none()
-        } {
-            Ok(Self::from_node(Node { value: a,
-                                      children: Vec::new(),
-                                      parent: Some((n, self.current_node)) }))
-        } else {
-            Err(self)
-        }
-    }
-
-    /// Goes up to a specific child position (if this position is occupied) and returns the resulting `TreeStack` in an `Ok`.
-    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
-    pub fn up(mut self, n: u8) -> Result<Self, Self> {
-        match {
-            let mut cn = match Rc::get_mut(&mut self.current_node) {
-                Some(c) => c,
-                None => panic!("multiple pointers to the same `current_node`."),
-            };
-
-            if cn.children.len() > usize::from(n) {
-                cn.children.push(None);
-                cn.children.swap_remove(usize::from(n))
-            } else {
-                None
-            }
-        } {
-            Some(tn) => Ok(Self::from_node(Node { value: tn.value.clone(),
-                                                  children: tn.children.clone(),
-                                                  parent: Some((n, self.current_node)) })),
-            None => Err(self),
-        }
-    }
-
-    /// Goes down to the parent position (if there is one) and returns the resulting `TreeStack` in an `Ok`.
-    /// Returns the unmodified `TreeStack` in an `Err` otherwise.
-    pub fn down(mut self) -> Result<Self, Self> {
-        match {
-            let mut cn = match Rc::get_mut(&mut self.current_node) {
-                Some(c) => c,
-                None => panic!("multiple pointers to the same `current_node`."),
-            };
-
-            cn.parent.take()
-        } {
-            Some((n, pn)) => {
-                let mut new_pch = pn.children.clone();
-                new_pch[usize::from(n)] = Some(self.current_node);
-                Ok(Self::from_node(Node { value: pn.value.clone(),
-                                          children: new_pch,
-                                          parent: pn.parent.clone() }))
-            },
-            None => Err(self),
-        }
-    }
-}
+impl<A: Eq> Eq for TreeStack<A> {}
 
 #[test]
 fn test_tree_stack() {
@@ -193,13 +141,3 @@ fn test_tree_stack() {
     let ts2 = ts.push(1, 11);
     assert_eq!(ts1, ts2);
 }
-
-
-impl<A: PartialEq> PartialEq for TreeStack<A> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.current_node, &other.current_node)
-            || self.current_node == other.current_node
-    }
-}
-
-impl<A: PartialEq> Eq for TreeStack<A> {}
