@@ -11,16 +11,16 @@ NFA ?= false
 bench: benchmark-results.txt
 
 benchmark-results.txt:
-	target/debug/rustomata coarse-to-fine benchmark ${GRAMMAR} ${EQC} ${WORDS} ${PTK} -w ${WORDLIMIT} --nfabool ${NFA} 2> benchmark.log
+	target/release/rustomata coarse-to-fine benchmark ${GRAMMAR} ${EQC} ${WORDS} ${PTK} -w ${WORDLIMIT} --nfabool ${NFA} 2> benchmark.log
 
 rustomata: target/debug/rustomata
 
-target/debug/rustomata:
-	cargo build
+target/release/rustomata:
+	cargo build --release
 
 .PHONY: clean clean-all
 clean:
 	rm -fv benchmark-results.txt benchmark.log
 
 clean-all: clean
-	rm -fv target/debug/rustomata
+	rm -fv target/release/rustomata
