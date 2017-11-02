@@ -5,13 +5,13 @@ GRAMMAR ?= example/example_mcfg.gr
 PTK ?= 5
 EQC ?= example/example_equivalence.classes
 WORDS ?= example/example_word.txt
-WORDLIMIT ?=
+WORDLIMIT ?= 1
 NFA ?= false
 
 bench: benchmark-results.txt
 
-benchmark-results.txt: ${NAME}.gr ${NAME}.classes ${NAME}.txt
-	target/debug/rustomata coarse-to-fine benchmark ${GRAMMAR} ${EQC} ${WORDS} ${PTK} --wordlimit ${WORDLIMIT} --nfabool ${NFA} 2> benchmark.log
+benchmark-results.txt:
+	target/debug/rustomata coarse-to-fine benchmark ${GRAMMAR} ${EQC} ${WORDS} ${PTK} -w ${WORDLIMIT} --nfabool ${NFA} 2> benchmark.log
 
 rustomata: target/debug/rustomata
 

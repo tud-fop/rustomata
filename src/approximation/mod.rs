@@ -47,6 +47,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
         let mut strat = strati.clone();
         let initial = strat.approximate_initial(self.initial.clone());
+        
         let mut transitions = Vec::new();
 
         for (k, value) in self.transitions.clone(){
