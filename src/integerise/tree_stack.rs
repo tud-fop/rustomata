@@ -286,7 +286,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
             transitions,
             initial2
         );
-        let b = IntPushDownAutomaton::new(a, n_int, self.term_integeriser.clone());///TODO actual integeriser
+        let b = IntPushDownAutomaton::new(a, n_int, self.term_integeriser.clone()); // TODO actual integeriser
 
         Ok((b,strat))
     }

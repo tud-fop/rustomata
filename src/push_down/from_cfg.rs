@@ -49,7 +49,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
         let mut t_buffer= HashSet::new();
 
-        ///creates a Transition for every rule that replaces the nonterminal of the left side with the rightside of the rule
+        // creates a Transition for every rule that replaces the nonterminal of the left side with the rightside of the rule
         for r in g.rules.clone(){
             let mut st = Vec::new();
             for v in r.composition.composition{
@@ -78,7 +78,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             );
 
         }
-        ///creates a transition for every terminal that reads the word
+        // creates a transition for every terminal that reads the word
         for t in t_buffer{
             let mut tvec = Vec::new();
             tvec.push(t.clone());
@@ -96,8 +96,8 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
 
         }
-        ///creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `one`
 
+        // creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `one`
         for ini in g.initial{
             let mut tvec = Vec::new();
             tvec.push(PushState::Nt(ini));
