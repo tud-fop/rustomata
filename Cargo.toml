@@ -10,3 +10,6 @@ ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 nom = "^2.2"
 time = "0.1.38"
 rand = "0.3.16"
+
+[profile.release]
+debug = true
