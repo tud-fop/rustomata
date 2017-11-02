@@ -4,23 +4,22 @@ use std::marker::PhantomData;
 use pmcfg::*;
 use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 
-
-pub fn from_pmcfg<N: Clone + Debug + Ord + PartialEq,
+impl<N: Clone + Debug + Ord + PartialEq,
      T: Clone + Debug + Ord + PartialEq,
-     W: Clone + Debug + Ord + PartialEq
-     >(pmcfg :PMCFG<N, T, W>) -> Result<CFG<N,T,W>, String> {
+     W: Clone + Debug + Ord + PartialEq> From<PMCFG<N, T, W>> for CFG<N, T, W> {
+    fn from(pmcfg: PMCFG<N, T, W>) -> CFG<N, T, W> {
         let mut rules = Vec::new();
 
         for r in pmcfg.rules{
-            if r.composition.composition.len()!=1{
-                return Err(format!("Too many clauses"))
+            if r.composition.composition.len() != 1 {
+                panic!("[ERROR] Too many clauses: {:?}", r)
             }
 
             let mut new_composition = Vec::new();
 
             let r_0 = &r.composition.composition[0];
 
-            for v in r_0{
+            for v in r_0 {
                 match v{
                     &VarT::T(ref x)=>{
                         new_composition.push(
@@ -33,7 +32,7 @@ pub fn from_pmcfg<N: Clone + Debug + Ord + PartialEq,
                             LetterT::Label(x.clone())
                         );
                     },
-                    _=> return Err(format!("Could not compile rules")),
+                    _=> panic!("[ERROR] Access to wrong component: {:?} in {:?}", v, r_0),
                 }
 
             }
@@ -46,11 +45,9 @@ pub fn from_pmcfg<N: Clone + Debug + Ord + PartialEq,
             });
         }
 
-
-        Ok(CFG {
-            _dummy: PhantomData,
-            initial: pmcfg.initial.clone(),
-            rules: rules,
-        })
-
+        CFG { _dummy: PhantomData,
+               initial: pmcfg.initial.clone(),
+               rules: rules,
+        }
+    }
 }
