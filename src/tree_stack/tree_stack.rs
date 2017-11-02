@@ -54,8 +54,11 @@ impl<A> TreeStack<A> {
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
     pub fn push(mut self, n: usize, a: A) -> Result<Self, Self> {
         if {
-            let filler = &mut vec![None; n - self.children.len() + 1];
-            self.children.append(filler);
+            if n >= self.children.len() {
+                let len = n - self.children.len() + 1;
+                let filler = &mut vec![None; len];
+                self.children.append(filler);
+            }
 
             self.children[n].is_none()
         } {
