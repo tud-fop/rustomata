@@ -412,8 +412,8 @@ fn main() {
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
-                            let n1 = cfg_parse_matches.value_of("limit2").unwrap().parse().unwrap();
-                            let n2 = cfg_parse_matches.value_of("limit1").unwrap().parse().unwrap();
+                            let n1 = cfg_parse_matches.value_of("limit-RLB").unwrap().parse().unwrap();
+                            let n2 = cfg_parse_matches.value_of("limit-PTK").unwrap().parse().unwrap();
                             let n3 = cfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
                             let mut c2 = 0;
                             let mut c3 = 0;
@@ -509,13 +509,14 @@ fn main() {
                             let mut corpus = String::new();
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
-                            let n1 = mcfg_parse_matches.value_of("limit3").unwrap().parse().unwrap();
-                            let n2 = mcfg_parse_matches.value_of("limit2").unwrap().parse().unwrap();
-                            let n3 = mcfg_parse_matches.value_of("limit1").unwrap().parse().unwrap();
+                            let n1 = mcfg_parse_matches.value_of("limit-TTS").unwrap().parse().unwrap();
+                            let n2 = mcfg_parse_matches.value_of("limit-RLB").unwrap().parse().unwrap();
+                            let n3 = mcfg_parse_matches.value_of("limit-PTK").unwrap().parse().unwrap();
                             let n4 = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
 
                             for sentence in corpus.lines() {
                                 println!("{}:\n", sentence);
+
                                 let mut c2 = 0;
                                 let mut c3 = 0;
                                 let mut c4 = 0;
