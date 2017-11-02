@@ -3,7 +3,7 @@ use std::rc::Rc;
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
 #[derive(Debug, Clone)]
 pub struct TreeStack<A> {
-    parent: Option<(u8, Rc<TreeStack<A>>)>,
+    parent: Option<(usize, Rc<TreeStack<A>>)>,
     value: A,
     children: Vec<Option<Rc<TreeStack<A>>>>,
 }
@@ -52,12 +52,12 @@ impl<A> TreeStack<A> {
 
     /// Writes a value to the specified child position (if the child position is vacant) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
-    pub fn push(mut self, n: u8, a: A) -> Result<Self, Self> {
+    pub fn push(mut self, n: usize, a: A) -> Result<Self, Self> {
         if {
-            let filler = &mut vec![None; usize::from(n) - self.children.len() + 1];
+            let filler = &mut vec![None; n - self.children.len() + 1];
             self.children.append(filler);
 
-            self.children[usize::from(n)].is_none()
+            self.children[n].is_none()
         } {
             Ok(TreeStack { value: a,
                            children: Vec::new(),
@@ -71,11 +71,11 @@ impl<A> TreeStack<A> {
 impl<A: Clone> TreeStack<A> {
     /// Goes up to a specific child position (if this position is occupied) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
-    pub fn up(mut self, n: u8) -> Result<Self, Self> {
+    pub fn up(mut self, n: usize) -> Result<Self, Self> {
         match {
-            if self.children.len() > usize::from(n) {
+            if self.children.len() > n {
                 self.children.push(None);
-                self.children.swap_remove(usize::from(n))
+                self.children.swap_remove(n)
             } else {
                 None
             }
@@ -93,7 +93,7 @@ impl<A: Clone> TreeStack<A> {
         match self.parent.take() {
             Some((n, pn)) => {
                 let mut new_pch = pn.children.clone();
-                new_pch[usize::from(n)] = Some(Rc::new(self));
+                new_pch[n] = Some(Rc::new(self));
                 Ok(TreeStack { value: pn.value.clone(),
                                children: new_pch,
                                parent: pn.parent.clone() })

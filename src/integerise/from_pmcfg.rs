@@ -39,7 +39,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             ))
             .collect();
 
-        let mut down_info: BTreeMap<pmcfg::PMCFGRule<N, T, W>, Vec<(u8, Vec<T>)>>
+        let mut down_info: BTreeMap<pmcfg::PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>
             = BTreeMap::new();
 
         let mut initial_rules: Vec<pmcfg::PMCFGRule<N, T, W>>
@@ -52,7 +52,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             rule_map.get_mut(&r.head).unwrap().push(r.clone());
 
             let mut var_cnt_vec = Vec::new();
-            let mut i: u8;
+            let mut i: usize;
             let mut down_buffer: Vec<T> = Vec::new();
             for component in &r.composition.composition {
                 i = 0;
@@ -122,27 +122,27 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
         let mut buffer: Vec<T>;
 
-        let mut j: u8;
-        let mut k: u8;
+        let mut j: usize;
+        let mut k: usize;
 
         for (r, rss) in agenda {
             j = 0;
-            let mut previous_component: Vec<Option<u8>> = rss.iter().map(|_| None).collect();
+            let mut previous_component: Vec<Option<usize>> = rss.iter().map(|_| None).collect();
             for component in r.composition.composition.clone() {
                 buffer = Vec::new();
                 k = 0;
                 for token in component {
                     match token {
                         pmcfg::VarT::Var(i1, j1) => {
-                            for ri in &rss[usize::from(i1)] {
+                            for ri in &rss[i1] {
                                 let t = automata::Transition {
                                     _dummy: PhantomData,
                                     word: buffer.clone(),
-                                    weight: match previous_component[usize::from(i1)] {
+                                    weight: match previous_component[i1] {
                                         None => ri.weight.clone(),
                                         Some(_) => W::one()
                                     },
-                                    instruction: match previous_component[usize::from(i1)] {
+                                    instruction: match previous_component[i1] {
                                         None => {
                                             TreeStackInstruction::Push {
                                                 n: i1,
@@ -157,7 +157,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                                 old_val: PosState::Position(
                                                     ri.clone(),
                                                     j0,
-                                                    down_info.get(&ri).unwrap()[usize::from(j0)].0
+                                                    down_info.get(&ri).unwrap()[j0].0
                                                 ),
                                                 new_val: PosState::Position(ri.clone(), j1, 0)
                                             }
@@ -170,13 +170,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
                                 let t2 = automata::Transition {
                                     _dummy: PhantomData,
-                                    word: down_info.get(&ri).unwrap()[usize::from(j1)].1.clone(),
+                                    word: down_info.get(&ri).unwrap()[j1].1.clone(),
                                     weight: W::one(),
                                     instruction: TreeStackInstruction::Down {
                                         current_val: PosState::Position(
                                             ri.clone(),
                                             j1,
-                                            down_info.get(&ri).unwrap()[usize::from(j1)].0
+                                            down_info.get(&ri).unwrap()[j1].0
                                         ),
                                         old_val: PosState::Position(r.clone(), j, k),
                                         new_val: PosState::Position(r.clone(), j, k + 1)
@@ -188,7 +188,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
                             }
 
-                            previous_component[usize::from(i1)] = Some(j1);
+                            previous_component[i1] = Some(j1);
                             k += 1;
                             buffer.clear();
                         },

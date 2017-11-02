@@ -10,7 +10,7 @@ mod relabel;
 pub enum VarT<T> {
     /// `Var(i, j)` represents the `j`th component of the `i`th successor.
     /// Indexing starts from `0`.
-    Var(u8, u8),
+    Var(usize, usize),
     T(T),
 }
 

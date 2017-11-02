@@ -48,7 +48,7 @@ impl<A: FromStr> FromStr for TreeStackInstruction<A> {
         let e: String = "Malformed node label.".to_string();
         match v[0] {
             "Up" if v.len() == 5 => {
-                let n: u8 = try!(v[1].parse().map_err(|e: ParseIntError| e.to_string()));
+                let n: usize = try!(v[1].parse().map_err(|e: ParseIntError| e.to_string()));
                 let cur_val: A = try!(v[2].parse().map_err(|_| e.clone()));
                 let old_val: A = try!(v[3].parse().map_err(|_| e.clone()));
                 let new_val: A = try!(v[4].parse().map_err(|_| e.clone()));
@@ -60,7 +60,7 @@ impl<A: FromStr> FromStr for TreeStackInstruction<A> {
                 })
             }
             "Push" if v.len() == 4 => {
-                let n: u8 = try!(v[1].parse().map_err(|e: ParseIntError| e.to_string()));
+                let n: usize = try!(v[1].parse().map_err(|e: ParseIntError| e.to_string()));
                 let cur_val: A = try!(v[2].parse().map_err(|_| e.clone()));
                 let new_val: A = try!(v[3].parse().map_err(|_| e.clone()));
                 Ok(TreeStackInstruction::Push {

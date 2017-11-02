@@ -9,12 +9,12 @@ use tree_stack::TreeStack;
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum TreeStackInstruction<A> {
     Up {
-        n: u8,
+        n: usize,
         current_val: A,
         old_val: A,
         new_val: A,
     },
-    Push { n: u8, current_val: A, new_val: A },
+    Push { n: usize, current_val: A, new_val: A },
     Down {
         current_val: A,
         old_val: A,
