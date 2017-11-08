@@ -1,4 +1,5 @@
 extern crate clap;
+extern crate integeriser;
 #[macro_use]
 extern crate nom;
 extern crate num_traits;

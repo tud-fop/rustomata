@@ -141,8 +141,8 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
 }
 
 //needed for integerised values
-impl Relabel<u64, u64, u64> for u64{
-    fn relabel(&self, map: &EquivalenceClass<u64, u64>) -> u64{
+impl Relabel<usize, usize, usize> for usize{
+    fn relabel(&self, map: &EquivalenceClass<usize, usize>) -> usize {
         *map.project(*self)
     }
 }

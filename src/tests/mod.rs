@@ -8,7 +8,6 @@ use approximation::*;
 use util::log_prob::*;
 use util::equivalence_classes::*;
 use util::ctf::*;
-use util::integeriser::*;
 use nfa::*;
 use push_down::*;
 use tree_stack::*;
@@ -286,35 +285,6 @@ fn test_from_str_cfg() {
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
-
-#[test]
-fn test_integeriser () {
-    let arr1 = vec!["this", "is", "a", "test", "."];
-    let arr2 = vec!["this", "test", "is", "really", "simple", "."];
-
-    let mut integeriser = Integeriser::new();
-
-    let mut arr1i = Vec::new();
-    let mut arr2i = Vec::new();
-
-    for a in arr1 {
-        arr1i.push(integeriser.integerise(a));
-    }
-
-    for a in arr2 {
-        arr2i.push(integeriser.integerise(a));
-    }
-
-    assert_eq!(arr1i[0], arr2i[0]);
-    assert_eq!(arr1i[1], arr2i[2]);
-    assert_eq!(arr1i[3], arr2i[1]);
-    assert_eq!(arr1i[4], arr2i[5]);
-
-    assert_ne!(arr1i[1], arr2i[0]);
-    assert_ne!(arr1i[2], arr2i[1]);
-    assert_ne!(arr1i[3], arr2i[3]);
-}
-
 
 #[test]
 fn test_relabel_pushdown() {

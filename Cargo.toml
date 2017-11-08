@@ -5,11 +5,12 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 
 [dependencies]
 clap = "2.19"
+integeriser = { git = "https://github.com/tud-fop/rust-integeriser.git" }
+nom = "^2.2"
 num-traits = "0.1.36"
 ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
-nom = "^2.2"
-time = "0.1.38"
 rand = "0.3.16"
+time = "0.1.38"
 
 [profile.release]
 debug = true

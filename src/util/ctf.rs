@@ -46,9 +46,9 @@ pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
                  T1: Eq + Clone + Debug + Hash,
                  A1: Eq + Clone + Debug + Hash,
                  W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
-                 ST: ApproximationStrategy<S1, S2, Transition<S1, I1, u64, W>, Transition<S2, I2, u64, W>>,
+                 ST: ApproximationStrategy<S1, S2, Transition<S1, I1, usize, W>, Transition<S2, I2, usize, W>>,
                  A: IntegerisedAutomaton<S1, I1, T1, A1, W>
-                 >(run: Vec<Transition<S2, I2, u64, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
+                 >(run: Vec<Transition<S2, I2, usize, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
 
     let mut outp = BinaryHeap::new();
     let v = strat.translate_run(run);

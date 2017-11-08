@@ -5,6 +5,8 @@ use std::vec::Vec;
 
 use num_traits::{One, Zero};
 
+use integeriser::{Integeriser, HashIntegeriser};
+
 use automata::*;
 use cfg::*;
 use approximation::*;
@@ -15,16 +17,16 @@ use push_down::Pushdown;
 /// Integerised Version of `PushDownAutomaton`. Holds two `Integeriser` used to encode the input, and the resulting `PushDownAutomaton`
 #[derive(Clone)]
 pub struct IntPushDownAutomaton<A: Ord + PartialEq + Clone + Hash, T: Eq + Hash, W: Ord + Eq>{
-    pub term_integeriser: Integeriser<T>,
-    pub nterm_integeriser: Integeriser<A>,
-    pub automaton: PushDownAutomaton<u64,u64,W>,
+    pub term_integeriser: HashIntegeriser<T>,
+    pub nterm_integeriser: HashIntegeriser<A>,
+    pub automaton: PushDownAutomaton<usize,usize,W>,
 }
 
 impl<A: Ord + PartialEq + Clone + Hash,
      T: Eq + Clone + Hash,
      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One>
     IntPushDownAutomaton<A, T, W> {
-    pub fn new(automaton: PushDownAutomaton<u64, u64, W>, inter1: Integeriser<A>, inter2: Integeriser<T>)->IntPushDownAutomaton<A, T, W> {
+    pub fn new(automaton: PushDownAutomaton<usize, usize, W>, inter1: HashIntegeriser<A>, inter2: HashIntegeriser<T>)->IntPushDownAutomaton<A, T, W> {
         IntPushDownAutomaton{
             term_integeriser: inter2,
             automaton: automaton,
@@ -39,8 +41,8 @@ impl<N: Clone + Debug + Hash + Ord + PartialEq,
     From<CFG<N, T, W>> for IntPushDownAutomaton<PushState<N, T>, T, W>
     where <W as FromStr>::Err: Debug{
      fn from(g: CFG<N, T, W>) -> Self {
-         let mut inter1 = Integeriser::new();
-         let mut inter2 = Integeriser::new();
+         let mut inter1 = HashIntegeriser::new();
+         let mut inter2 = HashIntegeriser::new();
          let a = PushDownAutomaton::from(g);
          let mut transitions= Vec::new();
          for t in a.list_transitions(){
@@ -59,10 +61,10 @@ impl<N: Clone + Debug + Hash + Ord + PartialEq,
 impl<A: Clone + Debug + Eq + Hash + Ord,
      T: Clone + Debug + Eq + Hash,
      W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord>
-    IntegerisedAutomaton<PushDown<u64>, PushDownInstruction<u64>, T, A, W> for IntPushDownAutomaton<A, T, W> {
+    IntegerisedAutomaton<PushDown<usize>, PushDownInstruction<usize>, T, A, W> for IntPushDownAutomaton<A, T, W> {
          type Key = A;
 
-         fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>{
+         fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, PushDown<usize>, PushDownInstruction<usize>, T, A, W>{
              let new_word = self.int_word(word);
 
              IntRecogniser{
@@ -72,7 +74,7 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
              }
          }
 
-         fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>) -> Option<IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>> {
+         fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>) -> Option<IntItem<'a, PushDown<usize>, PushDownInstruction<usize>, T, A, W>> {
              let heap = self.automaton.check(self.automaton.initial().clone(), run);
              if heap.is_empty(){
                  return None;
@@ -90,9 +92,9 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
              })
          }
 
-         fn int_word(&self, word: Vec<T>)->Vec<u64>{
+         fn int_word(&self, word: Vec<T>) -> Vec<usize>{
              let mut new_word = Vec::new();
-             for e in word{
+             for ref e in word {
                  match self.term_integeriser.find_key(e){
                      Some(x) => new_word.push(x.clone()),
                      None => (),
@@ -102,8 +104,8 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
          }
 }
 
-impl<A: Ord + Eq + Clone + Hash> Integerisable<PushDown<u64>, A> for PushDown<A>{
-    fn integerise(&self, inter: &mut Integeriser<A>)->PushDown<u64>{
+impl<A: Ord + Eq + Clone + Hash> Integerisable<PushDown<usize>, A> for PushDown<A>{
+    fn integerise(&self, inter: &mut HashIntegeriser<A>)->PushDown<usize>{
         let mut new_elements = Vec::new();
         for e in self.elements.clone(){
             new_elements.push(inter.integerise(e))
@@ -114,7 +116,7 @@ impl<A: Ord + Eq + Clone + Hash> Integerisable<PushDown<u64>, A> for PushDown<A>
         }
     }
 
-    fn translate(s: PushDown<u64>, inter: &Integeriser<A>)-> PushDown<A>{
+    fn translate(s: PushDown<usize>, inter: &HashIntegeriser<A>)-> PushDown<A>{
         let mut new_elements = Vec::new();
         for e in s.elements.clone(){
             match inter.find_value(e){
@@ -129,8 +131,8 @@ impl<A: Ord + Eq + Clone + Hash> Integerisable<PushDown<u64>, A> for PushDown<A>
     }
 }
 
-impl<A: Ord + PartialEq + Clone + Hash> Integerisable<PushDownInstruction<u64>, A> for PushDownInstruction<A>{
-    fn integerise(&self, inter: &mut Integeriser<A>)->PushDownInstruction<u64>{
+impl<A: Ord + PartialEq + Clone + Hash> Integerisable<PushDownInstruction<usize>, A> for PushDownInstruction<A>{
+    fn integerise(&self, inter: &mut HashIntegeriser<A>)->PushDownInstruction<usize>{
         match self{
             &PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 let mut ncv = Vec::new();
@@ -164,7 +166,7 @@ impl<A: Ord + PartialEq + Clone + Hash> Integerisable<PushDownInstruction<u64>, 
         }
     }
 
-    fn translate(s: PushDownInstruction<u64>, inter: &Integeriser<A>)->PushDownInstruction<A>{
+    fn translate(s: PushDownInstruction<usize>, inter: &HashIntegeriser<A>)->PushDownInstruction<A>{
         match s{
             PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 let mut ncv = Vec::new();
@@ -202,9 +204,9 @@ impl<A: Ord + PartialEq + Clone + Hash> Integerisable<PushDownInstruction<u64>, 
 impl<A: Clone + Debug + Hash + Ord + PartialEq,
      B: Clone + Eq + Hash,
      W: Clone + Eq + Ord>
-    IntegerisableM<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>, A, B>
+    IntegerisableM<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>, A, B>
     for Transition<PushDown<A>, PushDownInstruction<A>, B, W>{
-    fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)->Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>{
+    fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>{
         let mut nword = Vec::new();
         for l in self.word.clone(){
             nword.push(inter2.integerise(l));
@@ -217,7 +219,7 @@ impl<A: Clone + Debug + Hash + Ord + PartialEq,
         }
     }
 
-    fn translate(s: Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<B>)->Transition<PushDown<A>, PushDownInstruction<A>, B, W>{
+    fn translate(s: Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Transition<PushDown<A>, PushDownInstruction<A>, B, W>{
         let mut nword = Vec::new();
         for l in s.word.clone(){
             nword.push(inter2.find_value(l).unwrap().clone());
@@ -231,9 +233,9 @@ impl<A: Clone + Debug + Hash + Ord + PartialEq,
     }
 }
 
-impl<A:  Ord + PartialEq + Clone + Hash, B: Eq + Hash + Clone,  W: Ord + Eq + Clone> IntegerisableM<Configuration<PushDown<u64>, u64, W>, A, B>
+impl<A:  Ord + PartialEq + Clone + Hash, B: Eq + Hash + Clone,  W: Ord + Eq + Clone> IntegerisableM<Configuration<PushDown<usize>, usize, W>, A, B>
     for Configuration<PushDown<A>, B, W>{
-    fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)->Configuration<PushDown<u64>, u64, W>{
+    fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Configuration<PushDown<usize>, usize, W>{
         let mut nword = Vec::new();
         for l in self.word.clone(){
             nword.push(inter2.integerise(l));
@@ -245,7 +247,7 @@ impl<A:  Ord + PartialEq + Clone + Hash, B: Eq + Hash + Clone,  W: Ord + Eq + Cl
         }
     }
 
-    fn translate(s: Configuration<PushDown<u64>, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<B>)->Configuration<PushDown<A>, B, W>{
+    fn translate(s: Configuration<PushDown<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Configuration<PushDown<A>, B, W>{
         let mut nword = Vec::new();
         for l in s.word.clone(){
             nword.push(inter2.find_value(l).unwrap().clone());
@@ -261,9 +263,9 @@ impl<A:  Ord + PartialEq + Clone + Hash, B: Eq + Hash + Clone,  W: Ord + Eq + Cl
 impl<A: Clone + Debug + Hash + Ord + PartialEq,
      T: Clone + Eq + Hash,
      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One>
-    IntegerisableM<PushDownAutomaton<u64, u64, W>, A, T>
+    IntegerisableM<PushDownAutomaton<usize, usize, W>, A, T>
     for PushDownAutomaton<A, T, W>{
-    fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<T>)->PushDownAutomaton<u64, u64, W>{
+    fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<T>)->PushDownAutomaton<usize, usize, W>{
         let mut new_transitions = Vec::new();
         for l in self.list_transitions(){
             new_transitions.push(l.clone().integerise(inter1, inter2));
@@ -271,7 +273,7 @@ impl<A: Clone + Debug + Hash + Ord + PartialEq,
         PushDownAutomaton::new(new_transitions, self.initial.integerise(inter1))
     }
 
-    fn translate(s: PushDownAutomaton<u64, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<T>)->PushDownAutomaton<A, T, W>{
+    fn translate(s: PushDownAutomaton<usize, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<T>)->PushDownAutomaton<A, T, W>{
         let mut new_transitions = Vec::new();
         for l in s.list_transitions(){
             new_transitions.push(IntegerisableM::translate(l.clone(), inter1, inter2));
@@ -285,12 +287,12 @@ impl <A: Clone + Debug + Hash + Ord + PartialEq,
       T: Eq + Clone + Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: ApproximationStrategy<PushDown<A>, PushDown<B>,
-                               Transition<PushDown<A>, PushDownInstruction<A>, u64, W>,
-                               Transition<PushDown<B>, PushDownInstruction<B>, u64, W>>
+                               Transition<PushDown<A>, PushDownInstruction<A>, usize, W>,
+                               Transition<PushDown<B>, PushDownInstruction<B>, usize, W>>
       + IntApproximationStrategy<A, B, S2>,
-      S2: ApproximationStrategy<PushDown<u64>, PushDown<u64>,
-                                Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>,
-                                Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
+      S2: ApproximationStrategy<PushDown<usize>, PushDown<usize>,
+                                Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>,
+                                Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>>
       IntApproximation<S, S2, IntPushDownAutomaton<B, T, W>> for IntPushDownAutomaton<A, T, W>
       where W : Add<Output = W>{
 
@@ -330,7 +332,7 @@ impl<'a,
      A: Clone + Debug + Hash + Ord + PartialEq,
      T: Clone + Eq + Hash,
      W: Clone + Eq + Ord>
-    IntItem<'a, PushDown<u64>, PushDownInstruction<u64>, T, A, W>{
+    IntItem<'a, PushDown<usize>, PushDownInstruction<usize>, T, A, W>{
     pub fn translate(&self)->(Configuration<PushDown<A>, T, W>, Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>){
         let mut nvec = Vec::new();
         let vec: Vec<_> = self.run.clone().into();
@@ -340,7 +342,7 @@ impl<'a,
         (IntegerisableM::translate(self.configuration.clone(), self.nterm_integeriser, self.term_integeriser), nvec)
     }
 
-    pub fn give_up(&self)->(Configuration<PushDown<u64>, u64, W>, Vec<Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>){
+    pub fn give_up(&self)->(Configuration<PushDown<usize>, usize, W>, Vec<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>){
         (self.configuration.clone(), self.run.clone().into())
     }
 }

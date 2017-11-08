@@ -10,6 +10,8 @@ use num_traits::{One, Zero};
 use std::ops::{Add, Div};
 use std::marker::PhantomData;
 
+use integeriser::{Integeriser, HashIntegeriser};
+
 use automata;
 use pmcfg;
 use tree_stack::*;
@@ -21,8 +23,8 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
      W: Clone + fmt::Debug + Ord + PartialEq + One + Add<Output=W> + Div<Output=W> + Zero
      > From<pmcfg::PMCFG<N, T, W>> for IntTreeStackAutomaton<PosState<pmcfg::PMCFGRule<N, T, W>>, T, W> {
     fn from(g: pmcfg::PMCFG<N, T, W>) -> Self {
-        let mut inter1 = Integeriser::new();
-        let mut inter2 = Integeriser::new();
+        let mut inter1 = HashIntegeriser::new();
+        let mut inter2 = HashIntegeriser::new();
 
         let mut transitions = Vec::new();
 

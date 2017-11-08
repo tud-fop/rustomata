@@ -3,9 +3,9 @@ use std::hash::Hash;
 use std::str::FromStr;
 use std::collections::HashMap;
 use nom::{IResult, is_space};
+use integeriser::{Integeriser, HashIntegeriser};
 
 use util::parsing::*;
-use util::integeriser::*;
 use approximation::*;
 
 /// Structure containing the elements of type `A` in a equivalence class of type `B`
@@ -116,16 +116,16 @@ fn parse_heap<A:FromStr>(input: &[u8]) -> IResult<&[u8], Vec<A>>
 }
 
 //fits the equivalenz labels for integerise
-pub fn in_fit<N: Relabel<A, B, N2> + Hash + Eq + Clone + Ord, N2: Hash + Eq + Clone + Ord, A, B>(eq: EquivalenceClass<A, B>, inter: &Integeriser<N>)-> (EquivalenceClass<u64, u64>, Integeriser<N2>){
-    let mut i2 = Integeriser::new();
+pub fn in_fit<N: Relabel<A, B, N2> + Hash + Eq + Clone + Ord, N2: Hash + Eq + Clone + Ord, A, B>(eq: EquivalenceClass<A, B>, inter: &HashIntegeriser<N>)-> (EquivalenceClass<usize, usize>, HashIntegeriser<N2>){
+    let mut i2 = HashIntegeriser::new();
     let mut nmap = HashMap::new();
     let keys = inter.values();
     for k in keys{
-        nmap.insert(*inter.find_key(k.clone()).unwrap(), i2.integerise(k.relabel(&eq)));
+        nmap.insert(inter.find_key(k).unwrap(), i2.integerise(k.relabel(&eq)));
     }
     let e = EquivalenceClass{
         map: nmap,
-        default: 0 as u64,
+        default: 0 as usize,
     };
     (e, i2)
 }

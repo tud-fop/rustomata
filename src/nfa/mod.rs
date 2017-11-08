@@ -6,14 +6,15 @@ use num_traits::{One};
 use std::ops::{Mul};
 use std::io::{self,Write};
 
+use integeriser::{Integeriser, HashIntegeriser};
+
 use automata::*;
 use push_down::*;
-use util::*;
 
 /// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`
 #[derive(Debug, PartialEq)]
 pub struct Dict<S, I: Instruction<S>, T: Eq + Hash, W: Eq + Ord>{
-    map: HashMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>,
+    map: HashMap<NFATransition<usize, T, W>, Transition<S, I, T, W>>,
 }
 
 /// `Transition` equivalent for `NFA`
@@ -34,7 +35,7 @@ pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
 }
 
 impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Ord + One + Clone + Debug> NFA<S, T, W>{
-    pub fn new(/*states: HashSet<S>,*/ transitions: HashMap<S, BinaryHeap< NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
+    pub fn new(/*states: HashSet<S>,*/ transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
         NFA{
             //states: states,
             transitions: transitions,
@@ -117,13 +118,13 @@ impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W>{
 impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W>{}
 
 impl<S: Clone + Debug, I: Instruction<S> + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Clone + Ord + Debug> Dict<S, I, T, W>{
-    pub fn new(map : HashMap<NFATransition<u64, T, W>, Transition<S, I, T, W>>)->Self{
+    pub fn new(map : HashMap<NFATransition<usize, T, W>, Transition<S, I, T, W>>)->Self{
         Dict{
             map: map,
         }
     }
 
-    pub fn translate(&self, v: Vec<NFATransition<u64, T, W>>)-> Vec<Transition<S, I, T, W>>{
+    pub fn translate(&self, v: Vec<NFATransition<usize, T, W>>)-> Vec<Transition<S, I, T, W>>{
         let mut outv = Vec::new();
         for t in v{
             match self.map.get(&t){
@@ -186,9 +187,9 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
 /// Creates a `NFA` from a `PushDownAutomaton` including `Dict` to translate it back. Returns `None` when a `Replace` instruction is found
 pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                T: PartialEq + Eq + Hash + Clone + Debug,
-               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>)->Option<(NFA<u64, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{
-    let mut integeriser : Integeriser<PushDown<A>> = Integeriser::new();
-    let mut map : HashMap<NFATransition<u64, T, W>, Transition<PushDown<A>, PushDownInstruction<A>, T, W>> = HashMap::new();
+               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>) -> Option<(NFA<usize, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{
+    let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
+    let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDown<A>, PushDownInstruction<A>, T, W>> = HashMap::new();
     let mut to_do = Vec::new();
     let mut states = HashSet::new();
     let mut initial_states = HashSet::new();
@@ -200,7 +201,7 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
     to_do.push(a.initial().clone());
 
     while let Some(c) = to_do.pop(){
-        let ci : u64 = integeriser.integerise(c.clone());
+        let ci = integeriser.integerise(c.clone());
         states.insert(ci);
         if c.is_bottom(){
             final_states.insert(ci);
@@ -231,5 +232,5 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
             }
         }
     }
-    Some((NFA::new(/*states,*/ transitions, initial_states, final_states),Dict::new(map)))
+    Some((NFA::new(/*states,*/ transitions, initial_states, final_states), Dict::new(map)))
 }

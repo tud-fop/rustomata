@@ -7,6 +7,8 @@ use std::str::FromStr;
 use num_traits::{One};
 use std::ops::{Mul};
 
+use integeriser::HashIntegeriser;
+
 use push_down::*;
 use automata::*;
 use util::*;
@@ -34,23 +36,23 @@ pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
 
     fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, S, I, T, A, W>;
 
-    fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, u64, W>>) -> Option<IntItem<'a, S, I, T, A, W>>;
+    fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, usize, W>>) -> Option<IntItem<'a, S, I, T, A, W>>;
 
-    fn int_word(&self, word: Vec<T>)-> Vec<u64>;
+    fn int_word(&self, word: Vec<T>)-> Vec<usize>;
 }
 
 /// Trait that specifies whether a structure can be integerised using a `Ìntegeriser<A>`
 pub trait Integerisable<S, A: Hash + Eq>{
-    fn integerise(&self, inter: &mut Integeriser<A>)-> S;
+    fn integerise(&self, inter: &mut HashIntegeriser<A>)-> S;
 
-    fn translate(s: S, inter: &Integeriser<A>)-> Self;
+    fn translate(s: S, inter: &HashIntegeriser<A>)-> Self;
 }
 
 ///Trait that specifies whether a Structure can be integerised with two `Ìntegeriser`, `Ìntegeriser<A>` and `Ìntegeriser<B>`
 pub trait IntegerisableM<S, A: Hash + Eq, B: Hash + Eq>{
-    fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)-> S;
+    fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)-> S;
 
-    fn translate(s: S, inter1: &Integeriser<A>, inter2: &Integeriser<B>)-> Self;
+    fn translate(s: S, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)-> Self;
 }
 
 ///Integerised version of `Recogniser`. Creates `ÌntItems` as a result
@@ -60,9 +62,9 @@ pub struct IntRecogniser<'a,
          T: 'a + Clone + Debug + Hash + Eq,
          A: 'a + Clone + Debug + Hash + Eq,
          W: Ord + Clone + Debug>{
-    pub term_integeriser: &'a Integeriser<T>,
-    pub nterm_integeriser: &'a Integeriser<A>,
-    pub recog: Recogniser<'a, Configuration<S, u64, W>, Transition<S, I, u64, W>, u64>,
+    pub term_integeriser: &'a HashIntegeriser<T>,
+    pub nterm_integeriser: &'a HashIntegeriser<A>,
+    pub recog: Recogniser<'a, Configuration<S, usize, W>, Transition<S, I, usize, W>, usize>,
 }
 
 impl<'a, S: Clone + Debug + Eq,
@@ -94,10 +96,10 @@ pub struct IntItem<'a, S: Clone + Eq,
                    T: 'a + Clone+ Eq + Hash,
                    A: 'a + Clone + Hash + Eq,
                    W: Ord + Clone>{
-    pub configuration: Configuration<S, u64, W>,
-    pub run: Pushdown<Transition<S, I, u64, W>>,
-    pub term_integeriser: &'a Integeriser<T>,
-    pub nterm_integeriser: &'a Integeriser<A>,
+    pub configuration: Configuration<S, usize, W>,
+    pub run: Pushdown<Transition<S, I, usize, W>>,
+    pub term_integeriser: &'a HashIntegeriser<T>,
+    pub nterm_integeriser: &'a HashIntegeriser<A>,
 }
 
 impl<'a,S: Clone + Eq + Debug,

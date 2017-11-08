@@ -5,6 +5,8 @@ use std::vec::Vec;
 use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 
+use integeriser::{Integeriser, HashIntegeriser};
+
 use automata::*;
 use tree_stack::*;
 use approximation::*;
@@ -14,15 +16,15 @@ use integerise::*;
 /// Integerised version of the `TreeStackAutomaton`. Holds the two `Integeriser` used to encode the input and the resulting `TreeStackAutomaton`
 #[derive(Clone)]
 pub struct IntTreeStackAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq + Hash, W: Ord + Eq>{
-    pub term_integeriser: Integeriser<T>,
-    pub nterm_integeriser: Integeriser<A>,
-    pub automaton: TreeStackAutomaton<u64,u64,W>,
+    pub term_integeriser: HashIntegeriser<T>,
+    pub nterm_integeriser: HashIntegeriser<A>,
+    pub automaton: TreeStackAutomaton<usize,usize,W>,
 }
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash + Debug,
      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero +One> IntTreeStackAutomaton<A, T, W>{
-    pub fn new(automaton: TreeStackAutomaton<u64, u64, W>, inter1: Integeriser<A>, inter2: Integeriser<T>)->IntTreeStackAutomaton<A, T, W> {
+    pub fn new(automaton: TreeStackAutomaton<usize, usize, W>, inter1: HashIntegeriser<A>, inter2: HashIntegeriser<T>)->IntTreeStackAutomaton<A, T, W> {
         IntTreeStackAutomaton{
             term_integeriser: inter2,
             automaton: automaton,
@@ -35,10 +37,10 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<A: Ord + Eq + Debug + Clone + Hash,
      T: Clone + Debug + Eq + Hash,
      W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord>
-    IntegerisedAutomaton<TreeStack<u64>, TreeStackInstruction<u64>, T, A, W> for IntTreeStackAutomaton<A, T, W> {
+    IntegerisedAutomaton<TreeStack<usize>, TreeStackInstruction<usize>, T, A, W> for IntTreeStackAutomaton<A, T, W> {
         type Key = A;
 
-        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>{
+        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
             let new_word = self.int_word(word);
 
             IntRecogniser{
@@ -48,7 +50,7 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             }
         }
 
-        fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>) -> Option<IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>>{
+        fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>) -> Option<IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>>{
             let heap = self.automaton.check(self.automaton.initial().clone(), run);
             if heap.is_empty(){
                 return None;
@@ -66,9 +68,9 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             })
         }
 
-        fn int_word(&self, word: Vec<T>)-> Vec<u64>{
+        fn int_word(&self, word: Vec<T>)-> Vec<usize>{
             let mut new_word = Vec::new();
-            for e in word{
+            for ref e in word {
                 match self.term_integeriser.find_key(e){
                     Some(x) => new_word.push(x.clone()),
                     None => (),
@@ -78,18 +80,18 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
         }
     }
 
-impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStack<u64>, A> for TreeStack<A>{
-    fn integerise(&self, inter: &mut Integeriser<A>) -> TreeStack<u64>{
+impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStack<usize>, A> for TreeStack<A>{
+    fn integerise(&self, inter: &mut HashIntegeriser<A>) -> TreeStack<usize>{
         self.map_mut(&mut move |v| inter.integerise(v.clone()))
     }
 
-    fn translate(s: TreeStack<u64>, inter: &Integeriser<A>) -> TreeStack<A>{
+    fn translate(s: TreeStack<usize>, inter: &HashIntegeriser<A>) -> TreeStack<A>{
         s.map(&|&v| inter.find_value(v).unwrap().clone())
     }
 }
 
-impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstruction<u64>, A> for TreeStackInstruction<A>{
-    fn integerise(&self, inter: &mut Integeriser<A>)->TreeStackInstruction<u64>{
+impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstruction<usize>, A> for TreeStackInstruction<A>{
+    fn integerise(&self, inter: &mut HashIntegeriser<A>)->TreeStackInstruction<usize>{
         match self{
             &TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
                 TreeStackInstruction::Up {
@@ -116,7 +118,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
         }
     }
 
-    fn translate(s: TreeStackInstruction<u64>, inter: &Integeriser<A>)->TreeStackInstruction<A>{
+    fn translate(s: TreeStackInstruction<usize>, inter: &HashIntegeriser<A>)->TreeStackInstruction<A>{
         match s{
             TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
                 TreeStackInstruction::Up {
@@ -144,9 +146,9 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
     }
 }
 
-impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>, A, B>
+impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>, A, B>
     for Transition<TreeStack<A>, TreeStackInstruction<A>, B, W>{
-        fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)->Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>{
+        fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>{
             let mut nword = Vec::new();
             for l in self.word.clone(){
                 nword.push(inter2.integerise(l));
@@ -159,7 +161,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  
             }
         }
 
-        fn translate(s: Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<B>)->Transition<TreeStack<A>, TreeStackInstruction<A>, B, W>{
+        fn translate(s: Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Transition<TreeStack<A>, TreeStackInstruction<A>, B, W>{
             let mut nword = Vec::new();
             for l in s.word.clone(){
                 nword.push(inter2.find_value(l).unwrap().clone());
@@ -173,9 +175,9 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  
         }
     }
 
-impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Configuration<TreeStack<u64>, u64, W>, A, B>
+impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Configuration<TreeStack<usize>, usize, W>, A, B>
     for Configuration<TreeStack<A>, B, W>{
-        fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)->Configuration<TreeStack<u64>, u64, W>{
+        fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Configuration<TreeStack<usize>, usize, W>{
             let mut nword = Vec::new();
             for l in self.word.clone(){
                 nword.push(inter2.integerise(l));
@@ -187,7 +189,7 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  
             }
         }
 
-        fn translate(s: Configuration<TreeStack<u64>, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<B>)->Configuration<TreeStack<A>, B, W>{
+        fn translate(s: Configuration<TreeStack<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Configuration<TreeStack<A>, B, W>{
             let mut nword = Vec::new();
             for l in s.word.clone(){
                 nword.push(inter2.find_value(l).unwrap().clone());
@@ -202,16 +204,16 @@ impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  
 
 impl<A: Clone + Debug + Hash + Ord + PartialEq,
      B: Clone + Debug + Eq + Hash,
-     W: Ord + Eq + Clone> IntegerisableM<TreeStackAutomaton<u64, u64, W>, A, B>
+     W: Ord + Eq + Clone> IntegerisableM<TreeStackAutomaton<usize, usize, W>, A, B>
     for TreeStackAutomaton<A, B, W>{
-        fn integerise(&self, inter1: &mut Integeriser<A>, inter2: &mut Integeriser<B>)->TreeStackAutomaton<u64, u64, W>{
+        fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->TreeStackAutomaton<usize, usize, W>{
             let mut new_transitions = Vec::new();
             for l in self.list_transitions(){
                 new_transitions.push(l.integerise(inter1, inter2));
             }
             TreeStackAutomaton::new(new_transitions, self.initial.integerise(inter1))
         }
-        fn translate(s: TreeStackAutomaton<u64, u64, W>, inter1: &Integeriser<A>, inter2: &Integeriser<B>)->TreeStackAutomaton<A, B, W>{
+        fn translate(s: TreeStackAutomaton<usize, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->TreeStackAutomaton<A, B, W>{
             let mut new_transitions = Vec::new();
             for l in s.list_transitions(){
                 new_transitions.push(IntegerisableM::translate(l.clone(), inter1, inter2));
@@ -226,12 +228,12 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone + Hash + Debug,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
-                                       Transition<TreeStack<A>, TreeStackInstruction<A>, u64, W>,
-                                       Transition<PushDown<B>, PushDownInstruction<B>, u64, W>>
+                                       Transition<TreeStack<A>, TreeStackInstruction<A>, usize, W>,
+                                       Transition<PushDown<B>, PushDownInstruction<B>, usize, W>>
       + IntApproximationStrategy<A, B, S2>,
-      S2: ApproximationStrategy<TreeStack<u64>, PushDown<u64>,
-                                Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>,
-                                Transition<PushDown<u64>, PushDownInstruction<u64>, u64, W>>>
+      S2: ApproximationStrategy<TreeStack<usize>, PushDown<usize>,
+                                Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>,
+                                Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>>
     IntApproximation<S, S2, IntPushDownAutomaton<B, T, W>> for IntTreeStackAutomaton<A, T, W>
     where W : Add<Output = W>{
     
@@ -305,7 +307,7 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
 impl<'a,
      A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash + Debug,
-     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<u64>, TreeStackInstruction<u64>, T, A, W>{
+     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
     pub fn translate(&self)->(Configuration<TreeStack<A>, T, W>, Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>){
         let mut nvec = Vec::new();
         let vec: Vec<_> = self.run.clone().into();
@@ -315,7 +317,7 @@ impl<'a,
         (IntegerisableM::translate(self.configuration.clone(), self.nterm_integeriser, self.term_integeriser), nvec)
     }
 
-    pub fn give_up(&self)->(Configuration<TreeStack<u64>, u64, W>, Vec<Transition<TreeStack<u64>, TreeStackInstruction<u64>, u64, W>>){
+    pub fn give_up(&self)->(Configuration<TreeStack<usize>, usize, W>, Vec<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>){
         (self.configuration.clone(), self.run.clone().into())
     }
 }
