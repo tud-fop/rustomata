@@ -25,7 +25,7 @@ impl<A, T1, T2 : Ord> TTSElement<A, T1, T2>{
 
 impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Ord + Eq + Clone +Hash + Debug,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<f64, Output=W> + Add<f64, Output = f64> + Zero + One + Debug> ApproximationStrategy<TreeStack<A>,PushDown<A>,
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One + Debug> ApproximationStrategy<TreeStack<A>,PushDown<A>,
         automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>,
         automata::Transition<PushDown<A>,  PushDownInstruction<A>, T, W>>
       for TTSElement<A, automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>, TransitionKey<PushDown<A>,  PushDownInstruction<A>, T, W>>{

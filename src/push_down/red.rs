@@ -9,7 +9,7 @@ use push_down::*;
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash,
-     W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Zero + One> Redundancy for PushDownAutomaton<A, T, W>{
+     W: Ord + Eq + Clone + Add + Mul + Zero + One> Redundancy for PushDownAutomaton<A, T, W>{
     fn reduce_redundancy(self)-> PushDownAutomaton<A, T, W>{
         let tm = self.transitions.clone();
         let mut transition_map : HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();

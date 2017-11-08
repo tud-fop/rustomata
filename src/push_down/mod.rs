@@ -46,7 +46,7 @@ pub struct PushDown<A: Ord> {
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
     T: Eq + Clone + Hash,
-    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero +One> PushDownAutomaton<A, T, W> {
+    W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero +One> PushDownAutomaton<A, T, W> {
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 

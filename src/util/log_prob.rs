@@ -11,29 +11,34 @@ use self::num_traits::{One, Zero};
 /// A struct that represents probabilities.
 /// A probability is internally represented as its negative natural logarithm.
 /// Probabilities greater than 1 are allowed during calculations.
-#[derive(PartialOrd, Debug, Default, Clone, Copy)]
-pub struct LogProb {
-    value: f64
-}
+#[derive(PartialOrd, Debug, Clone, Copy)]
+pub enum LogProb { Exp(f64) }
 
 impl LogProb {
-    /// Creates a new `LogProb` from a given value in the interval [0,1].
+    /// Creates a new `LogProb` from a given value in the interval [0,∞).
     pub fn new(value: f64) -> Result<Self, String> {
         if 0.0 <= value {
-            Ok(LogProb { value: value.ln() })
+            Ok(LogProb::new_unchecked(value.ln()))
         } else {
             Err(format!("{} is not a probability, i.e. not in the interval [0,∞).", value))
         }
     }
 
+    fn ln(&self) -> f64 {
+        match self {
+            &LogProb::Exp(value) => value,
+        }
+    }
+
     /// Same as `new` but without bounds check.
+    #[inline]
     pub fn new_unchecked(value: f64) -> Self {
-        LogProb { value: value.ln() }
+        LogProb::Exp(value.ln())
     }
 
     /// Probability that is represented by the given `LogProb`.
     pub fn probability(&self) -> f64 {
-        self.value.exp()
+        self.ln().exp()
     }
 }
 
@@ -42,8 +47,8 @@ impl Ord for LogProb {
         match self.partial_cmp(&other) {
             Some(ordering) => ordering,
             None => {
-                if self.value.is_nan() {
-                    if other.value.is_nan() {
+                if self.ln().is_nan() {
+                    if other.ln().is_nan() {
                         Ordering::Equal
                     } else {
                         Ordering::Greater
@@ -58,12 +63,12 @@ impl Ord for LogProb {
 
 impl PartialEq for LogProb {
     fn eq(&self, other: &Self) -> bool {
-        if self.value.is_nan() {
-            if other.value.is_nan() { true } else { false }
-        } else if other.value.is_nan() {
+        if self.ln().is_nan() {
+            if other.ln().is_nan() { true } else { false }
+        } else if other.ln().is_nan() {
             false
         } else {
-            (self.value - other.value).abs() <= f64::EPSILON
+            (self.ln() - other.ln()).abs() <= f64::EPSILON
         }
     }
 }
@@ -74,7 +79,7 @@ impl Add for LogProb {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        let (a, b) = (self.value, other.value);
+        let (a, b) = (self.ln(), other.ln());
 
         let (x, y) = if a > b {
             (a, b)
@@ -82,7 +87,7 @@ impl Add for LogProb {
             (b, a)
         };
 
-        LogProb { value: x + (y - x).exp().ln_1p() }
+        LogProb::new_unchecked(x + (y - x).exp().ln_1p())
     }
 }
 
@@ -90,8 +95,8 @@ impl Sub for LogProb {
     type Output = Self ;
 
     fn sub(self, other: Self) -> Self {
-        match (self.value, other.value) {
-            (x, y) if x >= y => LogProb { value: x + (-(y - x).exp_m1()).ln() },
+        match (self.ln(), other.ln()) {
+            (x, y) if x >= y => LogProb::new_unchecked(x + (-(y - x).exp_m1()).ln()),
             (x, y) if x <  y => panic!("exp({}) - exp({}) is less than zero", x, y),
             _                => unreachable!(),
         }
@@ -102,14 +107,15 @@ impl Sub for LogProb {
 fn test_arithmetic() {
     match (LogProb::new(0.5), LogProb::new(0.25), LogProb::new(0.75)) {
         (Ok(x), Ok(y), Ok(z)) => {
-            assert_eq!(x + y, z);
-            assert_eq!(y + x, z);
-            assert_eq!(z - x, y);
-            assert_eq!(z - y, x);
-            assert_eq!(x * x, y);
-            assert_eq!(y / x, x);
+            assert_eq!(x + y, z); // 0.5  + 0.25 = 0.75
+            assert_eq!(y + x, z); // 0.25 + 0.5  = 0.75
+            assert_eq!(z - x, y); // 0.75 - 0.5  = 0.25
+            assert_eq!(z - y, x); // 0.75 - 0.25 = 0.5
+            assert_eq!(x * x, y); // 0.5  ⋅ 0.5  = 0.25
+            assert_eq!(y / x, x); // 0.25 / 0.5  = 0.5
             assert_eq!(z / z, LogProb::one());
-            assert!(z > y);
+                                  // 0.75 / 0.75 = 1
+            assert!(z > y);       // 0.75 > 0.25
         },
         _ => panic!(),
     }
@@ -119,7 +125,7 @@ impl Mul for LogProb {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        LogProb { value: self.value.add(other.value) }
+        LogProb::new_unchecked(self.ln().add(other.ln()))
     }
 }
 
@@ -127,45 +133,23 @@ impl Div for LogProb {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        LogProb { value: self.value.sub(other.value) }
-    }
-}
-
-impl Add<f64> for LogProb {
-    type Output = f64;
-
-    fn add(self, other: f64) -> f64 {
-        self.probability().add(other)
-    }
-}
-
-impl  Div<f64> for LogProb {
-    type Output = Self;
-
-    fn div(self, other: f64) -> Self{
-        let o;
-        match LogProb::new(other) {
-            Ok(p) => o=p,
-            Err(e) => panic!(e)
-        }
-        self/o
-
+        LogProb::new_unchecked(self.ln().sub(other.ln()))
     }
 }
 
 impl Zero for LogProb {
     fn zero() -> LogProb {
-        LogProb { value: f64::NEG_INFINITY }
+        LogProb::new_unchecked(f64::NEG_INFINITY)
     }
 
     fn is_zero(&self) -> bool {
-        self.value == f64::NEG_INFINITY
+        self.ln() == f64::NEG_INFINITY
     }
 }
 
 impl One for LogProb {
     fn one() -> LogProb {
-        LogProb { value: 0.0 }
+        LogProb::new_unchecked(0.0)
     }
 }
 
