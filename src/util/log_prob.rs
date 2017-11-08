@@ -18,7 +18,7 @@ impl LogProb {
     /// Creates a new `LogProb` from a given value in the interval [0,∞).
     pub fn new(value: f64) -> Result<Self, String> {
         if 0.0 <= value {
-            Ok(LogProb::new_unchecked(value.ln()))
+            Ok(LogProb::new_unchecked(value))
         } else {
             Err(format!("{} is not a probability, i.e. not in the interval [0,∞).", value))
         }
@@ -68,7 +68,7 @@ impl PartialEq for LogProb {
         } else if other.ln().is_nan() {
             false
         } else {
-            (self.ln() - other.ln()).abs() <= f64::EPSILON
+            self.ln() == other.ln() || (self.ln() - other.ln()).abs() <= f64::EPSILON
         }
     }
 }
@@ -87,7 +87,7 @@ impl Add for LogProb {
             (b, a)
         };
 
-        LogProb::new_unchecked(x + (y - x).exp().ln_1p())
+        LogProb::Exp(x + (y - x).exp().ln_1p())
     }
 }
 
@@ -96,7 +96,7 @@ impl Sub for LogProb {
 
     fn sub(self, other: Self) -> Self {
         match (self.ln(), other.ln()) {
-            (x, y) if x >= y => LogProb::new_unchecked(x + (-(y - x).exp_m1()).ln()),
+            (x, y) if x >= y => LogProb::Exp(x + (-(y - x).exp_m1()).ln()),
             (x, y) if x <  y => panic!("exp({}) - exp({}) is less than zero", x, y),
             _                => unreachable!(),
         }
@@ -125,7 +125,7 @@ impl Mul for LogProb {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        LogProb::new_unchecked(self.ln().add(other.ln()))
+        LogProb::Exp(self.ln().add(other.ln()))
     }
 }
 
@@ -133,13 +133,13 @@ impl Div for LogProb {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        LogProb::new_unchecked(self.ln().sub(other.ln()))
+        LogProb::Exp(self.ln().sub(other.ln()))
     }
 }
 
 impl Zero for LogProb {
     fn zero() -> LogProb {
-        LogProb::new_unchecked(f64::NEG_INFINITY)
+        LogProb::Exp(f64::NEG_INFINITY)
     }
 
     fn is_zero(&self) -> bool {
@@ -149,7 +149,7 @@ impl Zero for LogProb {
 
 impl One for LogProb {
     fn one() -> LogProb {
-        LogProb::new_unchecked(0.0)
+        LogProb::Exp(0.0)
     }
 }
 
