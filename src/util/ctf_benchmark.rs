@@ -10,12 +10,14 @@ use util::*;
 use util::equivalence_classes::*;
 use nfa::*;
 
+use log_prob::LogProb;
+
 use approximation::*;
 use integerise::*;
 
 /// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
 /// Does not test words that are longer than twenty
-pub fn benchmark(grammar: PMCFG<String, String, log_prob::LogProb>, eq: EquivalenceClass<String, String>, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String, check: usize, no_nfa: bool){
+pub fn benchmark(grammar: PMCFG<String, String, LogProb>, eq: EquivalenceClass<String, String>, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: String, check: usize, no_nfa: bool){
     //File that contains the results
     let mut f = File::create("benchmark-results.txt").unwrap();
     let _ = write!(&mut f, "Benchmarking results \n\n");

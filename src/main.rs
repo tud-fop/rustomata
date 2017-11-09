@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate integeriser;
+extern crate log_prob;
 #[macro_use]
 extern crate nom;
 extern crate num_traits;
@@ -23,6 +24,8 @@ mod tests;
 use clap::{Arg, App, SubCommand};
 use std::io::prelude::*;
 use std::fs::File;
+
+use log_prob::LogProb;
 
 pub use approximation::*;
 pub use automata::*;
@@ -316,7 +319,7 @@ fn main() {
                     let n = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                    let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                     let automaton = IntTreeStackAutomaton::from(grammar);
 
@@ -335,7 +338,7 @@ fn main() {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                    let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
                     println!("Ähhhh");
                     let automaton = IntTreeStackAutomaton::from(grammar);
                     println!("Automaton");
@@ -352,7 +355,7 @@ fn main() {
                     let n = cfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                    let grammar: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                     let automaton = IntPushDownAutomaton::from(grammar);
 
@@ -372,7 +375,7 @@ fn main() {
                     let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                    let grammar: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                     let automaton = IntPushDownAutomaton::from(grammar);
                     println!("{}", automaton);
@@ -389,7 +392,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let grammar: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(grammar);
 
@@ -447,7 +450,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let grammar: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let grammar: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(grammar);
                             println!("Original Automaton: \n\n{}", a);
@@ -482,7 +485,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
 
@@ -554,7 +557,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
                             println!("Original Automaton: \n\n{}", automaton);
@@ -594,7 +597,7 @@ fn main() {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                    let grammar: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                     let classes_file_name = benchmark_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -629,7 +632,7 @@ fn main() {
                     let n = tsa_recognise_matches.value_of("number-of-runs").unwrap().parse().unwrap();
                     let mut automaton_string = String::new();
                     let _ = automaton_file.read_to_string(&mut automaton_string);
-                    let automaton: TreeStackAutomaton<String, String, util::log_prob::LogProb> = automaton_string.parse().unwrap();
+                    let automaton: TreeStackAutomaton<String, String, LogProb> = automaton_string.parse().unwrap();
 
                     let mut corpus = String::new();
                     let _ = std::io::stdin().read_to_string(&mut corpus);
@@ -654,7 +657,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(g);
 
@@ -682,7 +685,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(g);
 
@@ -713,7 +716,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
@@ -737,7 +740,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: CFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: CFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let size = parse_matches.value_of("size").unwrap().parse::<usize>().unwrap();
 
@@ -763,7 +766,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntTreeStackAutomaton::from(g);
 
@@ -786,7 +789,7 @@ fn main() {
                             let mut grammar_file = File::open(grammar_file_name.clone()).unwrap();
                             let mut grammar_string = String::new();
                             let _ = grammar_file.read_to_string(&mut grammar_string);
-                            let g: PMCFG<String, String, util::log_prob::LogProb> = grammar_string.parse().unwrap();
+                            let g: PMCFG<String, String, LogProb> = grammar_string.parse().unwrap();
 
                             let a = IntTreeStackAutomaton::from(g);
                             println!("Original Automaton");
