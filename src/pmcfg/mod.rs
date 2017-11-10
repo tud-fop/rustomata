@@ -14,6 +14,22 @@ pub enum VarT<T> {
     T(T),
 }
 
+impl<T> VarT<T> {
+    pub fn is_var(&self) -> bool {
+        match self {
+            &VarT::Var(_, _) => true,
+            _ => false
+        } 
+    }
+
+    pub fn is_t(&self) -> bool {
+        match self {
+            &VarT::T(_) => true,
+            _ => false
+        } 
+    }
+}
+
 /// Composition function in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Composition<T> {

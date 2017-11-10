@@ -69,6 +69,21 @@ impl<A> TreeStack<A> {
             Err(self)
         }
     }
+
+    /// Writes a value in the first free child position.
+    pub fn push_next(self, a: A) -> Self {
+        let index = {
+            match self.children.iter().enumerate().filter(| &(_i,e) | e.is_none()).next() {
+                None => self.children.len(),
+                Some((i,_)) => i
+            }
+        };
+
+        match self.push(index, a) {
+            Ok(t) => t,
+            _ => panic!("tree_stack.rs: could not push into index {}", index)
+        }
+    }
 }
 
 impl<A: Clone> TreeStack<A> {
@@ -90,6 +105,14 @@ impl<A: Clone> TreeStack<A> {
         }
     }
 
+    /// Returns a `TreeStack` for every child position.
+    pub fn ups(self) -> Vec<Self> {
+        self.children.iter().enumerate().filter(| &(_i,e) | !e.is_none()).map(| (i,_e) | match self.clone().up(i) {
+            Ok(t) => t,
+            _ => panic!("tree_stack.rs: up failed")
+        }).collect()
+    }
+
     /// Goes down to the parent position (if there is one) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
     pub fn down(mut self) -> Result<Self, Self> {
@@ -102,6 +125,23 @@ impl<A: Clone> TreeStack<A> {
                                parent: pn.parent.clone() })
             },
             None => Err(self),
+        }
+    }
+
+    /// Removes the current node if the list of children is empty.
+    pub fn pop(self) -> Result<Self, Self> {
+        if self.children.len() == 0 || self.children.iter().all(| pc | pc.is_none()) {
+            match self.clone().down() {
+                Err(t) => Err(t),
+                Ok(t) => {
+                    let (n, _) = self.parent.unwrap();
+                    let mut cs = t.children;
+                    cs.remove(n);
+                    Ok(TreeStack{ value: t.value.clone(), children: cs, parent: t.parent.clone() })
+                }
+            }
+        } else {
+            Err(self)
         }
     }
 }

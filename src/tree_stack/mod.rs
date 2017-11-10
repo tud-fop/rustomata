@@ -36,9 +36,13 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeSta
         for t in transitions {
             let a =
                 match t.instruction {
-                    TreeStackInstruction::Up   { ref current_val, .. } => current_val.clone(),
-                    TreeStackInstruction::Push { ref current_val, .. } => current_val.clone(),
-                    TreeStackInstruction::Down { ref current_val, .. } => current_val.clone()
+                    TreeStackInstruction::Up        { ref current_val, .. }     => current_val.clone(),
+                    TreeStackInstruction::Push      { ref current_val, .. }     => current_val.clone(),
+                    TreeStackInstruction::Down      { ref current_val, .. }     => current_val.clone(),
+                    TreeStackInstruction::NDUp      { ref lower_current, .. }   => lower_current.clone(),
+                    TreeStackInstruction::NDPush    { ref lower_current, .. }   => lower_current.clone(),
+                    TreeStackInstruction::NDPop     { ref upper_current, .. }   => upper_current.clone(),
+                    TreeStackInstruction::NDDown    { ref upper_current, .. }   => upper_current.clone(),
                 };
 
             if !transition_map.contains_key(&a) {

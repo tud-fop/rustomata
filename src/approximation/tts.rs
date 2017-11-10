@@ -96,6 +96,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                 self.trans_map.get_mut(&tk).unwrap().push(t.clone());
                 t2
             },
+            _ => panic!("not implemented")
         }
     }
 

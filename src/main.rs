@@ -16,6 +16,8 @@ mod cfg;
 mod approximation;
 mod integerise;
 mod nfa;
+mod dyck;
+mod cs_representation;
 
 #[cfg(test)]
 mod tests;
