@@ -5,12 +5,13 @@ use integerise::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::*;
-use util::log_prob::*;
 use util::equivalence_classes::*;
 use util::ctf::*;
 use nfa::*;
 use push_down::*;
 use tree_stack::*;
+
+use log_prob::LogProb;
 
 use num_traits::One;
 
