@@ -84,7 +84,7 @@ fn test_from_str_automaton() {
     assert_eq!(Ok(t2.clone()), t2_string.parse());
     assert_eq!(Ok(t3.clone()), t3_string.parse());
 
-    let automaton: TreeStackAutomaton<String, String, LogProb> = TreeStackAutomaton::new(
+    let automaton: TreeStackAutomaton<String, String, LogProb<f64>> = TreeStackAutomaton::new(
         vec![t1.clone(), t2.clone(), t3.clone()],
         TreeStack::new("eins".to_string())
     );
@@ -97,7 +97,7 @@ fn test_from_str_automaton() {
     automaton_string.push_str(t3_string.as_str());
     automaton_string.push_str("\n");
 
-    let automaton_parse: Result<TreeStackAutomaton<String, String, LogProb>, _> = automaton_string.parse();
+    let automaton_parse: Result<TreeStackAutomaton<String, String, LogProb<f64>>, _> = automaton_string.parse();
 
     assert_eq!(
         automaton.list_transitions(),
@@ -133,35 +133,35 @@ fn test_from_str_pmcfg() {
                                VarT::Var(0, 1)]],
     };
 
-    let r0: PMCFGRule<String, String, LogProb> = PMCFGRule {
+    let r0: PMCFGRule<String, String, LogProb<f64>> = PMCFGRule {
         head: "S".to_string(),
         tail: vec!["A".to_string(), "B".to_string()],
         composition: c0.clone(),
         weight: LogProb::new(1.0).unwrap(),
     };
 
-    let r1: PMCFGRule<String, String, LogProb> = PMCFGRule {
+    let r1: PMCFGRule<String, String, LogProb<f64>> = PMCFGRule {
         head: "A".to_string(),
         tail: Vec::new(),
         composition: c1.clone(),
         weight: LogProb::new(0.6).unwrap(),
     };
 
-    let r2: PMCFGRule<String, String, LogProb> = PMCFGRule {
+    let r2: PMCFGRule<String, String, LogProb<f64>> = PMCFGRule {
         head: "A".to_string(),
         tail: vec!["A".to_string()],
         composition: c2.clone(),
         weight: LogProb::new(0.4).unwrap(),
     };
 
-    let r3: PMCFGRule<String, String, LogProb> = PMCFGRule {
+    let r3: PMCFGRule<String, String, LogProb<f64>> = PMCFGRule {
         head: "B".to_string(),
         tail: Vec::new(),
         composition: c1.clone(),
         weight: LogProb::new(0.7).unwrap(),
     };
 
-    let r4: PMCFGRule<String, String, LogProb> = PMCFGRule {
+    let r4: PMCFGRule<String, String, LogProb<f64>> = PMCFGRule {
         head: "B".to_string(),
         tail: vec!["B".to_string()],
         composition: c3.clone(),
@@ -175,17 +175,17 @@ fn test_from_str_pmcfg() {
     let r4_string = "B → [[T b, Var 0 0],[T d, Var 0 1]] (B)  # 0.3";
 
     assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<PMCFGRule<String, String, LogProb>>());
+               r0_string.parse::<PMCFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<PMCFGRule<String, String, LogProb>>());
+               r1_string.parse::<PMCFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<PMCFGRule<String, String, LogProb>>());
+               r2_string.parse::<PMCFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<PMCFGRule<String, String, LogProb>>());
+               r3_string.parse::<PMCFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r4.clone()),
-               r4_string.parse::<PMCFGRule<String, String, LogProb>>());
+               r4_string.parse::<PMCFGRule<String, String, LogProb<f64>>>());
 
-    let g: PMCFG<String, String, LogProb> = PMCFG {
+    let g: PMCFG<String, String, LogProb<f64>> = PMCFG {
         _dummy: PhantomData,
         initial: vec!["S".to_string()],
         rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
@@ -227,25 +227,25 @@ fn test_from_str_cfg() {
         composition: vec![LetterT::Value("b".to_string())],
     };
 
-    let r0: CFGRule<String, String, LogProb> = CFGRule {
+    let r0: CFGRule<String, String, LogProb<f64>> = CFGRule {
         head: "S".to_string(),
         composition: c0.clone(),
         weight: LogProb::one(),
     };
 
-    let r1: CFGRule<String, String, LogProb> = CFGRule {
+    let r1: CFGRule<String, String, LogProb<f64>> = CFGRule {
         head: "A".to_string(),
         composition: c1.clone(),
         weight: LogProb::new(0.6).unwrap(),
     };
 
-    let r2: CFGRule<String, String, LogProb> = CFGRule {
+    let r2: CFGRule<String, String, LogProb<f64>> = CFGRule {
         head: "A".to_string(),
         composition: c2.clone(),
         weight: LogProb::new(0.4).unwrap(),
     };
 
-    let r3: CFGRule<String, String, LogProb> = CFGRule {
+    let r3: CFGRule<String, String, LogProb<f64>> = CFGRule {
         head: "B".to_string(),
         composition: c3.clone(),
         weight: LogProb::one(),
@@ -257,15 +257,15 @@ fn test_from_str_cfg() {
     let r3_string = "B → [T b] # 1";
 
     assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<CFGRule<String, String, LogProb>>());
+               r0_string.parse::<CFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<CFGRule<String, String, LogProb>>());
+               r1_string.parse::<CFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<CFGRule<String, String, LogProb>>());
+               r2_string.parse::<CFGRule<String, String, LogProb<f64>>>());
     assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<CFGRule<String, String, LogProb>>());
+               r3_string.parse::<CFGRule<String, String, LogProb<f64>>>());
 
-    let g: CFG<String, String, LogProb> = CFG {
+    let g: CFG<String, String, LogProb<f64>> = CFG {
         _dummy: PhantomData,
         initial: vec!["S".to_string(),"B".to_string()],
         rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone()],
@@ -308,7 +308,7 @@ fn test_relabel_pushdown() {
     g_string.push_str("\n");
     g_string.push_str(r4_string.clone());
 
-    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: CFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let a = IntPushDownAutomaton::from(g);
 
@@ -347,7 +347,7 @@ fn test_topk() {
     g_string.push_str("\n");
     g_string.push_str(r2_string.clone());
 
-    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: CFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let a = IntPushDownAutomaton::from(g);
 
@@ -383,7 +383,7 @@ fn test_tts() {
     g_string.push_str("\n");
     g_string.push_str(r4_string.clone());
 
-    let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: PMCFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let a = IntTreeStackAutomaton::from(g);
 
@@ -420,7 +420,7 @@ fn test_relabel_check() {
     g_string.push_str("\n");
     g_string.push_str(r4_string.clone());
 
-    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: CFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let a = IntPushDownAutomaton::from(g);
 
@@ -458,7 +458,7 @@ fn test_ctf_scheme(){
     g_string.push_str("\n");
     g_string.push_str(r4_string.clone());
 
-    let g: PMCFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: PMCFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let automaton = IntTreeStackAutomaton::from(g);
 
@@ -542,7 +542,7 @@ fn test_ptk_to_nfa(){
     g_string.push_str("\n");
     g_string.push_str(r2_string.clone());
 
-    let g: CFG<String, String, LogProb> = g_string.parse().unwrap();
+    let g: CFG<String, String, LogProb<f64>> = g_string.parse().unwrap();
 
     let a = PushDownAutomaton::from(g);
 
