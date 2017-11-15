@@ -368,9 +368,7 @@ fn main() {
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
-                    println!("Ähhhh");
                     let automaton = IntTreeStackAutomaton::from(grammar);
-                    println!("Automaton");
                     println!("{}", automaton);
                 }
                 _ => ()
@@ -460,7 +458,6 @@ fn main() {
                             let mut c3 = 0;
 
                             for sentence in corpus.lines() {
-                                println!("{}:\n", sentence);
                                 for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
                                     let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
@@ -491,7 +488,6 @@ fn main() {
                             let grammar: CFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(grammar);
-                            println!("Original Automaton: \n\n{}", a);
 
                             let classes_file_name = cfg_automaton_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -556,8 +552,6 @@ fn main() {
                             let n4 = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
 
                             for sentence in corpus.lines() {
-                                println!("{}:\n", sentence);
-
                                 let mut c2 = 0;
                                 let mut c3 = 0;
                                 let mut c4 = 0;
@@ -598,7 +592,6 @@ fn main() {
                             let grammar: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
-                            println!("Original Automaton: \n\n{}", automaton);
 
                             let tts = TTSElement::new();
 
@@ -736,9 +729,6 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let classes_file_name = parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
@@ -749,7 +739,6 @@ fn main() {
 
                             let (b, _) = a.approximation(&rlb).unwrap();
 
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()
@@ -793,13 +782,9 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let ptk = PDTopKElement::new(size);
 
                             let (b, _) = a.approximation(&ptk).unwrap();
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()
@@ -825,7 +810,6 @@ fn main() {
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
                             for sentence in corpus.lines() {
-                                println!("{:?}", sentence);
                                 println!("{:?}: {}",
                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                         sentence);
@@ -839,13 +823,9 @@ fn main() {
                             let g: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let a = IntTreeStackAutomaton::from(g);
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let tts = TTSElement::new();
 
                             let (b, _) = a.approximation(&tts).unwrap();
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()
