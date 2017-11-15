@@ -54,7 +54,14 @@ fn main() {
                                      .help("number of parses that should be returned")
                                      .short("n")
                                      .long("number")
+                                     .value_name("number-of-parses")
                                      .default_value("1")
+                                     .required(false))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
                                      .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
@@ -75,6 +82,12 @@ fn main() {
                                      .short("n")
                                      .long("number")
                                      .default_value("1")
+                                     .required(false))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
                                      .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
@@ -90,6 +103,12 @@ fn main() {
                                      .help("automaton file to use")
                                      .index(1)
                                      .required(true))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
+                                     .required(false))
                                 .arg(Arg::with_name("number-of-runs")
                                      .help("number of runs that should be returned")
                                      .short("n")
@@ -327,9 +346,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.translate().0);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match mcfg_parse_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for parse in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                            None => {
+                                for parse in automaton.recognise(word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
@@ -363,10 +392,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{}:", sentence);
-                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.translate().0);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match cfg_parse_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for parse in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                            None => {
+                                for parse in automaton.recognise(word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
@@ -638,10 +676,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{}:", sentence);
-                        for run in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", run.1);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match tsa_recognise_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for run in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", run.1);
+                                }
+                            },
+                            None => {
+                                for run in automaton.recognise(word).take(n) {
+                                    println!("{:?}", run.1);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
