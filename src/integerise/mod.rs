@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::collections::BinaryHeap;
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -12,6 +13,8 @@ use integeriser::HashIntegeriser;
 use push_down::*;
 use automata::*;
 use util::*;
+
+use util::agenda::{Agenda, BoundedPriorityQueue};
 
 use push_down::PushDown;
 
@@ -34,7 +37,9 @@ pub trait IntegerisedAutomaton<S: Clone + Debug + Eq,
 
     type Key;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, S, I, T, A, W>;
+    fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, BinaryHeap<(Configuration<S, usize, W>, Pushdown<Transition<S, I, usize, W>>)>, S, I, T, A, W>;
+
+    fn recognise_beam_search<'a>(&'a self, beam_width: usize, word: Vec<T>) -> IntRecogniser<'a, BoundedPriorityQueue<W, (Configuration<S, usize, W>, Pushdown<Transition<S, I, usize, W>>)>, S, I, T, A, W>;
 
     fn check_run<'a>(&'a self, run: &Vec<Transition<S, I, usize, W>>) -> Option<IntItem<'a, S, I, T, A, W>>;
 
@@ -57,24 +62,27 @@ pub trait IntegerisableM<S, A: Hash + Eq, B: Hash + Eq>{
 
 ///Integerised version of `Recogniser`. Creates `ÌntItems` as a result
 pub struct IntRecogniser<'a,
-         S: Clone + Debug + Eq,
-         I: Clone + Debug + Eq + Instruction<S>,
-         T: 'a + Clone + Debug + Hash + Eq,
-         A: 'a + Clone + Debug + Hash + Eq,
-         W: Ord + Clone + Debug>{
+                         A: Agenda<Item=(Configuration<S, usize, W>, Pushdown<Transition<S, I, usize, W>>)>,
+                         S: Clone + Debug + Eq,
+                         I: Clone + Debug + Eq + Instruction<S>,
+                         T: 'a + Clone + Debug + Hash + Eq,
+                         N: 'a + Clone + Debug + Hash + Eq,
+                         W: Ord + Clone + Debug> {
     pub term_integeriser: &'a HashIntegeriser<T>,
-    pub nterm_integeriser: &'a HashIntegeriser<A>,
-    pub recog: Recogniser<'a, Configuration<S, usize, W>, Transition<S, I, usize, W>, usize>,
+    pub nterm_integeriser: &'a HashIntegeriser<N>,
+    pub recog: Recogniser<'a, A, Configuration<S, usize, W>, Transition<S, I, usize, W>, usize>,
 }
 
-impl<'a, S: Clone + Debug + Eq,
-         I: Clone + Debug + Eq + Instruction<S>,
-         T: 'a + Clone + Debug + Eq + Hash,
-         A: 'a + Ord + Eq + Debug + Clone + Hash,
-         W: Ord + Clone + Debug> Iterator for IntRecogniser<'a, S, I, T, A, W> {
-    type Item = IntItem<'a, S, I, T, A, W>;
+impl<'a,
+     A: Agenda<Item=(Configuration<S, usize, W>, Pushdown<Transition<S, I, usize, W>>)>,
+     S: Clone + Debug + Eq,
+     I: Clone + Debug + Eq + Instruction<S>,
+     T: 'a + Clone + Debug + Eq + Hash,
+     N: 'a + Ord + Eq + Debug + Clone + Hash,
+     W: Ord + Clone + Debug> Iterator for IntRecogniser<'a, A, S, I, T, N, W> {
+    type Item = IntItem<'a, S, I, T, N, W>;
 
-    fn next(&mut self) -> Option<IntItem<'a, S, I, T, A, W>> {
+    fn next(&mut self) -> Option<IntItem<'a, S, I, T, N, W>> {
         match self.recog.next(){
             Some((c, run)) =>{
                 Some(IntItem{
@@ -94,45 +102,49 @@ impl<'a, S: Clone + Debug + Eq,
 pub struct IntItem<'a, S: Clone + Eq,
                    I: Clone + Eq + Instruction<S>,
                    T: 'a + Clone+ Eq + Hash,
-                   A: 'a + Clone + Hash + Eq,
+                   N: 'a + Clone + Hash + Eq,
                    W: Ord + Clone>{
     pub configuration: Configuration<S, usize, W>,
     pub run: Pushdown<Transition<S, I, usize, W>>,
     pub term_integeriser: &'a HashIntegeriser<T>,
-    pub nterm_integeriser: &'a HashIntegeriser<A>,
+    pub nterm_integeriser: &'a HashIntegeriser<N>,
 }
 
-impl<'a,S: Clone + Eq + Debug,
-                   I: Debug + Clone + Eq + Instruction<S>,
-                   T: 'a + Clone+ Eq + Debug + Hash,
-                   A: 'a + Clone + Debug + Hash + Eq,
-                   W: Ord + Clone + Debug> PartialEq for IntItem<'a, S, I, T, A, W>{
+impl<'a,
+     S: Clone + Eq + Debug,
+     I: Debug + Clone + Eq + Instruction<S>,
+     T: 'a + Clone+ Eq + Debug + Hash,
+     N: 'a + Clone + Debug + Hash + Eq,
+     W: Ord + Clone + Debug> PartialEq for IntItem<'a, S, I, T, N, W>{
     fn eq(&self, other: &Self) -> bool{
         self.configuration == other.configuration && self.run == other.run
     }
 }
 
-impl<'a,S: Clone + Eq + Debug,
-                   I: Debug + Clone + Eq + Instruction<S>,
-                   T: 'a + Clone+ Eq + Debug + Hash,
-                   A: 'a + Clone + Debug + Hash + Eq,
-                   W: Ord + Clone + Debug> Eq for IntItem<'a, S, I, T, A, W>{ }
+impl<'a,
+     S: Clone + Eq + Debug,
+     I: Debug + Clone + Eq + Instruction<S>,
+     T: 'a + Clone+ Eq + Debug + Hash,
+     N: 'a + Clone + Debug + Hash + Eq,
+     W: Ord + Clone + Debug> Eq for IntItem<'a, S, I, T, N, W> { }
 
-impl<'a,S: Clone + Eq + Debug,
-                   I: Debug + Clone + Eq + Instruction<S>,
-                   T: 'a + Clone+ Eq + Debug + Hash,
-                   A: 'a + Clone + Debug + Hash + Eq,
-                   W: Ord + Clone + Debug> PartialOrd for IntItem<'a, S, I, T, A, W>{
+impl<'a,
+     S: Clone + Eq + Debug,
+     I: Debug + Clone + Eq + Instruction<S>,
+     T: 'a + Clone+ Eq + Debug + Hash,
+     N: 'a + Clone + Debug + Hash + Eq,
+     W: Ord + Clone + Debug> PartialOrd for IntItem<'a, S, I, T, N, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering>{
         self.configuration.partial_cmp(&other.configuration)
     }
 }
 
-impl<'a,S: Clone + Eq + Debug,
-                   I: Debug + Clone + Eq + Instruction<S>,
-                   T: 'a + Clone+ Eq + Debug + Hash,
-                   A: 'a + Clone + Debug + Hash + Eq,
-                   W: Ord + Clone + Debug> Ord for IntItem<'a, S, I, T, A, W>{
+impl<'a,
+     S: Clone + Eq + Debug,
+     I: Debug + Clone + Eq + Instruction<S>,
+     T: 'a + Clone+ Eq + Debug + Hash,
+     N: 'a + Clone + Debug + Hash + Eq,
+     W: Ord + Clone + Debug> Ord for IntItem<'a, S, I, T, N, W> {
     fn cmp(&self, other: &Self) -> Ordering{
         self.configuration.cmp(&other.configuration)
     }
