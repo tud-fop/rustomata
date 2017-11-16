@@ -40,13 +40,23 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
     IntegerisedAutomaton<TreeStack<usize>, TreeStackInstruction<usize>, T, A, W> for IntTreeStackAutomaton<A, T, W> {
         type Key = A;
 
-        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
+        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, BinaryHeap<(Configuration<TreeStack<usize>, usize, W>, Pushdown<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>)>, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
             let new_word = self.int_word(word);
 
             IntRecogniser{
                 term_integeriser: &self.term_integeriser,
                 nterm_integeriser: &self.nterm_integeriser,
                 recog: self.automaton.recognise(new_word)
+            }
+        }
+
+        fn recognise_beam_search<'a>(&'a self, beam_width: usize, word: Vec<T>) -> IntRecogniser<'a, BoundedPriorityQueue<W, (Configuration<TreeStack<usize>, usize, W>, Pushdown<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>)>, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
+            let new_word = self.int_word(word);
+
+            IntRecogniser{
+                term_integeriser: &self.term_integeriser,
+                nterm_integeriser: &self.nterm_integeriser,
+                recog: self.automaton.recognise_beam_search(beam_width, new_word)
             }
         }
 

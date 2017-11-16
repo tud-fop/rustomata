@@ -56,7 +56,14 @@ fn main() {
                                      .help("number of parses that should be returned")
                                      .short("n")
                                      .long("number")
+                                     .value_name("number-of-parses")
                                      .default_value("1")
+                                     .required(false))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
                                      .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
@@ -77,6 +84,12 @@ fn main() {
                                      .short("n")
                                      .long("number")
                                      .default_value("1")
+                                     .required(false))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
                                      .required(false)))
                     .subcommand(SubCommand::with_name("automaton")
                                 .about("constructs a tree-stack automaton from the given multiple context-free grammar")
@@ -92,6 +105,12 @@ fn main() {
                                      .help("automaton file to use")
                                      .index(1)
                                      .required(true))
+                                .arg(Arg::with_name("beam-width")
+                                     .help("maximum number of frontier nodes in the search space")
+                                     .short("b")
+                                     .long("beam")
+                                     .value_name("beam-width")
+                                     .required(false))
                                 .arg(Arg::with_name("number-of-runs")
                                      .help("number of runs that should be returned")
                                      .short("n")
@@ -329,9 +348,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.translate().0);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match mcfg_parse_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for parse in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                            None => {
+                                for parse in automaton.recognise(word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
@@ -341,9 +370,7 @@ fn main() {
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
                     let grammar: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
-                    println!("Ähhhh");
                     let automaton = IntTreeStackAutomaton::from(grammar);
-                    println!("Automaton");
                     println!("{}", automaton);
                 }
                 _ => ()
@@ -365,10 +392,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{}:", sentence);
-                        for parse in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", parse.translate().0);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match cfg_parse_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for parse in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                            None => {
+                                for parse in automaton.recognise(word).take(n) {
+                                    println!("{:?}", parse.translate().0);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
@@ -424,7 +460,6 @@ fn main() {
                             let mut c3 = 0;
 
                             for sentence in corpus.lines() {
-                                println!("{}:\n", sentence);
                                 for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
                                     let s1 = ctf::ctf_level_i(parse1.give_up().1, &nptk, &b);
                                     for parse2 in s1{
@@ -455,7 +490,6 @@ fn main() {
                             let grammar: CFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let a = IntPushDownAutomaton::from(grammar);
-                            println!("Original Automaton: \n\n{}", a);
 
                             let classes_file_name = cfg_automaton_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
@@ -520,8 +554,6 @@ fn main() {
                             let n4 = mcfg_parse_matches.value_of("number-of-parses").unwrap().parse().unwrap();
 
                             for sentence in corpus.lines() {
-                                println!("{}:\n", sentence);
-
                                 let mut c2 = 0;
                                 let mut c3 = 0;
                                 let mut c4 = 0;
@@ -562,7 +594,6 @@ fn main() {
                             let grammar: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let automaton = IntTreeStackAutomaton::from(grammar);
-                            println!("Original Automaton: \n\n{}", automaton);
 
                             let tts = TTSElement::new();
 
@@ -640,10 +671,19 @@ fn main() {
                     let _ = std::io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{}:", sentence);
-                        for run in automaton.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n) {
-                            println!("{:?}", run.1);
-                        }
+                        let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
+                        match tsa_recognise_matches.value_of("beam-width") {
+                            Some(b) => {
+                                for run in automaton.recognise_beam_search(b.parse().unwrap(), word).take(n) {
+                                    println!("{:?}", run.1);
+                                }
+                            },
+                            None => {
+                                for run in automaton.recognise(word).take(n) {
+                                    println!("{:?}", run.1);
+                                }
+                            },
+                        };
                         println!();
                     }
                 },
@@ -691,9 +731,6 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let classes_file_name = parse_matches.value_of("classes").unwrap();
                             let mut classes_file = File::open(classes_file_name.clone()).unwrap();
                             let mut classes_string = String::new();
@@ -704,7 +741,6 @@ fn main() {
 
                             let (b, _) = a.approximation(&rlb).unwrap();
 
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()
@@ -748,13 +784,9 @@ fn main() {
 
                             let a = IntPushDownAutomaton::from(g);
 
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let ptk = PDTopKElement::new(size);
 
                             let (b, _) = a.approximation(&ptk).unwrap();
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()
@@ -780,7 +812,6 @@ fn main() {
                             let _ = std::io::stdin().read_to_string(&mut corpus);
 
                             for sentence in corpus.lines() {
-                                println!("{:?}", sentence);
                                 println!("{:?}: {}",
                                         b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
                                         sentence);
@@ -794,13 +825,9 @@ fn main() {
                             let g: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
 
                             let a = IntTreeStackAutomaton::from(g);
-                            println!("Original Automaton");
-                            println!("{}", a);
-
                             let tts = TTSElement::new();
 
                             let (b, _) = a.approximation(&tts).unwrap();
-                            println!("Approximated Automaton");
                             println!("{}", b);
                         },
                         _ => ()

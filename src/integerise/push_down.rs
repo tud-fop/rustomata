@@ -64,7 +64,7 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
     IntegerisedAutomaton<PushDown<usize>, PushDownInstruction<usize>, T, A, W> for IntPushDownAutomaton<A, T, W> {
          type Key = A;
 
-         fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, PushDown<usize>, PushDownInstruction<usize>, T, A, W>{
+        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, BinaryHeap<(Configuration<PushDown<usize>, usize, W>, Pushdown<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>)>, PushDown<usize>, PushDownInstruction<usize>, T, A, W>{
              let new_word = self.int_word(word);
 
              IntRecogniser{
@@ -73,6 +73,16 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
                  recog: self.automaton.recognise(new_word)
              }
          }
+
+        fn recognise_beam_search<'a>(&'a self, beam_width: usize, word: Vec<T>) -> IntRecogniser<'a, BoundedPriorityQueue<W, (Configuration<PushDown<usize>, usize, W>, Pushdown<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>)>, PushDown<usize>, PushDownInstruction<usize>, T, A, W>{
+            let new_word = self.int_word(word);
+
+            IntRecogniser{
+                term_integeriser: &self.term_integeriser,
+                nterm_integeriser: &self.nterm_integeriser,
+                recog: self.automaton.recognise_beam_search(beam_width, new_word)
+            }
+        }
 
          fn check_run<'a>(&'a self, run: &Vec<Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>) -> Option<IntItem<'a, PushDown<usize>, PushDownInstruction<usize>, T, A, W>> {
              let heap = self.automaton.check(self.automaton.initial().clone(), run);

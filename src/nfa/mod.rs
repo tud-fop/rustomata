@@ -1,10 +1,10 @@
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::cmp::Ordering;
-use num_traits::{One};
-use std::ops::{Mul};
-use std::io::{self,Write};
+use std::ops::Mul;
+
+use num_traits::One;
 
 use integeriser::{Integeriser, HashIntegeriser};
 
@@ -158,9 +158,7 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
     type Item = (Configuration<S, T, W>, Vec<NFATransition<S, T, W>>);
 
     fn next(&mut self) -> Option<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)> {
-        let mut i = 0;
         while let Some((c, run)) = self.agenda.pop() {
-            i = i + 1;
             //self.used.insert(c.clone());
             for rs in self.filtered_rules.get(&(c.storage)){
                 for r in rs {
@@ -175,11 +173,10 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
                 }
             }
             if self.accepts(&c) {
-                writeln!(io::stderr(), "New successful configuration found after inspecting {} configurations.", i).unwrap();
                 return Some((c, run));
             }
         }
-        writeln!(io::stderr(), "No new successful configuration found after inspecting {} configurations.", i).unwrap();
+
         None
     }
 }
