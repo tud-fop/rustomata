@@ -5,13 +5,22 @@ pub use dyck::Bracket;
 use automata::Automaton;
 use std::fmt::Debug;
 
-pub struct MultipleDyckLanguage<T: Ord + Clone>(MultipleDyckAutomaton<T>);
+
+/// An object that represents the mutliple Dyck language of an alphabet Σ with respect to
+/// a partition of Σ.
+pub struct MultipleDyckLanguage<T: Ord + Clone>(
+    MultipleDyckAutomaton<T>
+);
 
 impl<T: Clone + Eq + Debug + Ord> MultipleDyckLanguage<T> {
+    /// Represents a multiple Dyck language with respect to
+    /// a partition Π = {π₁, …, πₙ} of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
     pub fn new(p: &Partition<T>) -> Self {
         MultipleDyckLanguage(MultipleDyckAutomaton::new(p))
     }
 
+    /// Unweightedly recognizes an element w ∈ Σ* of a multiple Dyck language with respect to 
+    /// Σ and a partition of Σ.
     pub fn recognize(&self, word: &Vec<Bracket<T>>) -> bool {
         let &MultipleDyckLanguage(ref mda) = self;
         mda.recognise(word.clone()).next().is_some()

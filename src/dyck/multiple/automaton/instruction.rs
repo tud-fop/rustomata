@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use Instruction;
 use TreeStack;
 
+
 /// An element of the tree push-down for recognizing a MDL.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub enum MDTreeElem<T> {
@@ -9,13 +10,16 @@ pub enum MDTreeElem<T> {
     Node(Option<T>, BTreeSet<T>)
 }
 
-/// 
+
+/// Instruction of an `Automaton` that recognizes multiple Dyck languages
+/// over an alphabet of elements in `T`.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub enum MultipleDyckInstruction<T: Ord> {
     Up(T, BTreeSet<T>),
     UpAt(usize, T, BTreeSet<T>),
     Down(T)
 }
+
 
 impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstruction<T> {
     fn apply(&self, ts: TreeStack<MDTreeElem<T>>) -> Vec<TreeStack<MDTreeElem<T>>> {

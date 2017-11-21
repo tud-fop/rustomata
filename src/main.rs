@@ -49,6 +49,7 @@ fn main() {
         .subcommand(tree_stack_automaton::cli::get_sub_command())
         .subcommand(coarse_to_fine::cli::get_sub_command())
         .subcommand(approximation::cli::get_sub_command())
+        .subcommand(cs_representation::cli::get_sub_command("cs"))
         .get_matches();
 
     match matches.subcommand() {
@@ -62,6 +63,8 @@ fn main() {
             tree_stack_automaton::cli::handle_sub_matches(tsa_matches),
         ("approximation", Some(r_matches)) =>
             approximation::cli::handle_sub_matches(r_matches),
+        ("cs", Some(cs_matches)) =>
+            cs_representation::cli::handle_sub_matches(cs_matches),
         _ => (),
     }
 

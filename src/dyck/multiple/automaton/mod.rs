@@ -12,12 +12,17 @@ use Configuration;
 
 use dyck::Bracket;
 
+
+/// A variant of a tree stack `Automaton` that is used to recognize multiple Dyck languages
+/// over symbols in `T`.
 #[derive(Debug)]
 pub struct MultipleDyckAutomaton<T: Ord + Clone> {
     transitions: HashMap<(), BinaryHeap<Transition<TreeStack<MDTreeElem<T>>, MultipleDyckInstruction<T>, Bracket<T>, u8>>>
 }
 
 impl<T: Ord + Clone> MultipleDyckAutomaton<T> {
+    /// Like a multiple Dyck language, the automaton is instantiated using a `Partition`
+    /// Π = { π₁, …, πₙ } of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
     pub fn new(partition: &Partition<T>) -> Self {
         use std::marker::PhantomData;
 

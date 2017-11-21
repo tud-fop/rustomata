@@ -6,10 +6,10 @@ use std::io::{stdin, stdout, Read};
 use std::fs::{File};
 
 use PMCFG;
-use LogProb;
+use log_prob::LogProb;
 use cs_representation::CSRepresentation;
 
-pub fn subcommand(name: &str) -> App {
+pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
         .about("Chomsky-Schützenberger representation of MCFGs")
             .subcommand(SubCommand::with_name("from-mcfg")
@@ -42,7 +42,7 @@ pub fn subcommand(name: &str) -> App {
             )
 }
 
-pub fn handle_subcommmand(submatches: &ArgMatches) {
+pub fn handle_sub_matches(submatches: &ArgMatches) {
     match submatches.subcommand() {
         ("from-mcfg", Some(params)) => {
             let mut grammar_string = String::new();

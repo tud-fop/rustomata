@@ -140,30 +140,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
                     new_val: inter.integerise(new_val.clone()),
                 }
             }
-            &TreeStackInstruction::NDUp { ref lower_current, ref upper_old, ref upper_new } => {
-                TreeStackInstruction::NDUp {
-                    lower_current: inter.integerise(lower_current.clone()),
-                    upper_old: inter.integerise(upper_old.clone()),
-                    upper_new: inter.integerise(upper_new.clone()),
-                }
-            }
-            &TreeStackInstruction::NDPush { ref lower_current, ref upper_new } => {
-                TreeStackInstruction::NDPush {
-                    lower_current: inter.integerise(lower_current.clone()),
-                    upper_new: inter.integerise(upper_new.clone()),
-                }
-            }
-            &TreeStackInstruction::NDPop { ref upper_current } => {
-                TreeStackInstruction::NDPop {
-                    upper_current: inter.integerise(upper_current.clone()),
-                }
-            }
-            &TreeStackInstruction::NDDown { ref upper_current, ref upper_new } => {
-                TreeStackInstruction::NDDown {
-                    upper_current: inter.integerise(upper_current.clone()),
-                    upper_new: inter.integerise(upper_new.clone()),
-                }
-            }
         }
     }
 
@@ -189,30 +165,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
                     current_val: inter.find_value(*current_val).unwrap().clone(),
                     old_val: inter.find_value(*old_val).unwrap().clone(),
                     new_val: inter.find_value(*new_val).unwrap().clone(),
-                }
-            }
-            TreeStackInstruction::NDUp { ref lower_current, ref upper_old, ref upper_new } => {
-                TreeStackInstruction::NDUp {
-                    lower_current: inter.find_value(*lower_current).unwrap().clone(),
-                    upper_old: inter.find_value(*upper_old).unwrap().clone(),
-                    upper_new: inter.find_value(*upper_new).unwrap().clone(),
-                }
-            }
-            TreeStackInstruction::NDPush { ref lower_current, ref upper_new } => {
-                TreeStackInstruction::NDPush {
-                    lower_current: inter.find_value(*lower_current).unwrap().clone(),
-                    upper_new: inter.find_value(*upper_new).unwrap().clone(),
-                }
-            }
-            TreeStackInstruction::NDPop { ref upper_current } => {
-                TreeStackInstruction::NDPop {
-                    upper_current: inter.find_value(*upper_current).unwrap().clone(),
-                }
-            }
-            TreeStackInstruction::NDDown { ref upper_current, ref upper_new } => {
-                TreeStackInstruction::NDDown {
-                    upper_current: inter.find_value(*upper_current).unwrap().clone(),
-                    upper_new: inter.find_value(*upper_new).unwrap().clone(),
                 }
             }
         }

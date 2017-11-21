@@ -1,4 +1,4 @@
-pub mod cla;
+mod cli;
 
 use std::hash::Hash;
 use std::fmt;
@@ -9,7 +9,7 @@ use num_traits::One;
 use pmcfg::{PMCFG, PMCFGRule, VarT};
 use dyck::multiple::{Bracket, MultipleDyckLanguage};
 use openfsa::fsa::{Arc, Automaton, Generator};
-use LogProb;
+use log_prob::LogProb;
 
 use util::partition::Partition;
 
@@ -251,7 +251,7 @@ mod test {
         use PMCFGRule;
         use Composition;
         use super::CSRepresentation;
-        use LogProb;
+        use super::LogProb;
         use super::Derivation;
         use super::MCFG;
 
