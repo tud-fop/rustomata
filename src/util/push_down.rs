@@ -107,7 +107,7 @@ impl<A: Clone> Into<Vec<A>> for Pushdown<A> {
 #[test]
 fn test_pushdown() {
     assert_eq!(Pushdown::new().push(1).push(2).push(3).push(4).pop().unwrap().0,
-               Pushdown::from(vec![1,2,3]));
+               Pushdown::from(vec![1,2,3].as_slice()));
 
     let v1: Vec<i32> = Pushdown::new().push(1).push(2).push(3).into();
     assert_eq!(v1, vec![1,2,3]);

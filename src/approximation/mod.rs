@@ -9,7 +9,7 @@ pub mod relabel;
 pub mod ptk;
 pub mod tts;
 
-use automata;
+use automata::Transition;
 
 use tree_stack_automaton::*;
 use push_down_automaton::*;
@@ -17,6 +17,9 @@ use push_down_automaton::*;
 pub use self::relabel::*;
 pub use self::ptk::*;
 pub use self::tts::*;
+
+type PushDownTransitionSequence<A, T, W> = Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>;
+type TreeStackTransitionSequence<A, T, W> = Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>;
 
 /// Object defining the strategies used for `approximation`
 pub trait ApproximationStrategy<A1, A2, T1, T2> {
@@ -39,11 +42,11 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: Clone + ApproximationStrategy<PushDown<A>, PushDown<B>,
-        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
-        automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+        Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+        Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
       Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
-      where W : Add<Output = W>{
-
+    where W : Add<Output = W>
+{
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
         let mut strat = strati.clone();
         let initial = strat.approximate_initial(self.initial.clone());
@@ -70,8 +73,8 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
       S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
-        automata::Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>,
-        automata::Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
+        Transition<TreeStack<A>,TreeStackInstruction<A>, T, W>,
+        Transition<PushDown<B>, PushDownInstruction<B>, T, W>>>
       Approximation<S, PushDownAutomaton<B, T, W>> for TreeStackAutomaton<A, T, W>
       where W : Add<Output = W>{
 
@@ -93,7 +96,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                             match b.instruction{
                                 PushDownInstruction::Replace {ref current_val, ref new_val} =>{
                                     fina = new_val[0].clone();
-                                    transitions.push(automata::Transition {
+                                    transitions.push(Transition {
                                         _dummy: PhantomData,
                                         word: b.word.clone(),
                                         weight: b.weight.clone(),

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-use automata::*;
+use automata::{Transition, TransitionKey};
 use approximation::*;
 use push_down_automaton::*;
 
@@ -27,49 +27,31 @@ impl<A, T1, T2 : Ord> PDTopKElement<A, T1, T2>{
 impl <A : Ord + PartialEq + Debug + Clone + Hash,
       T: Ord + Eq + Clone + Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A>, PushDown<A>,
-        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
-        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
-      for PDTopKElement<A, automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>, TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>>{
+        Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+        Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
+      for PDTopKElement<A, Transition<PushDown<A>, PushDownInstruction<A>, T, W>, TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>>{
 
     fn approximate_initial(&self, a : PushDown<A>)-> PushDown<A>{
         let mut b = a.elements.clone();
         b.remove(0);
         let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
-        let ps=pushdown.replacek(&b, &b, &self.size.clone());
+        let ps=pushdown.replacek(&b, &b, self.size);
         ps[0].clone()
     }
 
-    fn approximate_transition(&mut self, t :  automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
-        automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
+    fn approximate_transition(&mut self, t :  Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
+        Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
         match t.instruction{
-            PushDownInstruction::Replace {ref current_val, ref new_val} => {
-                let t2 = automata::Transition {
+            PushDownInstruction::Replace { ref current_val, ref new_val }
+            | PushDownInstruction::ReplaceK { ref current_val, ref new_val, .. } => {
+                let t2 = Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::ReplaceK {
                         current_val: current_val.clone(),
                         new_val: new_val.clone(),
-                        limit: self.size.clone(),
-                    }
-                };
-                let tk = TransitionKey::new(&t2);
-                if !self.trans_map.contains_key(&tk) {
-                    self.trans_map.insert(tk.clone(), Vec::new());
-                    ()
-                }
-                self.trans_map.get_mut(&tk).unwrap().push(t.clone());
-                t2
-            },
-            PushDownInstruction::ReplaceK {ref current_val, ref new_val, ..} => {
-                let t2 = automata::Transition {
-                    _dummy: PhantomData,
-                    word: t.word.clone(),
-                    weight: t.weight.clone(),
-                    instruction: PushDownInstruction::ReplaceK {
-                        current_val: current_val.clone(),
-                        new_val: new_val.clone(),
-                        limit: self.size.clone(),
+                        limit: self.size,
                     }
                 };
                 let tk = TransitionKey::new(&t2);
@@ -83,18 +65,18 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
         }
     }
 
-    fn translate_run(&self, run: Vec<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>) -> BinaryHeap<Vec<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>{
+    fn translate_run(&self, run: Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A, T, W>>{
         let mut res = Vec::new();
         for lv in run{
             let lvk = TransitionKey::new(&lv);
-            match self.trans_map.get(&lvk){
+            match self.trans_map.get(&lvk) {
                 Some(v) =>{
-                    if res.len() == 0{
+                    if res.is_empty() {
                         res.push(v.clone())
-                    }else{
+                    } else {
                         let mut res2 = Vec::new();
-                        for t in v{
-                            for r1 in res.clone(){
+                        for t in v {
+                            for r1 in res.clone() {
                                 let mut r2 = r1.clone();
                                 r2.push(t.clone());
                                 res2.push(r2);
@@ -103,7 +85,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
                         res = res2;
                     }
                 },
-                None =>{
+                None => {
                     return BinaryHeap::new();
                 },
             }
@@ -111,7 +93,7 @@ impl <A : Ord + PartialEq + Debug + Clone + Hash,
         BinaryHeap::from(res)
     }
 
-    fn add_transitions(&mut self, t1: &automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>, t2: &automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>){
+    fn add_transitions(&mut self, t1: &Transition<PushDown<A>, PushDownInstruction<A>, T, W>, t2: &Transition<PushDown<A>, PushDownInstruction<A>, T, W>){
         let tk = TransitionKey::new(t2);
         if !self.trans_map.contains_key(&tk) {
             self.trans_map.insert(tk.clone(), Vec::new());

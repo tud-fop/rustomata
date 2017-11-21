@@ -45,7 +45,7 @@ impl<A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     for RlbElement<PushDown<A1>, N1, N2, Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, TransitionKey<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
 
     fn integerise(&self, inter: &HashIntegeriser<A1>)-> (HashIntegeriser<A2>, RlbElement<PushDown<usize>, usize, usize, Transition<PushDown<usize>, PushDownInstruction<usize>, T, W>, TransitionKey<PushDown<usize>, PushDownInstruction<usize>, T, W>>){
-        let (ne, inter2) = in_fit(self.mapping.clone(), inter);
+        let (ne, inter2) = in_fit(&self.mapping, inter);
         (inter2, RlbElement::new(ne))
     }
 }

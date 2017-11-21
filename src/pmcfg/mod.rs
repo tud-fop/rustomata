@@ -83,13 +83,13 @@ impl<T: fmt::Display> fmt::Display for Composition<T> {
 
 impl<T: fmt::Display> fmt::Display for VarT<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &VarT::Var(i, j) => {
+        match *self {
+            VarT::Var(i, j) => {
                 write!(f, "Var {} {}", i, j)
             },
-            &VarT::T(ref x) => {
+            VarT::T(ref x) => {
                 write!(f, "T \"{}\"", x)
-            }
+            },
         }
     }
 }
@@ -129,7 +129,7 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
         }
         buffer.push_str("]\n\n");
 
-        for ref r in &self.rules {
+        for r in &self.rules {
             buffer.push_str(format!("{}\n", r).as_str());
         }
 

@@ -70,13 +70,11 @@ impl<N: fmt::Display, T: fmt::Display> fmt::Display for CFGComposition<N, T> {
 
 impl<N: fmt::Display, T: fmt::Display> fmt::Display for LetterT<N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &LetterT::Value(ref x) => {
-                write!(f, "T \"{}\"", x)
-            },
-            &LetterT::Label(ref x) => {
-                write!(f, "Nt \"{}\"", x)
-            }
+        match *self {
+            LetterT::Value(ref x) =>
+                write!(f, "T \"{}\"", x),
+            LetterT::Label(ref x) =>
+                write!(f, "Nt \"{}\"", x),
         }
     }
 }

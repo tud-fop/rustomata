@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-use automata::*;
+use automata::{Transition, TransitionKey};
 use approximation::*;
 use util::equivalence_classes::*;
 use push_down_automaton::*;
@@ -36,26 +36,26 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
       N2: Clone + Eq + Hash,
       T: Ord + Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A1>, PushDown<A2>,
-        automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>,
-        automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>
-      for RlbElement<PushDown<A1>, N1, N2, automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, TransitionKey<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
+        Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>,
+        Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>
+      for RlbElement<PushDown<A1>, N1, N2, Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, TransitionKey<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
     fn approximate_initial(&self, a : PushDown<A1>)-> PushDown<A2>{
         a.relabel(&self.mapping)
     }
 
-    fn approximate_transition(&mut self, t :  automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
-        automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>{
-        match t.instruction{
+    fn approximate_transition(&mut self, t :  Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
+        Transition<PushDown<A2>, PushDownInstruction<A2>, T, W> {
+        match t.instruction {
             PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 let mut stc = Vec::new();
                 let mut stn = Vec::new();
-                for nt in current_val{
+                for nt in current_val {
                     stc.push(nt.relabel(&self.mapping));
                 }
-                for nt in new_val{
+                for nt in new_val {
                     stn.push(nt.relabel(&self.mapping));
                 }
-                let t2 = automata::Transition {
+                let t2 = Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
@@ -72,23 +72,23 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                 self.trans_map.get_mut(&tk).unwrap().push(t.clone());
                 t2
             },
-            PushDownInstruction::ReplaceK {ref current_val, ref new_val, ref limit} => {
+            PushDownInstruction::ReplaceK {ref current_val, ref new_val, limit} => {
                 let mut stc = Vec::new();
                 let mut stn = Vec::new();
-                for nt in current_val{
+                for nt in current_val {
                     stc.push(nt.relabel(&self.mapping));
                 }
-                for nt in new_val{
+                for nt in new_val {
                     stn.push(nt.relabel(&self.mapping));
                 }
-                let t2 = automata::Transition {
+                let t2 = Transition {
                     _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::ReplaceK {
                         current_val: stc.clone(),
                         new_val: stn.clone(),
-                        limit: limit.clone(),
+                        limit: limit,
                     }
                 };
                 let tk = TransitionKey::new(&t2);
@@ -102,18 +102,18 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
         }
     }
 
-    fn translate_run(&self, run: Vec<automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>) -> BinaryHeap<Vec<automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>>>{
+    fn translate_run(&self, run: Vec<Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A1, T, W>>{
         let mut res = Vec::new();
-        for lv in run{
+        for lv in run {
             let lvk = TransitionKey::new(&lv);
-            match self.trans_map.get(&lvk){
-                Some(v) =>{
-                    if res.len() == 0{
+            match self.trans_map.get(&lvk) {
+                Some(v) => {
+                    if res.is_empty() {
                         res.push(v.clone())
-                    }else{
+                    } else {
                         let mut res2 = Vec::new();
-                        for t in v{
-                            for r1 in res.clone(){
+                        for t in v {
+                            for r1 in res.clone() {
                                 let mut r2 = r1.clone();
                                 r2.push(t.clone());
                                 res2.push(r2);
@@ -122,15 +122,13 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                         res = res2;
                     }
                 },
-                None =>{
-                    return BinaryHeap::new();
-                },
+                None => return BinaryHeap::new(),
             }
         }
         BinaryHeap::from(res)
     }
 
-    fn add_transitions(&mut self, t1: &automata::Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, t2: &automata::Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>){
+    fn add_transitions(&mut self, t1: &Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, t2: &Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>){
         let tk = TransitionKey::new(t2);
         if !self.trans_map.contains_key(&tk) {
             self.trans_map.insert(tk.clone(), Vec::new());
@@ -143,6 +141,6 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
 //needed for integerised values
 impl Relabel<usize, usize, usize> for usize{
     fn relabel(&self, map: &EquivalenceClass<usize, usize>) -> usize {
-        *map.project(*self)
+        *map.project(self)
     }
 }

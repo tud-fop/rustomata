@@ -44,11 +44,11 @@ impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + O
         }
     }
 
-    pub fn recognise(&self, word: Vec<T>) -> NFARecogniser<S, T, W> {
+    pub fn recognise(&self, word: &[T]) -> NFARecogniser<S, T, W> {
         let mut init_heap = BinaryHeap::new();
         for i in self.initial_states.clone(){
             let c = Configuration {
-                word: word.clone(),
+                word: word.to_vec(),
                 storage: i.clone(),
                 weight: W::one(),
             };
@@ -160,7 +160,7 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
     fn next(&mut self) -> Option<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)> {
         while let Some((c, run)) = self.agenda.pop() {
             //self.used.insert(c.clone());
-            for rs in self.filtered_rules.get(&(c.storage)){
+            if let Some(rs) = self.filtered_rules.get(&(c.storage)) {
                 for r in rs {
                     let cv = r.apply(&c);
                     for c1 in cv{
@@ -203,7 +203,7 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        for rs in a.transitions().get(c.current_symbol()){
+        if let Some(rs) = a.transitions().get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {
@@ -212,10 +212,8 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                     PushDownInstruction::ReplaceK {..} => {
                         for c1 in r.instruction.apply(c.clone()){
                             let c1i = integeriser.integerise(c1.clone());
-                            if !transitions.contains_key(&ci) {
-                                transitions.insert(ci.clone(), BinaryHeap::new());
-                            }
-                            let t = NFATransition::new(ci, c1i, r.word.clone(), r.weight.clone());
+                            transitions.entry(ci).or_insert_with(BinaryHeap::new);
+                            let t = NFATransition::new(ci, c1i, r.word.clone(), r.weight);
                             transitions.get_mut(&ci).unwrap().push(t.clone());
                             map.insert(t, r.clone());
 

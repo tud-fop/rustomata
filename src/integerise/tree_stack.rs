@@ -7,11 +7,25 @@ use std::ops::{Add, Mul, Div};
 
 use integeriser::{Integeriser, HashIntegeriser};
 
-use automata::*;
+use automata::VecItem;
 use tree_stack_automaton::*;
 use approximation::*;
 
 use integerise::*;
+
+// items of the transition system
+type IntTreeStackConfiguration<W> = Configuration<TreeStack<usize>, usize, W>;
+type IntTreeStackTransition<W> = Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>;
+type IntTreeStackItem<W> = (IntTreeStackConfiguration<W>, Pushdown<IntTreeStackTransition<W>>);
+type IntTreeStackVecItem<W> = (IntTreeStackConfiguration<W>, Vec<IntTreeStackTransition<W>>);
+
+// remove this when possible
+type IntTreeStackItemComplicated<'a, A, T, W> = IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
+
+// kinds of recognisers
+type ExactIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BinaryHeap<IntTreeStackItem<W>>, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
+type BeamIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BoundedPriorityQueue<W, IntTreeStackItem<W>>, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
+
 
 /// Integerised version of the `TreeStackAutomaton`. Holds the two `Integeriser` used to encode the input and the resulting `TreeStackAutomaton`
 #[derive(Clone)]
@@ -37,10 +51,10 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<A: Ord + Eq + Debug + Clone + Hash,
      T: Clone + Debug + Eq + Hash,
      W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord>
-    IntegerisedAutomaton<TreeStack<usize>, TreeStackInstruction<usize>, T, A, W> for IntTreeStackAutomaton<A, T, W> {
+    IntegerisedAutomaton<TreeStack<usize>, TreeStackInstruction<usize>, A, T, W> for IntTreeStackAutomaton<A, T, W> {
         type Key = A;
 
-        fn recognise<'a>(&'a self, word: Vec<T>) -> IntRecogniser<'a, BinaryHeap<(Configuration<TreeStack<usize>, usize, W>, Pushdown<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>)>, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
+        fn recognise(&self, word: Vec<T>) -> ExactIntTreeStackRecogniser<A, T, W> {
             let new_word = self.int_word(word);
 
             IntRecogniser{
@@ -50,7 +64,7 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             }
         }
 
-        fn recognise_beam_search<'a>(&'a self, beam_width: usize, word: Vec<T>) -> IntRecogniser<'a, BoundedPriorityQueue<W, (Configuration<TreeStack<usize>, usize, W>, Pushdown<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>)>, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
+        fn recognise_beam_search(&self, beam_width: usize, word: Vec<T>) -> BeamIntTreeStackRecogniser<A, T, W> {
             let new_word = self.int_word(word);
 
             IntRecogniser{
@@ -60,19 +74,19 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             }
         }
 
-        fn check_run<'a>(&'a self, run: &Vec<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>) -> Option<IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>>{
+        fn check_run<'a>(&'a self, run: &[Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>]) -> Option<IntTreeStackItemComplicated<A, T, W>> {
             let heap = self.automaton.check(self.automaton.initial().clone(), run);
             if heap.is_empty(){
                 return None;
             }
             let c = Configuration {
-                word: ctf::run_word(&run),
+                word: ctf::run_word(run),
                 storage: heap[0].clone(),
-                weight: ctf::run_weight(&run),
+                weight: ctf::run_weight(run),
             };
             Some(IntItem{
                 configuration: c,
-                run: Pushdown::from(run.clone()),
+                run: Pushdown::from(run),
                 term_integeriser: &self.term_integeriser,
                 nterm_integeriser: &self.nterm_integeriser,
             })
@@ -80,13 +94,12 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
 
         fn int_word(&self, word: Vec<T>)-> Vec<usize>{
             let mut new_word = Vec::new();
-            for ref e in word {
-                match self.term_integeriser.find_key(e){
-                    Some(x) => new_word.push(x.clone()),
-                    None => (),
+            for e in word {
+                if let Some(x) = self.term_integeriser.find_key(&e) {
+                    new_word.push(x)
                 }
             }
-            return new_word;
+            new_word
         }
     }
 
@@ -102,8 +115,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStack<usize>, 
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstruction<usize>, A> for TreeStackInstruction<A>{
     fn integerise(&self, inter: &mut HashIntegeriser<A>)->TreeStackInstruction<usize>{
-        match self{
-            &TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
+        match *self{
+            TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
                 TreeStackInstruction::Up {
                     n: n,
                     current_val: inter.integerise(current_val.clone()),
@@ -111,14 +124,14 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
                     new_val: inter.integerise(new_val.clone()),
                 }
             }
-            &TreeStackInstruction::Push { n, ref current_val, ref new_val } => {
+            TreeStackInstruction::Push { n, ref current_val, ref new_val } => {
                 TreeStackInstruction::Push {
                     n: n,
                     current_val: inter.integerise(current_val.clone()),
                     new_val: inter.integerise(new_val.clone()),
                 }
             }
-            &TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } => {
+            TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } => {
                 TreeStackInstruction::Down {
                     current_val: inter.integerise(current_val.clone()),
                     old_val: inter.integerise(old_val.clone()),
@@ -251,7 +264,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let (n_int, mut strat) = strati.clone().integerise(&self.nterm_integeriser);
         let initial1 = strat.approximate_initial(self.automaton.initial.clone());
         let i = self.automaton.initial.current_symbol();
-        let mut fina = initial1.empty.clone();
+        let mut fina = initial1.empty;
         let mut transitions = Vec::new();
 
         for (_, value) in self.automaton.transitions.clone(){
@@ -263,7 +276,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                         if *old_val == *i{
                             match b.instruction{
                                 PushDownInstruction::Replace {ref current_val, ref new_val} =>{
-                                    fina = new_val[0].clone();
+                                    fina = new_val[0];
                                     let st = Transition {
                                         _dummy: PhantomData,
                                         word: b.word.clone(),
@@ -317,8 +330,8 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
 impl<'a,
      A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash + Debug,
-     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, T, A, W>{
-    pub fn translate(&self)->(Configuration<TreeStack<A>, T, W>, Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>){
+     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>{
+    pub fn translate(&self) -> VecItem<TreeStack<A>, TreeStackInstruction<A>, T, W> {
         let mut nvec = Vec::new();
         let vec: Vec<_> = self.run.clone().into();
         for t in vec {
@@ -327,7 +340,7 @@ impl<'a,
         (IntegerisableM::translate(self.configuration.clone(), self.nterm_integeriser, self.term_integeriser), nvec)
     }
 
-    pub fn give_up(&self)->(Configuration<TreeStack<usize>, usize, W>, Vec<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>>){
+    pub fn give_up(&self)-> IntTreeStackVecItem<W> {
         (self.configuration.clone(), self.run.clone().into())
     }
 }

@@ -10,7 +10,10 @@ use automata::*;
 use approximation::*;
 use integerise::*;
 
-/// One level in the resukting coarse-to-fine scheme. Translates a `run` via a `ApproximationStrategy` and checks wheter the resulting runs are accepted by `Automaton` a.
+type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<S1, I1, T1, W>>);
+
+/// One level in a coarse-to-fine scheme.
+/// Translates a `run` via an `ApproximationStrategy` and checks whether the resulting `Vec`s of `Transition`s are accepted by the given `Automaton`.
 pub fn ctf_level<S1: Eq + Clone + Debug,
                  S2: Eq + Clone + Debug,
                  I1: Eq + Clone + Debug + Instruction<S1>,
@@ -20,60 +23,45 @@ pub fn ctf_level<S1: Eq + Clone + Debug,
                  W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
                  ST: ApproximationStrategy<S1, S2, Transition<S1, I1, T1, W>, Transition<S2, I2, T2, W>>,
                  A: Automaton<S1, I1, T1, W>
-                 >(run: Vec<Transition<S2, I2, T2, W>>, strat: &ST, automaton: &A) -> BinaryHeap<(Configuration<S1, T1, W>, Vec<Transition<S1, I1, T1, W>>)>{
-
+                 >(run: Vec<Transition<S2, I2, T2, W>>, strat: &ST, automaton: &A) -> BinaryHeap<Item<S1, I1, T1, W>>
+{
     let mut outp = BinaryHeap::new();
-    let v = strat.translate_run(run);
-    if v.is_empty(){
-        return BinaryHeap::new();
-    }
-    for e in v{
-        match automaton.check_run(&e){
-            Some((c, e2)) =>{
-                outp.push((c,e2));
-            },
-            None =>(),
+    for e in strat.translate_run(run) {
+        if let Some(x) = automaton.check_run(&e) {
+            outp.push(x);
         }
     }
-    return outp;
+    outp
 }
 
 /// Same as `ctf_level`, but for `IntegerisedAutomaton`
 pub fn ctf_level_i<'a, S1: Eq + Clone + Debug,
-                 S2: Eq + Clone + Debug,
-                 I1: Eq + Clone + Debug + Instruction<S1>,
-                 I2: Eq + Clone + Debug + Instruction<S2>,
-                 T1: Eq + Clone + Debug + Hash,
-                 A1: Eq + Clone + Debug + Hash,
-                 W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
-                 ST: ApproximationStrategy<S1, S2, Transition<S1, I1, usize, W>, Transition<S2, I2, usize, W>>,
-                 A: IntegerisedAutomaton<S1, I1, T1, A1, W>
-                 >(run: Vec<Transition<S2, I2, usize, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>{
-
+                   S2: Eq + Clone + Debug,
+                   I1: Eq + Clone + Debug + Instruction<S1>,
+                   I2: Eq + Clone + Debug + Instruction<S2>,
+                   T1: Eq + Clone + Debug + Hash,
+                   A1: Eq + Clone + Debug + Hash,
+                   W:  Copy+ Ord + Eq + Clone + Debug + Mul<Output=W> + One,
+                   ST: ApproximationStrategy<S1, S2, Transition<S1, I1, usize, W>, Transition<S2, I2, usize, W>>,
+                   A: IntegerisedAutomaton<S1, I1, T1, A1, W>
+                   >(run: Vec<Transition<S2, I2, usize, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)>
+{
     let mut outp = BinaryHeap::new();
-    let v = strat.translate_run(run);
-    if v.is_empty(){
-        println!("Noooooooooo");
-        return BinaryHeap::new();
-    }
-    for e in v{
-        match automaton.check_run(&e.into()){
-            Some(x) =>{
-                outp.push(x);
-            },
-            None =>(),
+    for e in strat.translate_run(run) {
+        if let Some(x) = automaton.check_run(&e) {
+            outp.push(x);
         }
     }
-    return outp;
+    outp
 }
 
 pub struct Run<A>{
-    v : Vec<A>,
+    v: Vec<A>,
 }
 
 impl<A> Run<A>{
-    pub fn new(v : Vec<A>)->Run<A>{
-        Run{
+    pub fn new(v: Vec<A>) -> Run<A>{
+        Run {
             v: v,
         }
     }
@@ -94,8 +82,8 @@ impl<A: fmt::Display> fmt::Display for Run<A> {
     }
 }
 
-/// rezurns the word recognised by a `run`
-pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &Vec<Transition<S, I, T, W>>)-> Vec<T>{
+/// returns the word recognised by a `run`
+pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &[Transition<S, I, T, W>]) -> Vec<T> {
     let mut word = Vec::new();
     for t in v{
         let mut t2 = t. word.clone();
@@ -104,8 +92,8 @@ pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &Vec<Transition<S, I, T, W
     word
 }
 
-///returns the weight ammesed by the `run`
-pub fn run_weight<S, I: Instruction<S>, T, W: Mul<Output = W> + Copy + One>(v: &Vec<Transition<S, I, T, W>>)-> W{
+/// returns the weight of a `run`
+pub fn run_weight<S, I: Instruction<S>, T, W: Mul<Output = W> + Copy + One>(v: &[Transition<S, I, T, W>]) -> W {
     let mut weight = W::one();
     for t in v{
         weight = weight * t.weight;
