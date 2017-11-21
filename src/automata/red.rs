@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
 
 /// Structure used to map weight changes. Contains only an `Instruction` and a `Vec<T>`
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialOrd, Ord)]
 pub struct TransitionKey<A, I, T, W>{
     pub _dummy_a : PhantomData<A>,
     pub _dummy_w : PhantomData<W>,
@@ -17,6 +17,15 @@ impl <A, I: Clone + Hash + Instruction<A>, T: Clone + Hash , W> Hash for Transit
         self.word.hash(state);
     }
 }
+
+/// `impl` of `PartialEq` that ignores the `weight` (to conform to the `impl` of `Hash`)
+impl<A, I: PartialEq, T: PartialEq, W> PartialEq for TransitionKey<A, I, T, W> {
+    fn eq(&self, other: &Self) -> bool {
+        self.word == other.word && self.instruction == other.instruction
+    }
+}
+
+impl<A, I: Eq, T: Eq, W> Eq for TransitionKey<A, I, T, W> {}
 
 /// Trait defining the ability to reduce redundancy in the structure. Until now only used by `PushDownAutomaton`
 pub trait Redundancy{

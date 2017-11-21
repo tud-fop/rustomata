@@ -8,7 +8,7 @@ use automata::Instruction;
 use automata::Configuration;
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Transition<A, I: Instruction<A>, T, W> {
     pub _dummy: PhantomData<A>,
     pub word: Vec<T>,
@@ -22,6 +22,15 @@ impl<A, I: Hash + Instruction<A>, T: Hash, W> Hash for Transition<A, I, T, W> {
         self.instruction.hash(state);
     }
 }
+
+/// `impl` of `PartialEq` that ignores the `weight` (to conform to the `impl` of `Hash`)
+impl<A, I: Instruction<A> + PartialEq, T: PartialEq, W> PartialEq for Transition<A, I, T, W> {
+    fn eq(&self, other: &Self) -> bool {
+        self.word == other.word && self.instruction == other.instruction
+    }
+}
+
+impl<A, I: Instruction<A> + Eq, T: Eq, W> Eq for Transition<A, I, T, W> {}
 
 impl<A: Clone, I: Instruction<A>, T: PartialEq + Clone, W: Mul<Output = W> + Copy> Transition<A, I, T, W> {
     pub fn apply(&self, c: &Configuration<A, T, W>) -> Vec<Configuration<A, T, W>> {
