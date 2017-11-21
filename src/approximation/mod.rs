@@ -11,8 +11,8 @@ pub mod tts;
 
 use automata;
 
-use tree_stack::*;
-use push_down::*;
+use tree_stack_automaton::*;
+use push_down_automaton::*;
 
 pub use self::relabel::*;
 pub use self::ptk::*;

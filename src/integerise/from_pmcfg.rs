@@ -14,7 +14,7 @@ use integeriser::{Integeriser, HashIntegeriser};
 
 use automata;
 use pmcfg;
-use tree_stack::*;
+use tree_stack_automaton::*;
 use integerise::*;
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components

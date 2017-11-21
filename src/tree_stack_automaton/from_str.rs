@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 
 use automata;
-use tree_stack::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 
 impl<A: Ord + PartialEq + Debug + Clone + FromStr + Hash, T: Eq + FromStr, W: Eq + Ord + FromStr> FromStr
     for TreeStackAutomaton<A, T, W> {

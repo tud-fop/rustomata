@@ -12,7 +12,7 @@ use cfg::*;
 use approximation::*;
 use integerise::*;
 
-use push_down::Pushdown;
+use util::push_down::Pushdown;
 
 /// Integerised Version of `PushDownAutomaton`. Holds two `Integeriser` used to encode the input, and the resulting `PushDownAutomaton`
 #[derive(Clone)]

@@ -4,8 +4,8 @@ use std::hash::Hash;
 
 use automata::*;
 use approximation::*;
-use tree_stack::*;
-use push_down::*;
+use tree_stack_automaton::*;
+use push_down_automaton::*;
 
 /// `ÀpproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]

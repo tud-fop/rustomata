@@ -5,7 +5,7 @@ use std::hash::Hash;
 use automata::*;
 use approximation::*;
 use util::equivalence_classes::*;
-use push_down::*;
+use push_down_automaton::*;
 
 /// Specifies how to relabel the internal values of the structure. Used for `Approximation` with the `RlbElement`
 pub trait Relabel<N1, N2, O>{

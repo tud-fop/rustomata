@@ -5,8 +5,8 @@ use integeriser::HashIntegeriser;
 
 use automata::*;
 use approximation::*;
-use push_down::*;
-use tree_stack::*;
+use push_down_automaton::*;
+use tree_stack_automaton::*;
 use util::equivalence_classes::*;
 
 

@@ -8,7 +8,7 @@ use std::ops::{Add, Mul, Div};
 use integeriser::{Integeriser, HashIntegeriser};
 
 use automata::*;
-use tree_stack::*;
+use tree_stack_automaton::*;
 use approximation::*;
 
 use integerise::*;

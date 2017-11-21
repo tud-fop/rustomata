@@ -53,15 +53,13 @@ impl<A> TreeStack<A> {
     /// Writes a value to the specified child position (if the child position is vacant) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
     pub fn push(mut self, n: usize, a: A) -> Result<Self, Self> {
-        if {
-            if n >= self.children.len() {
-                let len = n - self.children.len() + 1;
-                let filler = &mut vec![None; len];
-                self.children.append(filler);
-            }
+        if n >= self.children.len() {
+            let len = n - self.children.len() + 1;
+            let filler = &mut vec![None; len];
+            self.children.append(filler);
+        }
 
-            self.children[n].is_none()
-        } {
+        if self.children[n].is_none() {
             Ok(TreeStack { value: a,
                            children: Vec::new(),
                            parent: Some((n, Rc::new(self))) })

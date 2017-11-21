@@ -19,11 +19,12 @@ pub use self::from_pmcfg::*;
 pub use self::tree_stack::*;
 pub use self::tree_stack_instruction::*;
 
+type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>>;
 
 /// Automaton with storage type `TreeStack<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
 pub struct TreeStackAutomaton<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> {
-    pub transitions: HashMap<A, BinaryHeap<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>>,
+    pub transitions: TransitionMap<A, T, W>,
     pub initial: TreeStack<A>,
 }
 
@@ -31,14 +32,14 @@ pub struct TreeStackAutomaton<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T:
 impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeStackAutomaton<A, T, W> {
     pub fn new(transitions: Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>)
                -> TreeStackAutomaton<A, T, W> {
-        let mut transition_map: HashMap<A, BinaryHeap<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>>  = HashMap::new();
+        let mut transition_map: TransitionMap<A, T, W>  = HashMap::new();
 
         for t in transitions {
             let a =
                 match t.instruction {
-                    TreeStackInstruction::Up   { ref current_val, .. } => current_val.clone(),
-                    TreeStackInstruction::Push { ref current_val, .. } => current_val.clone(),
-                    TreeStackInstruction::Down { ref current_val, .. } => current_val.clone()
+                    TreeStackInstruction::Up   { ref current_val, .. }
+                    | TreeStackInstruction::Push { ref current_val, .. }
+                    | TreeStackInstruction::Down { ref current_val, .. } => current_val.clone()
                 };
 
             if !transition_map.contains_key(&a) {
@@ -62,7 +63,7 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeSta
         keys.sort();
 
         for k in keys {
-            for t in self.transitions.get(k).unwrap() {
+            for t in &self.transitions[k] {
                 result.push(t);
             }
         }
@@ -82,7 +83,7 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash,
             c.storage.current_symbol()
         }
 
-        fn transitions(&self) -> &HashMap<A, BinaryHeap<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>> {
+        fn transitions(&self) -> &TransitionMap<A, T, W> {
             &self.transitions
         }
 

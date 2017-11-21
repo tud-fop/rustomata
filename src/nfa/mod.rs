@@ -9,7 +9,7 @@ use num_traits::One;
 use integeriser::{Integeriser, HashIntegeriser};
 
 use automata::*;
-use push_down::*;
+use push_down_automaton::*;
 
 /// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`
 #[derive(Debug, PartialEq)]

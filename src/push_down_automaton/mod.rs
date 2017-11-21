@@ -15,26 +15,24 @@ pub mod from_cfg;
 pub mod relabel;
 pub mod red;
 
-mod push_down;
-
 pub use self::from_cfg::*;
 pub use self::relabel::*;
 pub use self::red::*;
-pub use self::push_down::*;
 
+type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>;
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
 pub struct PushDownAutomaton<A: Ord + PartialEq + Debug + Clone + Hash, T: Eq, W: Ord + Eq> {
-    pub transitions: HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>,
+    pub transitions: TransitionMap<A, T, W>,
     pub initial: PushDown<A>,
 }
 
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
-    Replace { current_val: Vec<A>, new_val : Vec<A>},
-    ReplaceK { current_val: Vec<A>, new_val : Vec<A>, limit : usize},
+    Replace { current_val: Vec<A>, new_val : Vec<A> },
+    ReplaceK { current_val: Vec<A>, new_val : Vec<A>, limit : usize },
 }
 
 /// Stack with Elements of type `A`
@@ -50,23 +48,20 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
     pub fn new(transitions: Vec<automata::Transition<PushDown<A>,PushDownInstruction<A>, T, W>>, initial: PushDown<A>)
             -> PushDownAutomaton<A,T,W>{
 
-        let mut transition_map: HashMap< A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>  = HashMap::new();
+        let mut transition_map: TransitionMap<A, T, W> = HashMap::new();
         let emp_transitions = transitions.len();
         let mut nw = W::one();
         for _ in 2..emp_transitions{
             nw = nw+W::one();
         }
         let b = initial.empty.clone();
-        let mut count = 0;
-
 
         for t in transitions {
-            count = count +1;
             let mut emp = false;
             let a =
                 match t.instruction {
-                    PushDownInstruction::Replace { ref current_val, ..} => current_val.first().unwrap().clone(),
-                    PushDownInstruction::ReplaceK { ref current_val, ..} =>{
+                    PushDownInstruction::Replace { ref current_val, .. } => current_val.first().unwrap().clone(),
+                    PushDownInstruction::ReplaceK { ref current_val, .. } =>{
                         emp = true;
                         current_val.first().unwrap().clone()
                      },
@@ -80,8 +75,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 
             //Places all ReplaceK transitions also in for the empty symbol
             if emp{
-                let nt = automata::Transition{
-                    _dummy: t._dummy.clone(),
+                let nt = automata::Transition {
+                    _dummy: t._dummy,
                     word: t.word.clone(),
                     instruction: t.instruction.clone(),
                     weight: t.weight/nw.clone(),
@@ -110,8 +105,8 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         keys.sort();
 
         for k in keys {
-            if *k != self.initial.empty{
-                for t in self.transitions.get(k).unwrap() {
+            if *k != self.initial.empty {
+                for t in &self.transitions[k] {
                     result.push(t);
                 }
             }
@@ -124,13 +119,11 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<A: Ord + PartialEq + Debug + Clone + Hash> automata::Instruction<PushDown<A>>
     for PushDownInstruction<A> {
         fn apply(&self, p: PushDown<A>) -> Vec<PushDown<A>> {
-            match self {
-                &PushDownInstruction::Replace {ref current_val, ref new_val} => {
-                    p.replace(current_val, new_val)
-                }
-                &PushDownInstruction::ReplaceK {ref current_val, ref new_val, ref limit} => {
-                    p.replacek(current_val, new_val, limit)
-                }
+            match *self {
+                PushDownInstruction::Replace {ref current_val, ref new_val} =>
+                    p.replace(current_val, new_val),
+                PushDownInstruction::ReplaceK {ref current_val, ref new_val, limit} =>
+                    p.replacek(current_val, new_val, limit),
             }
         }
 
@@ -143,14 +136,14 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         type Key = A;
 
         fn extract_key(c: &automata::Configuration<PushDown<A>, T, W>) -> &A {
-            if c.storage.is_bottom(){
-                return &c.storage.empty;
-            }else{
-                return c.storage.current_symbol();
+            if c.storage.is_bottom() {
+                &c.storage.empty
+            } else {
+                c.storage.current_symbol()
             }
         }
 
-        fn transitions(&self) -> &HashMap<A, BinaryHeap<automata::Transition<PushDown<A>, PushDownInstruction<A>, T, W>>> {
+        fn transitions(&self) -> &TransitionMap<A, T, W> {
             &self.transitions
         }
 
@@ -166,12 +159,12 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     ///new `PushDown<A>` stack with empty-symbol of type `A` and initial symbol of type `A`
     pub fn new(a: A, empty: A)->PushDown<A>{
-        let mut ele : Vec<A> = Vec::new();
+        let mut ele: Vec<A> = Vec::new();
         ele.push(empty.clone());
-        ele.push(a.clone());
-        PushDown{
-            elements : ele,
-            empty : empty,
+        ele.push(a);
+        PushDown {
+            elements: ele,
+            empty: empty,
         }
     }
 
@@ -188,27 +181,29 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
     /// Opertations for Instructions:
 
     ///replaces uppermost element with the given elements.
-    pub fn replace(&self, cur_sym: &Vec<A>,  new_sym: &Vec<A>) -> Vec<PushDown<A>>{
+    pub fn replace(&self, cur_sym: &[A],  new_sym: &[A]) -> Vec<PushDown<A>> {
         let mut new_elements=self.elements.clone();
 
-        for c in cur_sym{
-            if !(new_elements.last()==Some(c)){
+        for c in cur_sym {
+            if new_elements.last() != Some(c) {
                 return Vec::new();
             }
             new_elements.pop();
         }
 
-        for e in new_sym{
+        for e in new_sym {
             new_elements.push(e.clone());
         }
-        vec![PushDown{
-            elements: new_elements,
-            empty: self.empty.clone(),
-        }]
+        vec![
+            PushDown {
+                elements: new_elements,
+                empty: self.empty.clone(),
+            }
+        ]
     }
 
-    ///replaces uppermost element with the given elements. Truncates to the last `limit` elements. Also works without `cur_sym`if `is_bottom()`
-    pub fn replacek(&self, cur_sym: &Vec<A>,  new_sym: &Vec<A>, limit: &usize) -> Vec<PushDown<A>>{
+    ///replaces uppermost element with the given elements. Truncates to the last `limit` elements. Also works without `cur_sym` if `is_bottom()`
+    pub fn replacek(&self, cur_sym: &[A],  new_sym: &[A], limit: usize) -> Vec<PushDown<A>>{
         let mut new_elements=self.elements.clone();
 
         for c in cur_sym{
@@ -224,8 +219,8 @@ impl<A: Ord + PartialEq + Clone + Debug> PushDown<A> {
         }
         let n = new_elements.len();
 
-        if n>*limit{
-            let last_elements = new_elements.split_off(n-*limit);
+        if n > limit{
+            let last_elements = new_elements.split_off(n - limit);
             new_elements = last_elements;
             new_elements.insert(0,self.empty.clone());
         }
@@ -256,8 +251,8 @@ impl<A: Ord + fmt::Display> fmt::Display for PushDown<A> {
 
 impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &PushDownInstruction::Replace { ref current_val, ref new_val} => {
+        match *self {
+            PushDownInstruction::Replace { ref current_val, ref new_val} => {
                 let mut buffer1 = "".to_string();
                 let mut buffer2 = "".to_string();
 
@@ -279,7 +274,7 @@ impl<A: fmt::Display> fmt::Display for PushDownInstruction<A> {
                 }
                 write!(f, "(Replace {} // {})", buffer1, buffer2)
             }
-            &PushDownInstruction::ReplaceK { ref current_val, ref new_val , ref limit} => {
+            PushDownInstruction::ReplaceK { ref current_val, ref new_val , ref limit} => {
                 let mut buffer1 = "".to_string();
                 let mut buffer2 = "".to_string();
 

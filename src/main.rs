@@ -8,11 +8,11 @@ extern crate time;
 extern crate rand;
 
 mod automata;
-mod tree_stack;
+mod tree_stack_automaton;
 mod pmcfg;
 mod util;
 
-mod push_down;
+mod push_down_automaton;
 mod cfg;
 mod approximation;
 mod integerise;
@@ -32,8 +32,8 @@ pub use automata::*;
 pub use cfg::*;
 pub use integerise::*;
 pub use pmcfg::*;
-pub use push_down::*;
-pub use tree_stack::*;
+pub use push_down_automaton::*;
+pub use tree_stack_automaton::*;
 pub use util::*;
 
 fn main() {

@@ -2,16 +2,20 @@ extern crate num_traits;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::fmt;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
 use self::num_traits::One;
 use std::marker::PhantomData;
 
-use automata;
-use pmcfg;
-use tree_stack::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use automata::Transition;
+use pmcfg::{PMCFG, PMCFGRule, VarT};
+use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+
+// types for analysis of derivation trees of PMCFGs
+pub type RuleCallerMap<N, T, W> = BTreeMap<PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>;
+pub type DerivationSnippet<N, T, W> = (PMCFGRule<N, T, W>, Vec<Vec<PMCFGRule<N, T, W>>>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum PosState<X> {
@@ -20,28 +24,28 @@ pub enum PosState<X> {
     Position(X, usize, usize),
 }
 
-impl<X: fmt::Display> fmt::Display for PosState<X> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &PosState::Designated
+impl<X: Display> Display for PosState<X> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match *self {
+            PosState::Designated
                 => write!(f, "@"),
-            &PosState::Initial
+            PosState::Initial
                 => write!(f, "I"),
-            &PosState::Position(ref x, i, j)
+            PosState::Position(ref x, i, j)
                 => write!(f, "({}, {}, {})", x, i, j)
         }
     }
 }
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components
-impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
-     T: Clone + fmt::Debug + Ord + PartialEq + Hash,
-     W: Clone + fmt::Debug + Ord + PartialEq + One
-     > From<pmcfg::PMCFG<N, T, W>> for TreeStackAutomaton<PosState<pmcfg::PMCFGRule<N, T, W>>, T, W> {
-    fn from(g: pmcfg::PMCFG<N, T, W>) -> Self {
+impl<N: Clone + Debug + Ord + PartialEq + Hash,
+     T: Clone + Debug + Ord + PartialEq + Hash,
+     W: Clone + Debug + Ord + PartialEq + One
+     > From<PMCFG<N, T, W>> for TreeStackAutomaton<PosState<PMCFGRule<N, T, W>>, T, W> {
+    fn from(g: PMCFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
 
-        let mut rule_map: BTreeMap<N, Vec<pmcfg::PMCFGRule<N, T, W>>>
+        let mut rule_map: BTreeMap<N, Vec<PMCFGRule<N, T, W>>>
             = BTreeSet::from_iter(
                 g.rules
                     .iter()
@@ -50,14 +54,14 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             .iter()
             .map(|n| (
                 n.clone(),
-                Vec::<pmcfg::PMCFGRule<N, T, W>>::new()
+                Vec::<PMCFGRule<N, T, W>>::new()
             ))
             .collect();
 
-        let mut down_info: BTreeMap<pmcfg::PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>
+        let mut down_info: RuleCallerMap<N, T, W>
             = BTreeMap::new();
 
-        let mut initial_rules: Vec<pmcfg::PMCFGRule<N, T, W>>
+        let mut initial_rules: Vec<PMCFGRule<N, T, W>>
             = Vec::new();
 
         for r in g.rules.clone() {
@@ -73,13 +77,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 i = 0;
                 for ntt in component {
                     down_buffer.clear();
-                    match ntt {
-                        &pmcfg::VarT::Var(_, _)
+                    match *ntt {
+                        VarT::Var(_, _)
                             => {
                                 i += 1;
                                 down_buffer.clear();
                             },
-                        &pmcfg::VarT::T(ref t)
+                        VarT::T(ref t)
                             => {
                                 down_buffer.push(t.clone());
                             }
@@ -92,7 +96,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
         for r in initial_rules {
             transitions.push(
-                automata::Transition {
+                Transition {
                     _dummy: PhantomData,
                     word: Vec::new(),
                     weight: r.weight.clone(),
@@ -104,10 +108,10 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 }
             );
 
-            match down_info.get(&r).unwrap()[0] {
+            match down_info[&r][0] {
                 (j, ref word) => {
                     transitions.push(
-                        automata::Transition {
+                        Transition {
                             _dummy: PhantomData,
                             word: word.clone(),
                             weight: W::one(),
@@ -122,13 +126,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             }
         }
         // each [r, [r₁, …, rₖ]] on the agenda signifies that r(r₁(…), …, rₖ(…)) is a possible subderivation
-        let mut agenda: Vec<(pmcfg::PMCFGRule<N, T, W>, Vec<Vec<pmcfg::PMCFGRule<N, T, W>>>)>
+        let mut agenda: Vec<DerivationSnippet<N, T, W>>
             = Vec::new();
 
         for r in g.rules {
             agenda.push(
                 ( r.clone(),
-                  r.tail.iter().map(|n| rule_map.get(&n).unwrap().clone()).collect()
+                  r.tail.iter().map(|n| rule_map[n].clone()).collect()
                 )
             );
         }
@@ -146,9 +150,9 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 k = 0;
                 for token in component {
                     match token {
-                        pmcfg::VarT::Var(i1, j1) => {
+                        VarT::Var(i1, j1) => {
                             for ri in &rss[i1] {
-                                transitions.push(automata::Transition {
+                                transitions.push(Transition {
                                     _dummy: PhantomData,
                                     word: buffer.clone(),
                                     weight: match previous_component[i1] {
@@ -170,7 +174,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                                 old_val: PosState::Position(
                                                     ri.clone(),
                                                     j0,
-                                                    down_info.get(&ri).unwrap()[j0].0
+                                                    down_info[ri][j0].0
                                                 ),
                                                 new_val: PosState::Position(ri.clone(), j1, 0)
                                             }
@@ -178,15 +182,15 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                     }
                                 });
 
-                                transitions.push(automata::Transition {
+                                transitions.push(Transition {
                                     _dummy: PhantomData,
-                                    word: down_info.get(&ri).unwrap()[j1].1.clone(),
+                                    word: down_info[ri][j1].1.clone(),
                                     weight: W::one(),
                                     instruction: TreeStackInstruction::Down {
                                         current_val: PosState::Position(
                                             ri.clone(),
                                             j1,
-                                            down_info.get(&ri).unwrap()[j1].0
+                                            down_info[ri][j1].0
                                         ),
                                         old_val: PosState::Position(r.clone(), j, k),
                                         new_val: PosState::Position(r.clone(), j, k + 1)
@@ -199,7 +203,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                             buffer.clear();
                         },
 
-                        pmcfg::VarT::T(t) => {
+                        VarT::T(t) => {
                             buffer.push(t);
                         }
                     }

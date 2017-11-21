@@ -9,7 +9,7 @@ use std::vec::Vec;
 
 use self::num_traits::One;
 
-use push_down::Pushdown;
+use util::push_down::Pushdown;
 use util::agenda::{Agenda, BoundedPriorityQueue, Weighted};
 
 pub mod from_str;

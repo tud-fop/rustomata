@@ -10,13 +10,14 @@ use std::ops::{Mul};
 
 use integeriser::HashIntegeriser;
 
-use push_down::*;
+use push_down_automaton::*;
 use automata::*;
 use util::*;
 
 use util::agenda::{Agenda, BoundedPriorityQueue};
+use util::push_down::Pushdown;
 
-use push_down::PushDown;
+use push_down_automaton::PushDown;
 
 mod push_down;
 mod tree_stack;

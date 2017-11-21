@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use automata::*;
 use approximation::*;
-use push_down::*;
+use push_down_automaton::*;
 
 /// `ApproximationStrategy`that limits a `PushDownAutomaton` to a certain height.
 #[derive(Clone, Debug)]

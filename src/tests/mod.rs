@@ -8,8 +8,8 @@ use approximation::*;
 use util::equivalence_classes::*;
 use util::ctf::*;
 use nfa::*;
-use push_down::*;
-use tree_stack::*;
+use push_down_automaton::*;
+use tree_stack_automaton::*;
 
 use log_prob::LogProb;
 

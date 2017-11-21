@@ -22,7 +22,7 @@ impl<A: PartialEq> PartialEq for Pushdown<A> {
 
 impl<A: Eq> Eq for Pushdown<A> {}
 
-impl<A: Clone> Pushdown<A> {
+impl<A> Pushdown<A> {
     /// Creates an empty `Pushdown`.
     pub fn new() -> Pushdown<A> {
         Pushdown::Empty
@@ -31,15 +31,6 @@ impl<A: Clone> Pushdown<A> {
     /// Pushes an `a: A` on top of the `Pushdown`.
     pub fn push(self, a: A) -> Self {
         Pushdown::Cons { value: a, below: Rc::new(self) }
-    }
-
-    /// Removes the top-most symbol of the `Pushdown` and returns it together with the resulting `Pushdown`.
-    /// If the `Pushdown` is empty, then it is returned unchanged.
-    pub fn pop(self) -> Result<(Self, A), Self> {
-        match self {
-            Pushdown::Empty => Err(Pushdown::Empty),
-            Pushdown::Cons { value, below } => Ok((below.deref().clone(), value)),
-        }
     }
 
     /// Replaces the top-most symbol of the `Pushdown` and returns the result.
@@ -51,28 +42,45 @@ impl<A: Clone> Pushdown<A> {
         }
     }
 
-    /// Returns `Some` clone of the top-most symbol of the `Pushdown` if the `Pushdown` is not empty.
-    pub fn peek(&self) -> Option<A> {
-        match self {
-            &Pushdown::Empty => None,
-            &Pushdown::Cons { ref value, .. } => Some(value.clone()),
-        }
-    }
-
     /// Returns `true` iff the `Pushdown` is empty.
     pub fn is_empty(&self) -> bool {
-        match self {
-            &Pushdown::Empty => true,
+        match *self {
+            Pushdown::Empty => true,
             _ => false,
         }
     }
 }
 
-impl<A: Clone> From<Vec<A>> for Pushdown<A> {
-    fn from(vec: Vec<A>) -> Self {
+impl<A: Clone> Pushdown<A> {
+    /// Removes the top-most symbol of the `Pushdown` and returns it together with the resulting `Pushdown`.
+    /// If the `Pushdown` is empty, then it is returned unchanged.
+    pub fn pop(self) -> Result<(Self, A), Self> {
+        match self {
+            Pushdown::Empty => Err(Pushdown::Empty),
+            Pushdown::Cons { value, below } => Ok((below.deref().clone(), value)),
+        }
+    }
+
+    /// Returns `Some` clone of the top-most symbol of the `Pushdown` if the `Pushdown` is not empty.
+    pub fn peek(&self) -> Option<A> {
+        match *self {
+            Pushdown::Empty => None,
+            Pushdown::Cons { ref value, .. } => Some(value.clone()),
+        }
+    }
+}
+
+impl<A> Default for Pushdown<A> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a, A: Clone> From<&'a [A]> for Pushdown<A> {
+    fn from(vec: &'a [A]) -> Self {
         let mut res = Pushdown::new();
-        for a in vec {
-            res = res.push(a);
+        for a in vec.iter() {
+            res = res.push(a.clone());
         }
         res
     }
