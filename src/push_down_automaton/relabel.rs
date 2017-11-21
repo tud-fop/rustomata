@@ -1,8 +1,8 @@
 use std::clone::*;
 
-use util::equivalence_classes::*;
+use approximation::equivalence_classes::EquivalenceClass;
 use approximation::relabel::*;
-use push_down::*;
+use push_down_automaton::*;
 
 impl<A : Relabel<N1, N2, B> +Ord + Clone,
      B: Ord + Clone,
@@ -21,23 +21,13 @@ impl<A : Relabel<N1, N2, B> +Ord + Clone,
         }
 }
 
-impl<N1: Clone + Eq + Hash, N2: Clone + Eq + Hash, T: Clone> Relabel<N1, N2, PushState<N2, T>> for PushState<N1, T>{
+impl<N1: Clone + Eq + Hash, N2: Clone + Debug + Eq + Hash, T: Clone> Relabel<N1, N2, PushState<N2, T>> for PushState<N1, T>{
         fn relabel(&self, mapping: &EquivalenceClass<N1, N2>) -> PushState<N2, T> {
-            match self {
-                &PushState::Nt( ref x) => {
-                    PushState::Nt(mapping.project(x.clone()).clone())
-                }
-                &PushState::T(ref x) => {
-                    PushState::T(x.clone())
-                }
-                &PushState::Initial => {
-                    PushState::Initial
-                }
-                &PushState::Designated => {
-                    PushState::Designated
-                }
+            match *self {
+                PushState::Nt(ref x) => PushState::Nt(mapping.project(x).clone()),
+                PushState::T(ref x) => PushState::T(x.clone()),
+                PushState::Initial => PushState::Initial,
+                PushState::Designated => PushState::Designated,
             }
-
-
         }
 }

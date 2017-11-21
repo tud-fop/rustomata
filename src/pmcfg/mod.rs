@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 mod from_str;
 mod relabel;
 
+pub mod cli;
+
 /// Variable or terminal symbol in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub enum VarT<T> {
@@ -37,7 +39,7 @@ pub struct Composition<T> {
 }
 
 /// Rule of a weighted MCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct PMCFGRule<N, T, W> {
     pub head: N,
     pub tail: Vec<N>,
@@ -60,6 +62,14 @@ impl<N: Hash, T: Hash, W> Hash for PMCFGRule<N, T, W> {
         self.composition.hash(state);
     }
 }
+
+impl<N: PartialEq, T: PartialEq, W> PartialEq for PMCFGRule<N, T, W> {
+    fn eq(&self, other: &Self) -> bool {
+        self.head == other.head && self.tail == other.tail && self.composition == other.composition
+    }
+}
+
+impl<N: Eq, T: Eq, W> Eq for PMCFGRule<N, T, W> {}
 
 impl<T: fmt::Display> fmt::Display for Composition<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -91,13 +101,13 @@ impl<T: fmt::Display> fmt::Display for Composition<T> {
 
 impl<T: fmt::Display> fmt::Display for VarT<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &VarT::Var(i, j) => {
+        match *self {
+            VarT::Var(i, j) => {
                 write!(f, "Var {} {}", i, j)
             },
-            &VarT::T(ref x) => {
+            VarT::T(ref x) => {
                 write!(f, "T \"{}\"", x)
-            }
+            },
         }
     }
 }
@@ -137,7 +147,7 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
         }
         buffer.push_str("]\n\n");
 
-        for ref r in &self.rules {
+        for r in &self.rules {
             buffer.push_str(format!("{}\n", r).as_str());
         }
 

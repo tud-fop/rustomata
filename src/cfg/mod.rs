@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 mod from_str;
 mod from_pmcfg;
 
+pub mod cli;
+
 /// Variable or terminal symbol in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum LetterT<N,T> {
@@ -19,7 +21,7 @@ pub struct CFGComposition<N,T> {
 }
 
 /// Rule of a weighted `CFG`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialOrd, Ord, Clone)]
 pub struct CFGRule<N, T, W> {
     pub head: N,
     pub composition: CFGComposition<N,T>,
@@ -40,6 +42,14 @@ impl<N: Hash, T: Hash, W> Hash for CFGRule<N, T, W> {
         self.composition.hash(state);
     }
 }
+
+impl<N: PartialEq, T: PartialEq, W> PartialEq for CFGRule<N, T, W> {
+    fn eq(&self, other: &Self) -> bool {
+        self.head == other.head && self.composition == other.composition
+    }
+}
+
+impl<N: Eq, T: Eq, W> Eq for CFGRule<N, T, W> {}
 
 impl<N: fmt::Display, T: fmt::Display> fmt::Display for CFGComposition<N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -62,13 +72,11 @@ impl<N: fmt::Display, T: fmt::Display> fmt::Display for CFGComposition<N, T> {
 
 impl<N: fmt::Display, T: fmt::Display> fmt::Display for LetterT<N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &LetterT::Value(ref x) => {
-                write!(f, "T \"{}\"", x)
-            },
-            &LetterT::Label(ref x) => {
-                write!(f, "Nt \"{}\"", x)
-            }
+        match *self {
+            LetterT::Value(ref x) =>
+                write!(f, "T \"{}\"", x),
+            LetterT::Label(ref x) =>
+                write!(f, "Nt \"{}\"", x),
         }
     }
 }

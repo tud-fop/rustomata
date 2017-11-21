@@ -4,12 +4,14 @@ use automata::*;
 use integerise::*;
 use pmcfg::*;
 use cfg::*;
-use approximation::*;
-use util::equivalence_classes::*;
-use util::ctf::*;
+use approximation::relabel::{EquivalenceClass, RlbElement};
+use approximation::ptk::PDTopKElement;
+use approximation::tts::TTSElement;
+use approximation::Approximation;
+use coarse_to_fine::*;
 use nfa::*;
-use push_down::*;
-use tree_stack::*;
+use push_down_automaton::*;
+use tree_stack_automaton::*;
 
 use log_prob::LogProb;
 
@@ -556,11 +558,11 @@ fn test_ptk_to_nfa(){
         Some((nfa, nfa_dict))=>{
             assert!(true);
             assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
-            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
+            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
             assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            assert_ne!(None, nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            let m_obj = match nfa.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
+            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
+            let m_obj = match nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
                 Some(x) =>{Some(nfa_dict.translate(x.1))},
                 None => None,
             };

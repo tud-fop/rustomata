@@ -59,7 +59,7 @@ impl<P: Ord + Clone, I: Weighted<Weight=P>> Agenda for BoundedPriorityQueue<P, I
             Some((k, v)) => {
                 let res = v.pop();
                 if res.is_some() {
-                    self.size = self.size - 1;
+                    self.size -= 1;
                     if self.size == 0 {
                         self.last_key = None;
                     }
@@ -105,12 +105,12 @@ impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
     }
 
     fn enqueue_unchecked(&mut self, priority: P, item: I) {
-        self.data.entry(priority.clone()).or_insert(Vec::new()).push(item);
+        self.data.entry(priority.clone()).or_insert_with(Vec::new).push(item);
         self.last_key = match self.last_key {
             Some(ref lk) if priority < *lk => Some(lk.clone()),
             _ => Some(priority),
         };
-        self.size = self.size + 1;
+        self.size += 1;
     }
 
     fn drop_last(&mut self) -> Option<I> {
@@ -124,7 +124,7 @@ impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
                 } else {
                     self.last_key = self.data.keys().next_back().cloned();
                 }
-                self.size = self.size - 1;
+                self.size -= 1;
 
                 Some(item)
             },

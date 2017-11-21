@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::fmt;
 
 /// Configuration of an automaton containing sequence of symbols `word` to be read, a storage value `storage`, and a `weight`.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Configuration<S, T, W> {
     pub word: Vec<T>,
     pub storage: S,
@@ -16,6 +16,15 @@ impl<S: Hash, T: Hash, W> Hash for Configuration<S, T, W> {
         self.storage.hash(state);
     }
 }
+
+/// `impl` of `PartialEq` that ignores `weight` (to conform to the `impl` of `Hash`)
+impl<S: PartialEq, T: PartialEq, W> PartialEq for Configuration<S, T, W> {
+    fn eq(&self, other: &Self) -> bool {
+        self.word == other.word && self.storage == other.storage
+    }
+}
+
+impl<S: Eq, T: Eq, W> Eq for Configuration<S, T, W> {}
 
 impl<S: Eq, T: Eq, W: PartialOrd + Eq> PartialOrd for Configuration<S, T, W> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

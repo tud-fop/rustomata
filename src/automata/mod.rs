@@ -9,7 +9,7 @@ use std::vec::Vec;
 
 use self::num_traits::One;
 
-use push_down::Pushdown;
+use util::push_down::Pushdown;
 use util::agenda::{Agenda, BoundedPriorityQueue, Weighted};
 
 pub mod from_str;
@@ -20,14 +20,23 @@ pub mod red;
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
 pub use self::red::TransitionKey;
-use util::ctf::*;
+use coarse_to_fine::*;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {
     fn apply(&self, A) -> Vec<A>;
 }
 
+// items of the transition system
 type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<S, I, T, W>>);
+pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<S, I, T, W>>);
+
+// map from key to transition
+type TransitionMap<K, S, I, T, W> = HashMap<K, BinaryHeap<Transition<S, I, T, W>>>;
+
+// kinds of recognisers
+type ExactRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, K>;
+type BeamRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, K>;
 
 impl<S, I: Instruction<S>, T, W: Clone> Weighted for Item<S, I, T, W> {
     type Weight = W;
@@ -47,17 +56,17 @@ pub trait Automaton<S: Clone + Debug + Eq,
 
     fn extract_key(&Configuration<S, T, W>) -> &Self::Key;
 
-    fn transitions(&self) -> &HashMap<Self::Key, BinaryHeap<Transition<S, I, T, W>>>;
+    fn transitions(&self) -> &TransitionMap<Self::Key, S, I, T, W>;
 
     fn keys(&self) -> Vec<Self::Key> {
-        self.transitions().keys().map(|k| k.clone()).collect()
+        self.transitions().keys().cloned().collect()
     }
 
     fn initial(&self) -> S;
 
     fn is_terminal(&self, &Configuration<S, T, W>) -> bool;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, Self::Key> {
+    fn recognise(&self, word: Vec<T>) -> ExactRecogniser<S, I, T, W, Self::Key> {
         let i = Configuration {
             word: word,
             storage: self.initial().clone(),
@@ -68,14 +77,14 @@ pub trait Automaton<S: Clone + Debug + Eq,
 
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| Self::extract_key(&c)),
+            configuration_characteristic: Box::new(|c| Self::extract_key(c)),
             filtered_rules: self.transitions().clone(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(move |c| self.is_terminal(c))
         }
     }
 
-    fn recognise_beam_search<'a>(&'a self, beam_width: usize, word: Vec<T>) -> Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, Self::Key> {
+    fn recognise_beam_search(&self, beam_width: usize, word: Vec<T>) -> BeamRecogniser<S, I, T, W, Self::Key> {
         let i = Configuration {
             word: word,
             storage: self.initial().clone(),
@@ -86,14 +95,14 @@ pub trait Automaton<S: Clone + Debug + Eq,
 
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| Self::extract_key(&c)),
+            configuration_characteristic: Box::new(|c| Self::extract_key(c)),
             filtered_rules: self.transitions().clone(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(move |c| self.is_terminal(c))
         }
     }
 
-    fn check_run(&self, run: &Vec<Transition<S, I, T, W>>) -> Option<(Configuration<S, T, W>, Vec<Transition<S, I, T, W>>)> {
+    fn check_run(&self, run: &[Transition<S, I, T, W>]) -> Option<VecItem<S, I, T, W>> {
         let heap = self.check(self.initial().clone(), run);
         if heap.is_empty(){
             return None;
@@ -103,11 +112,11 @@ pub trait Automaton<S: Clone + Debug + Eq,
             storage: heap[0].clone(),
             weight: run_weight(run),
         };
-        Some((c, run.clone()))
+        Some((c, run.to_owned()))
     }
 
     //note: gives back the first configuration it finds
-    fn check<'a>(&'a self, storage: S, run: &Vec<Transition<S, I, T, W>>) -> Vec<S> {
+    fn check<'a>(&'a self, storage: S, run: &[Transition<S, I, T, W>]) -> Vec<S> {
         let mut storage_heap = Vec::new();
         storage_heap.push(storage);
         for t in run {
@@ -136,9 +145,9 @@ impl<'a, A: Agenda<Item=(C, Pushdown<R>)>, C: Ord + Clone + Debug, R: Ord + Clon
     type Item = (C, Pushdown<R>);
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((c, run)) = self.agenda.dequeue() {
-            for rs in self.filtered_rules.get(&(self.configuration_characteristic)(&c)) {
+            if let Some(rs) = self.filtered_rules.get((self.configuration_characteristic)(&c)) {
                 for r in rs {
-                    for c1 in (self.apply)(&c, &r) {
+                    for c1 in (self.apply)(&c, r) {
                         let run1 = run.clone().push(r.clone());
                         self.agenda.enqueue((c1, run1));
                     }

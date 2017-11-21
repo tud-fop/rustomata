@@ -13,22 +13,22 @@ use std::marker::PhantomData;
 use integeriser::{Integeriser, HashIntegeriser};
 
 use automata;
-use pmcfg;
-use tree_stack::*;
+use pmcfg::{PMCFG, PMCFGRule, VarT};
+use tree_stack_automaton::*;
 use integerise::*;
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components
 impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
      T: Clone + fmt::Debug + Ord + PartialEq + Hash,
      W: Clone + fmt::Debug + Ord + PartialEq + One + Add<Output=W> + Div<Output=W> + Zero
-     > From<pmcfg::PMCFG<N, T, W>> for IntTreeStackAutomaton<PosState<pmcfg::PMCFGRule<N, T, W>>, T, W> {
-    fn from(g: pmcfg::PMCFG<N, T, W>) -> Self {
+     > From<PMCFG<N, T, W>> for IntTreeStackAutomaton<PosState<PMCFGRule<N, T, W>>, T, W> {
+    fn from(g: PMCFG<N, T, W>) -> Self {
         let mut inter1 = HashIntegeriser::new();
         let mut inter2 = HashIntegeriser::new();
 
         let mut transitions = Vec::new();
 
-        let mut rule_map: BTreeMap<N, Vec<pmcfg::PMCFGRule<N, T, W>>>
+        let mut rule_map: BTreeMap<N, Vec<PMCFGRule<N, T, W>>>
             = BTreeSet::from_iter(
                 g.rules
                     .iter()
@@ -37,14 +37,14 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             .iter()
             .map(|n| (
                 n.clone(),
-                Vec::<pmcfg::PMCFGRule<N, T, W>>::new()
+                Vec::<PMCFGRule<N, T, W>>::new()
             ))
             .collect();
 
-        let mut down_info: BTreeMap<pmcfg::PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>
+        let mut down_info: RuleCallerMap<N, T, W>
             = BTreeMap::new();
 
-        let mut initial_rules: Vec<pmcfg::PMCFGRule<N, T, W>>
+        let mut initial_rules: Vec<PMCFGRule<N, T, W>>
             = Vec::new();
 
         for r in g.rules.clone() {
@@ -60,13 +60,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 i = 0;
                 for ntt in component {
                     down_buffer.clear();
-                    match ntt {
-                        &pmcfg::VarT::Var(_, _)
+                    match *ntt {
+                        VarT::Var(_, _)
                             => {
                                 i += 1;
                                 down_buffer.clear();
                             },
-                        &pmcfg::VarT::T(ref t)
+                        VarT::T(ref t)
                             => {
                                 down_buffer.push(t.clone());
                             }
@@ -92,7 +92,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 t.integerise(&mut inter1, &mut inter2)
             );
 
-            match down_info.get(&r).unwrap()[0] {
+            match down_info[&r][0] {
                 (j, ref word) => {
                     let t = automata::Transition {
                         _dummy: PhantomData,
@@ -111,13 +111,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             }
         }
         // each [r, [r₁, …, rₖ]] on the agenda signifies that r(r₁(…), …, rₖ(…)) is a possible subderivation
-        let mut agenda: Vec<(pmcfg::PMCFGRule<N, T, W>, Vec<Vec<pmcfg::PMCFGRule<N, T, W>>>)>
+        let mut agenda: Vec<DerivationSnippet<N, T, W>>
             = Vec::new();
 
         for r in g.rules {
             agenda.push(
                 ( r.clone(),
-                  r.tail.iter().map(|n| rule_map.get(&n).unwrap().clone()).collect()
+                  r.tail.iter().map(|n| rule_map[n].clone()).collect()
                 )
             );
         }
@@ -135,7 +135,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                 k = 0;
                 for token in component {
                     match token {
-                        pmcfg::VarT::Var(i1, j1) => {
+                        VarT::Var(i1, j1) => {
                             for ri in &rss[i1] {
                                 let t = automata::Transition {
                                     _dummy: PhantomData,
@@ -159,7 +159,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                                 old_val: PosState::Position(
                                                     ri.clone(),
                                                     j0,
-                                                    down_info.get(&ri).unwrap()[j0].0
+                                                    down_info[ri][j0].0
                                                 ),
                                                 new_val: PosState::Position(ri.clone(), j1, 0)
                                             }
@@ -172,13 +172,13 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
                                 let t2 = automata::Transition {
                                     _dummy: PhantomData,
-                                    word: down_info.get(&ri).unwrap()[j1].1.clone(),
+                                    word: down_info[ri][j1].1.clone(),
                                     weight: W::one(),
                                     instruction: TreeStackInstruction::Down {
                                         current_val: PosState::Position(
                                             ri.clone(),
                                             j1,
-                                            down_info.get(&ri).unwrap()[j1].0
+                                            down_info[ri][j1].0
                                         ),
                                         old_val: PosState::Position(r.clone(), j, k),
                                         new_val: PosState::Position(r.clone(), j, k + 1)
@@ -195,7 +195,7 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                             buffer.clear();
                         },
 
-                        pmcfg::VarT::T(t) => {
+                        VarT::T(t) => {
                             buffer.push(t);
                         }
                     }

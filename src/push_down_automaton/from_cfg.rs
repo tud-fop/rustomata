@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 
 use automata;
 use cfg::*;
-use push_down::{PushDown, PushDownAutomaton, PushDownInstruction};
+use push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
 
 /// Symbols of a `PushDown` created by an `CFG`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -26,14 +26,14 @@ pub enum PushState<X, Y> {
 
 impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &PushState::Designated
+        match *self {
+            PushState::Designated
                 => write!(f, "@"),
-            &PushState::Initial
+            PushState::Initial
                 => write!(f, "I"),
-            &PushState::Nt(ref x)
+            PushState::Nt(ref x)
                 => write!(f, "({})", x),
-            &PushState::T(ref x)
+            PushState::T(ref x)
                 => write!(f, "({})", x),
         }
     }
@@ -54,7 +54,7 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             let mut st = Vec::new();
             for v in r.composition.composition{
 
-                match v{
+                match v {
                     LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
                         st.insert(0,PushState::T(x.clone()));

@@ -20,13 +20,13 @@ impl<N: Clone + Debug + Ord + PartialEq,
             let r_0 = &r.composition.composition[0];
 
             for v in r_0 {
-                match v{
-                    &VarT::T(ref x)=>{
+                match *v {
+                    VarT::T(ref x)=>{
                         new_composition.push(
                             LetterT::Value(x.clone())
                         );
                     },
-                    &VarT::Var(i,0)=>{
+                    VarT::Var(i,0)=>{
                         let x = &r.tail[i as usize];
                         new_composition.push(
                             LetterT::Label(x.clone())
