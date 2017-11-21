@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 mod from_str;
 mod from_pmcfg;
 
+pub mod cli;
+
 /// Variable or terminal symbol in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum LetterT<N,T> {

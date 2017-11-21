@@ -20,7 +20,7 @@ pub mod red;
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
 pub use self::red::TransitionKey;
-use util::ctf::*;
+use coarse_to_fine::*;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction<A> {

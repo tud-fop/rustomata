@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use automata::{Transition, TransitionKey};
 use approximation::*;
-use util::equivalence_classes::*;
+pub use approximation::equivalence_classes::EquivalenceClass;
 use push_down_automaton::*;
 
 /// Specifies how to relabel the internal values of the structure. Used for `Approximation` with the `RlbElement`
@@ -138,8 +138,8 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     }
 }
 
-//needed for integerised values
-impl Relabel<usize, usize, usize> for usize{
+// needed for integerised values
+impl Relabel<usize, usize, usize> for usize {
     fn relabel(&self, map: &EquivalenceClass<usize, usize>) -> usize {
         *map.project(self)
     }

@@ -1,6 +1,6 @@
 use std::clone::*;
 
-use util::equivalence_classes::*;
+use approximation::equivalence_classes::EquivalenceClass;
 use approximation::relabel::*;
 use push_down_automaton::*;
 

@@ -12,7 +12,6 @@ use integeriser::HashIntegeriser;
 
 use push_down_automaton::*;
 use automata::*;
-use util::*;
 
 use util::agenda::{Agenda, BoundedPriorityQueue};
 use util::push_down::Pushdown;

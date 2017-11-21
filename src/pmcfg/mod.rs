@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 mod from_str;
 mod relabel;
 
+pub mod cli;
+
 /// Variable or terminal symbol in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum VarT<T> {

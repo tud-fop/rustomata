@@ -5,18 +5,21 @@ use std::fmt::Debug;
 use std::ops::{Add, Mul, Div};
 use num_traits::{Zero, One};
 
+pub mod equivalence_classes;
 pub mod relabel;
 pub mod ptk;
 pub mod tts;
 
+pub mod cli;
+
 use automata::Transition;
 
-use tree_stack_automaton::*;
-use push_down_automaton::*;
+use push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
+use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 
-pub use self::relabel::*;
-pub use self::ptk::*;
-pub use self::tts::*;
+use self::relabel::*;
+use self::ptk::*;
+use self::tts::*;
 
 type PushDownTransitionSequence<A, T, W> = Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>;
 type TreeStackTransitionSequence<A, T, W> = Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>;
@@ -50,7 +53,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
         let mut strat = strati.clone();
         let initial = strat.approximate_initial(self.initial.clone());
-        
+
         let mut transitions = Vec::new();
 
         for (k, value) in self.transitions.clone(){

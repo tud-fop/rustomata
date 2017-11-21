@@ -1,16 +1,17 @@
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::fmt::Debug;
 
-use integeriser::HashIntegeriser;
+use integeriser::{HashIntegeriser, Integeriser};
 
-use automata::*;
-use approximation::*;
-use push_down_automaton::*;
-use tree_stack_automaton::*;
-use util::equivalence_classes::*;
+use automata::{Transition, TransitionKey};
+use approximation::tts::TTSElement;
+use approximation::ptk::PDTopKElement;
+use approximation::relabel::{EquivalenceClass, Relabel, RlbElement};
+use push_down_automaton::{PushDown, PushDownInstruction};
+use tree_stack_automaton::{TreeStack, TreeStackInstruction};
 
-
-///Integerised form of the `ApproximationStrategy` trait
+/// Integerised form of the `ApproximationStrategy` trait
 pub trait IntApproximationStrategy<N1: Hash + Eq, N2: Hash + Eq, S> {
     fn integerise(&self, &HashIntegeriser<N1>)->(HashIntegeriser<N2>, S);
 }
@@ -64,3 +65,19 @@ impl<N1: Ord + PartialEq + Debug + Clone + Hash, T: Ord, W: Ord>
          (inter.clone(), TTSElement::new())
     }
 }
+
+// fits the equivalence labels for integerise
+pub fn in_fit<N: Relabel<A, B, N2> + Hash + Eq + Clone + Ord, N2: Hash + Eq + Clone + Ord, A, B>(eq: &EquivalenceClass<A, B>, inter: &HashIntegeriser<N>) -> (EquivalenceClass<usize, usize>, HashIntegeriser<N2>) {
+    let mut i2 = HashIntegeriser::new();
+    let mut nmap = HashMap::new();
+    let keys = inter.values();
+    for k in keys {
+        nmap.insert(inter.find_key(k).unwrap(), i2.integerise(k.relabel(eq)));
+    }
+    let e = EquivalenceClass {
+        map: nmap,
+        default: 0usize,
+    };
+    (e, i2)
+}
+

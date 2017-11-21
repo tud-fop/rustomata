@@ -11,6 +11,8 @@ use automata::VecItem;
 use tree_stack_automaton::*;
 use approximation::*;
 
+use coarse_to_fine;
+
 use integerise::*;
 
 // items of the transition system
@@ -80,9 +82,9 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
                 return None;
             }
             let c = Configuration {
-                word: ctf::run_word(run),
+                word: coarse_to_fine::run_word(run),
                 storage: heap[0].clone(),
-                weight: ctf::run_weight(run),
+                weight: coarse_to_fine::run_weight(run),
             };
             Some(IntItem{
                 configuration: c,

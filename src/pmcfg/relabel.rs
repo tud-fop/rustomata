@@ -2,7 +2,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 
 pub use util::*;
-pub use util::equivalence_classes::*;
+pub use approximation::equivalence_classes::EquivalenceClass;
 
 pub use approximation::relabel::*;
 pub use pmcfg::*;

@@ -12,6 +12,8 @@ use cfg::*;
 use approximation::*;
 use integerise::*;
 
+use coarse_to_fine;
+
 use util::push_down::Pushdown;
 
 // items of the transition system
@@ -105,9 +107,9 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
                  return None;
              }
              let c = Configuration {
-                 word: ctf::run_word(run),
+                 word: coarse_to_fine::run_word(run),
                  storage: heap[0].clone(),
-                 weight: ctf::run_weight(run),
+                 weight: coarse_to_fine::run_weight(run),
              };
              Some(IntItem {
                  configuration: c,

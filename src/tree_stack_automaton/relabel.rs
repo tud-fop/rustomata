@@ -1,7 +1,7 @@
 use std::clone::*;
 use std::hash::Hash;
 
-use util::equivalence_classes::*;
+use approximation::equivalence_classes::EquivalenceClass;
 use approximation::relabel::*;
 use tree_stack_automaton::*;
 

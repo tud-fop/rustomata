@@ -15,6 +15,8 @@ mod tree_stack;
 mod tree_stack_instruction;
 mod relabel;
 
+pub mod cli;
+
 pub use self::from_pmcfg::*;
 pub use self::tree_stack::*;
 pub use self::tree_stack_instruction::*;
