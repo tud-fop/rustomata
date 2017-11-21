@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 
 /// A bracket with some annotation of type `A`.
-#[derive(PartialEq, Debug, Eq, Clone, Hash)]
+#[derive(PartialEq, Debug, Eq, Clone, Hash, Serialize, Deserialize)]
 pub enum Bracket<A: PartialEq> {
     Open(A),
     Close(A)
@@ -46,12 +46,11 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(alphabet: Vec<A>, word:
     use Automaton;
 
     let mut instructions = Vec::new();
-    let mut elements = vec![None];
     for alpha in alphabet.clone().into_iter() {
         instructions.push(Transition{
             word: vec![Bracket::Open(alpha.clone())],
             weight: 1 as u8,
-            instruction: Replace{ current_val: vec![None], new_val: vec![Some(alpha.clone()), None] },
+            instruction: Replace{ current_val: vec![None], new_val: vec![None, Some(alpha.clone())] },
             _dummy: PhantomData
         });
         instructions.push(Transition{
@@ -64,7 +63,7 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(alphabet: Vec<A>, word:
             instructions.push(Transition{
                 word: vec![Bracket::Open(alpha.clone())],
                 weight: 1 as u8,
-                instruction: Replace{ current_val: vec![Some(beta.clone())], new_val: vec![Some(alpha.clone()), Some(beta.clone())] },
+                instruction: Replace{ current_val: vec![Some(beta.clone())], new_val: vec![Some(beta.clone()), Some(alpha.clone())] },
                 _dummy: PhantomData
             });
             instructions.push(Transition{
@@ -74,10 +73,9 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(alphabet: Vec<A>, word:
                 _dummy: PhantomData
             });
         }
-        elements.push(Some(alpha));
     }
 
-    let automaton = PushDownAutomaton::new(instructions, PushDown{ elements, empty: None });
+    let automaton = PushDownAutomaton::new(instructions, PushDown{ elements: vec![None], empty: None });
     println!("{:?}", automaton);
 
     for _ in automaton.recognise(word) {

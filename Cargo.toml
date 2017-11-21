@@ -5,14 +5,18 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 
 [dependencies]
 clap = "2.19"
-integeriser = { git = "https://github.com/tud-fop/rust-integeriser.git" }
-log_prob = { git = "https://github.com/tud-fop/rust-log-prob.git" }
+integeriser = { path = "/home/dommasch/rust-integeriser" }
+log_prob = { path = "/home/dommasch/rust-log-prob" }
 nom = "^2.2"
 num-traits = "0.1.36"
 ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 rand = "0.3.16"
 time = "0.1.38"
 openfsa = { path = "/home/dommasch/rust-openfsa" }
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+bincode = "0.9"
 
 [profile.release]
 debug = true

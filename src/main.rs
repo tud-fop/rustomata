@@ -6,6 +6,11 @@ extern crate nom;
 extern crate num_traits;
 extern crate time;
 extern crate rand;
+extern crate openfsa;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+
 
 mod automata;
 mod tree_stack;
@@ -24,6 +29,7 @@ mod cs_representation;
 mod tests;
 
 use clap::{Arg, App, SubCommand};
+use std::io::Read;
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -329,6 +335,7 @@ fn main() {
                                                 .help("mcfg-grammar file to use")
                                                 .index(1)
                                                 .required(true)))))
+            .subcommand(cs_representation::cla::subcommand("cs"))
         .get_matches();
 
     match matches.subcommand() {
@@ -837,6 +844,7 @@ fn main() {
                 _ => ()
             }
         },
+        ("cs", Some(subs)) => cs_representation::cla::handle_subcommmand(subs),
         _ => ()
     }
 

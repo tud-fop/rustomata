@@ -6,7 +6,7 @@ mod from_str;
 mod relabel;
 
 /// Variable or terminal symbol in an MCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub enum VarT<T> {
     /// `Var(i, j)` represents the `j`th component of the `i`th successor.
     /// Indexing starts from `0`.
@@ -31,13 +31,13 @@ impl<T> VarT<T> {
 }
 
 /// Composition function in an MCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub struct Composition<T> {
     pub composition: Vec<Vec<VarT<T>>>,
 }
 
 /// Rule of a weighted MCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct PMCFGRule<N, T, W> {
     pub head: N,
     pub tail: Vec<N>,
@@ -45,7 +45,7 @@ pub struct PMCFGRule<N, T, W> {
     pub weight: W,
 }
 
-/// A weighted MCFG.
+/// A weighted PMCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
     pub _dummy: PhantomData<T>,
