@@ -1,14 +1,14 @@
 pub mod multiple;
 
 use std::cmp::PartialEq;
-use std::hash::Hash;
-use std::fmt::Debug;
+// use std::hash::Hash;
+// use std::fmt::Debug;
 
 /// A bracket with some annotation of type `A`.
 #[derive(PartialEq, Debug, Eq, Clone, Hash, Serialize, Deserialize)]
 pub enum Bracket<A: PartialEq> {
     Open(A),
-    Close(A)
+    Close(A),
 }
 
 /// Reckognizes a bracket word as element of the Dyck language over the set of elements in `A`.
@@ -25,7 +25,7 @@ pub fn recognize<A: PartialEq>(word: Vec<Bracket<A>>) -> bool {
                     None => return false,
                     Some(symbol_) => {
                         if symbol != symbol_ {
-                            return false
+                            return false;
                         }
                     }
                 }
@@ -92,31 +92,36 @@ mod tests {
         use super::Bracket::*;
         let words = vec![
             vec![Open(1), Close(1), Open(2), Close(2)],
-            vec![Open(1), Open(2), Close(2), Open(1), Close(1), Close(1)]
+            vec![Open(1), Open(2), Close(2), Open(1), Close(1), Close(1)],
         ];
 
         for dyckword in words.into_iter() {
             assert!(super::recognize(dyckword));
         }
 
-        assert!(super::recognize(vec![Open("eins"), Close("eins"), Open("zwei"), Close("zwei")]));
+        assert!(super::recognize(vec![
+            Open("eins"),
+            Close("eins"),
+            Open("zwei"),
+            Close("zwei"),
+        ]));
     }
 
-     #[test]
-    fn dyck_with_pda() {
-        use super::Bracket::*;
-        let words = vec![
-            vec![Open(1), Close(1), Open(2), Close(2)],
-            vec![Open(1), Open(2), Close(2), Open(1), Close(1), Close(1)]
-        ];
-        let alphabet = vec![1,2];
+    //  #[test]
+    // fn dyck_with_pda() {
+    //     use super::Bracket::*;
+    //     let words = vec![
+    //         vec![Open(1), Close(1), Open(2), Close(2)],
+    //         vec![Open(1), Open(2), Close(2), Open(1), Close(1), Close(1)]
+    //     ];
+    //     let alphabet = vec![1,2];
 
-        for dyckword in words.into_iter() {
-            assert!(super::recognize_with_pda(alphabet.clone(), dyckword));
-        }
+    //     for dyckword in words.into_iter() {
+    //         assert!(super::recognize_with_pda(alphabet.clone(), dyckword));
+    //     }
 
-        let alphabet = vec!["eins", "zwei"];
-        assert!(super::recognize_with_pda(alphabet, vec![Open("eins"), Close("eins"), Open("zwei"), Close("zwei")]));
-    }
+    //     let alphabet = vec!["eins", "zwei"];
+    //     assert!(super::recognize_with_pda(alphabet, vec![Open("eins"), Close("eins"), Open("zwei"), Close("zwei")]));
+    // }
 
 }
