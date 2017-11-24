@@ -1,5 +1,5 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
-use log_prob::LogProb;
+use log_domain::LogDomain;
 use automata::Automaton;
 use tree_stack_automaton::TreeStackAutomaton;
 
@@ -49,7 +49,7 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
                 .unwrap();
             let mut automaton_string = String::new();
             let _ = automaton_file.read_to_string(&mut automaton_string);
-            let automaton: TreeStackAutomaton<String, String, LogProb<f64>> =
+            let automaton: TreeStackAutomaton<String, String, LogDomain<f64>> =
                 automaton_string.parse().unwrap();
 
             let mut corpus = String::new();

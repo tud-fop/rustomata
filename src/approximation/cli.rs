@@ -1,5 +1,5 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
-use log_prob::LogProb;
+use log_domain::LogDomain;
 use pmcfg::PMCFG;
 use cfg::CFG;
 use integerise::{IntegerisedAutomaton, IntTreeStackAutomaton, IntPushDownAutomaton};
@@ -112,7 +112,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogProb<f64>> =
+                    let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let a = IntPushDownAutomaton::from(g);
@@ -141,7 +141,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogProb<f64>> =
+                    let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let a = IntPushDownAutomaton::from(g);
@@ -168,7 +168,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogProb<f64>> =
+                    let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let size = parse_matches
@@ -197,7 +197,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogProb<f64>> =
+                    let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let size = parse_matches
@@ -223,7 +223,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogProb<f64>> =
+                    let g: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let a = IntTreeStackAutomaton::from(g);
@@ -246,7 +246,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogProb<f64>> =
+                    let g: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
                     let a = IntTreeStackAutomaton::from(g);

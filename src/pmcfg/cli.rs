@@ -1,5 +1,5 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
-use log_prob::LogProb;
+use log_domain::LogDomain;
 use pmcfg::PMCFG;
 use integerise::{IntegerisedAutomaton, IntTreeStackAutomaton};
 
@@ -62,7 +62,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                 .unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: PMCFG<String, String, LogProb<f64>> =
+            let grammar: PMCFG<String, String, LogDomain<f64>> =
                 grammar_string.parse().unwrap();
 
             let automaton = IntTreeStackAutomaton::from(grammar);
@@ -95,7 +95,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
             let mut grammar_file = File::open(grammar_file_name).unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: PMCFG<String, String, LogProb<f64>> =
+            let grammar: PMCFG<String, String, LogDomain<f64>> =
                 grammar_string.parse().unwrap();
             let automaton = IntTreeStackAutomaton::from(grammar);
             println!("{}", automaton);

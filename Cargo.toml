@@ -6,7 +6,7 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 [dependencies]
 clap = "2.19"
 integeriser = { git = "https://github.com/tud-fop/rust-integeriser.git" }
-log_prob = { git = "https://github.com/tud-fop/rust-log-prob.git" }
+log_domain = { git = "https://github.com/tud-fop/rust-log-domain.git" }
 nom = "^2.2"
 num-traits = "0.1.36"
 rand = "0.3.16"
