@@ -9,7 +9,6 @@ integeriser = { git = "https://github.com/tud-fop/rust-integeriser.git" }
 log_prob = { git = "https://github.com/tud-fop/rust-log-prob.git" }
 nom = "^2.2"
 num-traits = "0.1.36"
-ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 rand = "0.3.16"
 time = "0.1.38"
 
