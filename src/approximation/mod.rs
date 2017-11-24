@@ -57,7 +57,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let mut transitions = Vec::new();
 
         for (k, value) in self.transitions.clone(){
-            if !(k == self.initial.empty){
+            if !(k == *self.initial.empty()){
                 for t in &value{
                     let b = strat.approximate_transition(t.clone());
                     transitions.push(b);
@@ -85,7 +85,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let mut strat = strati.clone();
         let initial1 = strat.approximate_initial(self.initial.clone());
         let i = self.initial.current_symbol();
-        let mut fina = initial1.empty.clone();
+        let mut fina = initial1.empty().clone();
 
         let mut transitions = Vec::new();
 
@@ -125,7 +125,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 
             }
         }
-        let initial2 = PushDown::new(initial1.empty, fina);
+        let initial2 = PushDown::new(initial1.empty().clone(), fina);
         Ok((PushDownAutomaton::new(
             transitions,
             initial2

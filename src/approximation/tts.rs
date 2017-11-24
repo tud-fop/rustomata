@@ -39,10 +39,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     fn approximate_initial(&self, a: TreeStack<A>)-> PushDown<A>{
         let nempty = a.current_symbol().clone();
         let ele = vec![nempty.clone()];
-        PushDown{
-            elements: ele.clone(),
-            empty: nempty,
-        }
+        PushDown::from_vec(ele.clone())
     }
 
     fn approximate_transition(&mut self, t :  Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>) ->

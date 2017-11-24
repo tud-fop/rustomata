@@ -266,7 +266,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
         let (n_int, mut strat) = strati.clone().integerise(&self.nterm_integeriser);
         let initial1 = strat.approximate_initial(self.automaton.initial.clone());
         let i = self.automaton.initial.current_symbol();
-        let mut fina = initial1.empty;
+        let mut fina = *initial1.empty();
         let mut transitions = Vec::new();
 
         for (_, value) in self.automaton.transitions.clone(){
@@ -307,7 +307,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 
             }
         }
-        let initial2 = PushDown::new(initial1.empty, fina);
+        let initial2 = PushDown::new(*initial1.empty(), fina);
 
         let a = PushDownAutomaton::new(
             transitions,

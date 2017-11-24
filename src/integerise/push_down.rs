@@ -133,26 +133,20 @@ impl<A: Clone + Debug + Eq + Hash + Ord,
 impl<A: Ord + Eq + Clone + Hash> Integerisable<PushDown<usize>, A> for PushDown<A> {
     fn integerise(&self, inter: &mut HashIntegeriser<A>) -> PushDown<usize> {
         let mut new_elements = Vec::new();
-        for e in self.elements.clone(){
-            new_elements.push(inter.integerise(e))
+        for e in self.iter() {
+            new_elements.push(inter.integerise(e.clone()))
         }
-        PushDown{
-            elements: new_elements,
-            empty: inter.integerise(self.empty.clone()),
-        }
+        PushDown::from_vec(new_elements)
     }
 
     fn translate(s: PushDown<usize>, inter: &HashIntegeriser<A>)-> PushDown<A> {
         let mut new_elements = Vec::new();
-        for e in s.elements.clone(){
-            if let Some(x) = inter.find_value(e) {
+        for e in s.iter() {
+            if let Some(x) = inter.find_value(*e) {
                 new_elements.push(x.clone())
             }
         }
-        PushDown{
-            elements: new_elements,
-            empty: inter.find_value(s.empty).unwrap().clone(),
-        }
+        PushDown::from_vec(new_elements)
     }
 }
 
@@ -327,7 +321,7 @@ impl <A: Clone + Debug + Hash + Ord + PartialEq,
         let mut transitions = Vec::new();
 
         for (k, value) in self.automaton.transitions.clone(){
-            if !(k == self.automaton.initial.empty){
+            if !(k == *self.automaton.initial.empty()){
                 for t in &value{
                     let b = strat.approximate_transition(t.clone());
                     transitions.push(b);
@@ -344,7 +338,7 @@ impl <A: Clone + Debug + Hash + Ord + PartialEq,
 }
 
 impl<A: Clone + Debug + Display + Hash + Ord + PartialEq,
-     T: Clone + Debug + Eq + Hash,
+     T: Clone + Debug + Display + Eq + Hash,
      W: Clone + Copy + Debug + Display + Eq + One + Ord + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero>
     Display for IntPushDownAutomaton<A, T, W> {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
