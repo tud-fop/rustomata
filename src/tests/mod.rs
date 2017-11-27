@@ -107,8 +107,8 @@ fn test_from_str_automaton() {
     );
 
     assert_eq!(
-        automaton.initial,
-        automaton_parse.unwrap().initial
+        automaton.initial(),
+        automaton_parse.unwrap().initial()
     );
 }
 

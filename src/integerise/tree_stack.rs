@@ -236,14 +236,14 @@ impl<A: Clone + Debug + Hash + Ord + PartialEq,
             for l in self.list_transitions(){
                 new_transitions.push(l.integerise(inter1, inter2));
             }
-            TreeStackAutomaton::new(new_transitions, self.initial.integerise(inter1))
+            TreeStackAutomaton::new(new_transitions, self.initial().integerise(inter1))
         }
         fn translate(s: TreeStackAutomaton<usize, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->TreeStackAutomaton<A, B, W>{
             let mut new_transitions = Vec::new();
             for l in s.list_transitions(){
                 new_transitions.push(IntegerisableM::translate(l.clone(), inter1, inter2));
             }
-            TreeStackAutomaton::new(new_transitions, Integerisable::translate(s.initial, inter1))
+            TreeStackAutomaton::new(new_transitions, Integerisable::translate(s.initial(), inter1))
         }
     }
 
@@ -264,20 +264,20 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     
     fn approximation(&self, strati : &S) -> Result<(IntPushDownAutomaton<B, T, W>, S2), String>{
         let (n_int, mut strat) = strati.clone().integerise(&self.nterm_integeriser);
-        let initial1 = strat.approximate_initial(self.automaton.initial.clone());
-        let i = self.automaton.initial.current_symbol();
+        let initial1 = strat.approximate_initial(self.automaton.initial());
+        let i = self.automaton.initial().current_symbol().clone();
         let mut fina = *initial1.empty();
         let mut transitions = Vec::new();
 
-        for (_, value) in self.automaton.transitions.clone(){
-            for t in &value{
-                match t.instruction{
+        for (_, value) in self.automaton.transitions() {
+            for t in value {
+                match t.instruction {
                     TreeStackInstruction::Down { ref old_val, .. }=>{
                         let b = strat.approximate_transition(t.clone());
 
-                        if *old_val == *i{
-                            match b.instruction{
-                                PushDownInstruction::Replace {ref current_val, ref new_val} =>{
+                        if *old_val == i {
+                            match b.instruction {
+                                PushDownInstruction::Replace {ref current_val, ref new_val} => {
                                     fina = new_val[0];
                                     let st = Transition {
                                         _dummy: PhantomData,
@@ -291,15 +291,15 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                                     strat.add_transitions(t, &st);
                                     transitions.push(st);
                                 },
-                                _=>{
+                                _ => {
                                     transitions.push(b.clone());
                                 },
                             }
-                        }else{
+                        } else {
                             transitions.push(b.clone());
                         }
                     },
-                    _=> {
+                    _ => {
                         let b = strat.approximate_transition(t.clone());
                         transitions.push(b);
                     },

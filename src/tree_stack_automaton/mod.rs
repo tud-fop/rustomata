@@ -1,7 +1,7 @@
 extern crate num_traits;
 
 use std::collections::{BinaryHeap, HashMap};
-use std::fmt;
+use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::ops::Mul;
 use std::vec::Vec;
@@ -25,13 +25,21 @@ type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<Transition<TreeStack<A>, Tre
 
 /// Automaton with storage type `TreeStack<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
-pub struct TreeStackAutomaton<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> {
-    pub transitions: TransitionMap<A, T, W>,
-    pub initial: TreeStack<A>,
+pub struct TreeStackAutomaton<A, T, W>
+    where A: Clone + Hash + Ord,
+          T: Eq,
+          W: Ord,
+{
+    transitions: TransitionMap<A, T, W>,
+    initial: TreeStack<A>,
 }
 
 
-impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeStackAutomaton<A, T, W> {
+impl<A, T, W> TreeStackAutomaton<A, T, W>
+    where A: Clone + Hash + Ord,
+          T: Eq,
+          W: Ord,
+{
     pub fn new(transitions: Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>)
                -> TreeStackAutomaton<A, T, W> {
         let mut transition_map: TransitionMap<A, T, W>  = HashMap::new();
@@ -58,6 +66,14 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeSta
         }
     }
 
+    pub fn initial(&self) -> TreeStack<A> {
+        self.initial.clone()
+    }
+
+    pub fn transitions(&self) -> &TransitionMap<A, T, W> {
+        &self.transitions
+    }
+
     pub fn list_transitions(&self) -> Vec<&Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>> {
         let mut result = Vec::new();
         let mut keys: Vec<_> = self.transitions.keys().collect();
@@ -75,39 +91,41 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash, T: Eq, W: Ord + Eq> TreeSta
 }
 
 
-impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash,
-     T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Mul<Output=W> + Clone + Copy + fmt::Debug + Eq + Ord>
-    Automaton<TreeStack<A>, TreeStackInstruction<A>, T, W> for TreeStackAutomaton<A, T, W> {
-        type Key = A;
+impl<A, T, W> Automaton<TreeStack<A>, TreeStackInstruction<A>, T, W> for TreeStackAutomaton<A, T, W>
+    where A: Ord + PartialEq + Debug + Clone + Hash,
+          T: Clone + Debug + Eq + Hash,
+          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
+{
+    type Key = A;
 
-        fn extract_key(c: &Configuration<TreeStack<A>, T, W>) -> &A {
-            c.storage.current_symbol()
-        }
-
-        fn transitions(&self) -> &TransitionMap<A, T, W> {
-            &self.transitions
-        }
-
-        fn initial(&self) -> TreeStack<A> {
-            self.initial.clone()
-        }
-
-        fn is_terminal(&self, c: &Configuration<TreeStack<A>, T, W>) -> bool{
-            c.word.is_empty() && c.storage.is_at_bottom()
-        }
+    fn extract_key(c: &Configuration<TreeStack<A>, T, W>) -> &A {
+        c.storage.current_symbol()
     }
 
-impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
-     T: Clone + fmt::Debug + Eq + Hash,
-     W: One + Mul<Output=W> + Clone + Copy + fmt::Debug + Eq + Ord + fmt::Display>
-    fmt::Display for TreeStackAutomaton<A, T, W> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let mut formatted_transitions = String::new();
-            for t in self.list_transitions() {
-                formatted_transitions.push_str(&t.to_string());
-                formatted_transitions.push_str("\n");
-            }
-            write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
-        }
+    fn transitions(&self) -> &TransitionMap<A, T, W> {
+        &self.transitions
     }
+
+    fn initial(&self) -> TreeStack<A> {
+        self.initial.clone()
+    }
+
+    fn is_terminal(&self, c: &Configuration<TreeStack<A>, T, W>) -> bool{
+        c.word.is_empty() && c.storage.is_at_bottom()
+    }
+}
+
+impl<A, T, W> Display for TreeStackAutomaton<A, T, W>
+    where A: Ord + PartialEq + Debug + Clone + Hash + Display,
+          T: Clone + Debug + Eq + Hash,
+          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord + Display
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatted_transitions = String::new();
+        for t in self.list_transitions() {
+            formatted_transitions.push_str(&t.to_string());
+            formatted_transitions.push_str("\n");
+        }
+        write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
+    }
+}

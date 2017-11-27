@@ -9,7 +9,7 @@ use automata::Configuration;
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
 #[derive(Clone, Debug)]
-pub struct Transition<A, I: Instruction<A>, T, W> {
+pub struct Transition<A, I, T, W> {
     pub _dummy: PhantomData<A>,
     pub word: Vec<T>,
     pub weight: W,

@@ -23,7 +23,7 @@ pub enum TreeStackInstruction<A> {
 }
 
 
-impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash> Instruction<TreeStack<A>>
+impl<A: Ord + PartialEq + Clone + Hash> Instruction<TreeStack<A>>
     for TreeStackInstruction<A> {
         fn apply(&self, t: TreeStack<A>) -> Vec<TreeStack<A>> {
             match *self {

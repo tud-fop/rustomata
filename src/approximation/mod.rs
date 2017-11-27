@@ -83,21 +83,21 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
 
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
         let mut strat = strati.clone();
-        let initial1 = strat.approximate_initial(self.initial.clone());
-        let i = self.initial.current_symbol();
+        let initial1 = strat.approximate_initial(self.initial());
+        let i = self.initial().current_symbol().clone();
         let mut fina = initial1.empty().clone();
 
         let mut transitions = Vec::new();
 
-        for (_, value) in self.transitions.clone(){
-            for t in &value{
+        for (_, value) in self.transitions() {
+            for t in value {
                 match t.instruction{
                     TreeStackInstruction::Down { ref old_val, .. }=>{
                         let b = strat.approximate_transition(t.clone());
 
-                        if *old_val == *i{
-                            match b.instruction{
-                                PushDownInstruction::Replace {ref current_val, ref new_val} =>{
+                        if *old_val == i {
+                            match b.instruction {
+                                PushDownInstruction::Replace {ref current_val, ref new_val} => {
                                     fina = new_val[0].clone();
                                     transitions.push(Transition {
                                         _dummy: PhantomData,
@@ -109,7 +109,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                                         }
                                     })
                                 },
-                                _=>{
+                                _ => {
                                     transitions.push(b.clone());
                                 },
                             }
@@ -117,7 +117,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                             transitions.push(b.clone());
                         }
                     },
-                    _=> {
+                    _ => {
                         let b = strat.approximate_transition(t.clone());
                         transitions.push(b);
                     },
