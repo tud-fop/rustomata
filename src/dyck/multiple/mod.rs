@@ -10,7 +10,7 @@ use std::fmt::Debug;
 /// a partition of Σ.
 pub struct MultipleDyckLanguage<T: Ord + Clone>(MultipleDyckAutomaton<T>);
 
-impl<T: Clone + Eq + Debug + Ord> MultipleDyckLanguage<T> {
+impl<T: Clone + Eq + Ord + Debug> MultipleDyckLanguage<T> {
     /// Represents a multiple Dyck language with respect to
     /// a partition Π = {π₁, …, πₙ} of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
     pub fn new(p: &Partition<T>) -> Self {
@@ -21,7 +21,9 @@ impl<T: Clone + Eq + Debug + Ord> MultipleDyckLanguage<T> {
     /// Σ and a partition of Σ.
     pub fn recognize(&self, word: &Vec<Bracket<T>>) -> bool {
         let &MultipleDyckLanguage(ref mda) = self;
-        mda.recognise(word.clone()).next().is_some()
+        let word_ = word.clone();
+        let mut b = mda.recognise(word_);
+        b.next().is_some()
     }
 }
 

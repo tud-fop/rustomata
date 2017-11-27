@@ -13,7 +13,8 @@ pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
         .about("Chomsky-Schützenberger representation of MCFGs")
             .subcommand(SubCommand::with_name("from-mcfg")
-                .about("Reads a grammar from stdin and prints an objects that represents the grammar.")
+                .about("Reads a grammar from stdin and prints an object
+                        that represents the grammar.")
                 .arg(Arg::with_name("pretty")
                     .short("p").long("pretty")
                     .takes_value(false)
@@ -21,7 +22,8 @@ pub fn get_sub_command(name: &str) -> App {
                 )
             )
             .subcommand(SubCommand::with_name("parse")
-                .about("Reads a list of words from stdin and parses them using the CS representation of a grammar.")
+                .about("Reads a list of words from stdin and parses them
+                        using the CS representation of a grammar.")
                 .arg(Arg::with_name("csfile")
                     .required(true)
                     .index(1)
@@ -83,7 +85,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
 
             let step: usize = match params.value_of("step") {
                 Some(n) => n.parse::<usize>().unwrap(),
-                None => 10usize,
+                None => 100usize,
             };
             let n: usize = match params.value_of("trees") {
                 Some(n) => n.parse::<usize>().unwrap(),

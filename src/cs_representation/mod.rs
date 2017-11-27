@@ -298,10 +298,10 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
     }
 }
 
-/// Iterates Dyck words that represent a derivation for a word according to the Chomsky-Schützenberger characterization
-/// of an MCFG.
+/// Iterates Dyck words that represent a derivation for a word according to
+/// the Chomsky-Schützenberger characterization of an MCFG.
 pub struct CSGenerator<'a, T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::Debug, N: 'a + Hash + Eq> {
-    candidates: generator::Generator<Bracket<BracketContent<T>>>,
+    candidates: generator::BatchGenerator<Bracket<BracketContent<T>>>,
 
     checker: MultipleDyckLanguage<BracketContent<T>>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogProb<f32>>>,
@@ -320,9 +320,11 @@ impl<
             ref checker,
             ref rules,
         } = self;
-        for candidate in candidates {
-            if checker.recognize(&candidate) {
-                return Some(CSRepresentation::from_brackets(rules, candidate));
+        for candidate_batch in candidates {
+            for candidate in candidate_batch {
+                if checker.recognize(&candidate) {
+                    return Some(CSRepresentation::from_brackets(rules, candidate));
+                }
             }
         }
         None
