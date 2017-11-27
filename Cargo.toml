@@ -9,7 +9,6 @@ integeriser = { path = "/home/dommasch/rust-integeriser" }
 log_prob = { path = "/home/dommasch/rust-log-prob" }
 nom = "^2.2"
 num-traits = "0.1.36"
-ordered-float = { git = "https://github.com/tud-fop/rust-ordered-float.git" }
 rand = "0.3.16"
 time = "0.1.38"
 openfsa = { path = "/home/dommasch/rust-openfsa" }

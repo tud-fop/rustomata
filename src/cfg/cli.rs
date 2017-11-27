@@ -1,5 +1,5 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
-use log_prob::LogProb;
+use log_domain::LogDomain;
 use cfg::CFG;
 use integerise::{IntegerisedAutomaton, IntPushDownAutomaton};
 
@@ -47,7 +47,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
                 .unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: CFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
+            let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
             let automaton = IntPushDownAutomaton::from(grammar);
 
@@ -79,7 +79,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
             let mut grammar_file = File::open(grammar_file_name).unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: CFG<String, String, LogProb<f64>> = grammar_string.parse().unwrap();
+            let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
             let automaton = IntPushDownAutomaton::from(grammar);
             println!("{}", automaton);

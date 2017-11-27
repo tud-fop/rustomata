@@ -15,31 +15,32 @@ pub struct PDTopKElement<A, T1, T2>{
 }
 
 impl<A, T1, T2 : Ord> PDTopKElement<A, T1, T2>{
-    pub fn new(size: usize) -> PDTopKElement<A, T1, T2>{
+    pub fn new(size: usize) -> PDTopKElement<A, T1, T2> {
+        assert!(size >= 1);
         PDTopKElement{
-            dummy : PhantomData,
-            trans_map : BTreeMap::new(),
-            size : size,
+            dummy: PhantomData,
+            trans_map: BTreeMap::new(),
+            size: size,
         }
     }
 }
 
-impl <A : Ord + PartialEq + Debug + Clone + Hash,
-      T: Ord + Eq + Clone + Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A>, PushDown<A>,
-        Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
-        Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
-      for PDTopKElement<A, Transition<PushDown<A>, PushDownInstruction<A>, T, W>, TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>>{
-
-    fn approximate_initial(&self, a : PushDown<A>)-> PushDown<A>{
-        let mut b = a.elements.clone();
-        b.remove(0);
-        let pushdown = PushDown::new(b[0].clone(), a.empty.clone());
-        let ps=pushdown.replacek(&b, &b, self.size);
-        ps[0].clone()
+impl<A, T, W> ApproximationStrategy<PushDown<A>,
+                                    PushDown<A>,
+                                    Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+                                    Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
+    for PDTopKElement<A,
+                      Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
+                      TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>>
+    where A: Ord + PartialEq + Debug + Clone + Hash,
+          T: Ord + Eq + Clone + Hash,
+          W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One
+{
+    fn approximate_initial(&self, a: PushDown<A>) -> PushDown<A> {
+        a
     }
 
-    fn approximate_transition(&mut self, t :  Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
+    fn approximate_transition(&mut self, t: Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
         Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
         match t.instruction{
             PushDownInstruction::Replace { ref current_val, ref new_val }

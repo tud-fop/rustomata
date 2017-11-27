@@ -1,6 +1,6 @@
 extern crate clap;
 extern crate integeriser;
-extern crate log_prob;
+extern crate log_domain;
 #[macro_use]
 extern crate nom;
 extern crate num_traits;
