@@ -9,13 +9,13 @@ use num_traits::One;
 use pmcfg::{PMCFG, PMCFGRule, VarT};
 use dyck::multiple::{Bracket, MultipleDyckLanguage};
 use openfsa::fsa::{Arc, Automaton, generator};
-use log_prob::LogProb;
+use log_domain::LogDomain;
 
 use util::partition::Partition;
 
 /// A derivation tree of PMCFG rules.
 #[derive(PartialEq, Debug)]
-pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogProb<f32>>>);
+pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>);
 
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -23,7 +23,7 @@ impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation
         let &Derivation(ref tree) = self;
 
         for (pos, rule) in tree {
-            if pos.len() > 0 {
+            if !pos.is_empty() {
                 for _ in 0..(pos.len() - 1) {
                     buffer.push('\t');
                 }
@@ -42,8 +42,8 @@ pub struct MCFG<N, T, W> {
     initial: N,
 }
 
-impl<N, T> From<PMCFG<N, T, LogProb<f64>>> for MCFG<N, T, LogProb<f32>> {
-    fn from(grammar: PMCFG<N, T, LogProb<f64>>) -> Self {
+impl<N, T> From<PMCFG<N, T, LogDomain<f64>>> for MCFG<N, T, LogDomain<f32>> {
+    fn from(grammar: PMCFG<N, T, LogDomain<f64>>) -> Self {
         let PMCFG { rules, mut initial, .. } = grammar;
         assert!(initial.len() == 1);
 
@@ -60,7 +60,7 @@ impl<N, T> From<PMCFG<N, T, LogProb<f64>>> for MCFG<N, T, LogProb<f32>> {
                         head,
                         tail,
                         composition,
-                        weight: LogProb::new(weight.probability() as f32).unwrap(),
+                        weight: LogDomain::new(weight.value() as f32).unwrap(),
                     },
                 })
                 .collect(),
@@ -87,7 +87,7 @@ pub struct CSRepresentation<N: Eq + Hash + Clone, T: Ord + Hash + Clone> {
 
     // rules are integerized in CSRepresentation::new()
     // TODO: maybe integerize each `BracketContent` ?
-    rules: HashIntegeriser<PMCFGRule<N, T, LogProb<f32>>>,
+    rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 
     // saves all brackets σ with h(σ)(ε) ≠ 0
     epsilon_brackets: Vec<BracketContent<T>>,
@@ -108,7 +108,7 @@ fn terminal_brackets<T: PartialEq + Clone>(terminals: &[T]) -> Vec<Bracket<Brack
 impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::std::fmt::Debug>
     CSRepresentation<N, T> {
     ///
-    pub fn new<G: Into<MCFG<N, T, LogProb<f32>>>>(grammar: G) -> Self {
+    pub fn new<G: Into<MCFG<N, T, LogDomain<f32>>>>(grammar: G) -> Self {
         let mcfg = grammar.into();
 
         let mut rules = HashIntegeriser::new();
@@ -117,7 +117,7 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
         let mut arcs = Vec::new();
         let mut epsilon_brackets = Vec::new();
 
-        for rule in mcfg.rules.into_iter() {
+        for rule in mcfg.rules {
             let comp_prob = rule.weight.pow(
                 1f32 / rule.composition.composition.len() as f32,
             );
@@ -130,12 +130,12 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                 let mut from = Bracket::Open((rule.head.clone(), component));
                 let mut current_sequence = Vec::new();
                 for symbol in composition {
-                    match symbol {
-                        &VarT::T(ref t) => {
+                    match *symbol {
+                        VarT::T(ref t) => {
                             current_sequence.push(t.clone());
                             alphabet.insert(t.clone());
                         }
-                        &VarT::Var(ref i, ref j) => {
+                        VarT::Var(ref i, ref j) => {
                             let mut bracketword = terminal_brackets(current_sequence.as_slice());
                             bracketword.insert(0, first);
                             bracketword.push(Bracket::Open(
@@ -153,11 +153,8 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                             from = Bracket::Close((rule.tail[*i].clone(), *j));
                             first = Bracket::Close(BracketContent::Variable(rule_id, *i, *j));
 
-                            match variable_brackets.get_mut(*i) {
-                                Some(cell) => {
+                            if let Some(cell) = variable_brackets.get_mut(*i) {
                                     cell.insert(BracketContent::Variable(rule_id, *i, *j));
-                                }
-                                _ => (),
                             }
                         }
                     }
@@ -208,7 +205,7 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate<'a>(&'a self, word: Vec<T>, n: usize) -> CSGenerator<'a, T, N> {
+    pub fn generate(&self, word: Vec<T>, n: usize) -> CSGenerator<T, N> {
         // filter automaton
         let mut arcs = Vec::new();
         let fin = word.len();
@@ -218,13 +215,13 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                 0,
                 0,
                 vec![Bracket::Open(epsilon_bracket.clone())],
-                LogProb::one(),
+                LogDomain::one(),
             ));
             arcs.push(Arc::new(
                 0,
                 0,
                 vec![Bracket::Close(epsilon_bracket)],
-                LogProb::one(),
+                LogDomain::one(),
             ));
         }
         for (i, sigma) in word.into_iter().enumerate() {
@@ -235,20 +232,20 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                     Bracket::Open(BracketContent::Terminal(sigma.clone())),
                     Bracket::Close(BracketContent::Terminal(sigma.clone())),
                 ],
-                LogProb::one(),
+                LogDomain::one(),
             ));
             for epsilon_bracket in self.epsilon_brackets.iter().cloned() {
                 arcs.push(Arc::new(
                     i + 1,
                     i + 1,
                     vec![Bracket::Open(epsilon_bracket.clone())],
-                    LogProb::one(),
+                    LogDomain::one(),
                 ));
                 arcs.push(Arc::new(
                     i + 1,
                     i + 1,
                     vec![Bracket::Close(epsilon_bracket)],
-                    LogProb::one(),
+                    LogDomain::one(),
                 ));
             }
         }
@@ -272,10 +269,10 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
         }
     }
 
-    fn from_brackets<'a>(
-        rules: &'a HashIntegeriser<PMCFGRule<N, T, LogProb<f32>>>,
+    fn from_brackets(
+        rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
         word: Vec<Bracket<BracketContent<T>>>,
-    ) -> Derivation<'a, N, T> {
+    ) -> Derivation<N, T> {
         let mut tree = BTreeMap::new();
         let mut pos = Vec::new();
 
@@ -304,7 +301,7 @@ pub struct CSGenerator<'a, T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::De
     candidates: generator::BatchGenerator<Bracket<BracketContent<T>>>,
 
     checker: MultipleDyckLanguage<BracketContent<T>>,
-    rules: &'a HashIntegeriser<PMCFGRule<N, T, LogProb<f32>>>,
+    rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 }
 
 impl<
@@ -318,7 +315,7 @@ impl<
         let &mut CSGenerator {
             ref mut candidates,
             ref checker,
-            ref rules,
+            rules,
         } = self;
         for candidate_batch in candidates {
             for candidate in candidate_batch {
@@ -341,7 +338,7 @@ mod test {
         use PMCFGRule;
         use Composition;
         use super::CSRepresentation;
-        use super::LogProb;
+        use super::LogDomain;
         use super::Derivation;
         use super::MCFG;
 
@@ -354,13 +351,13 @@ mod test {
                     composition: Composition {
                         composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0)]],
                     },
-                    weight: LogProb::new(0.3f32).unwrap(),
+                    weight: LogDomain::new(0.3f32).unwrap(),
                 },
                 PMCFGRule {
                     head: "S",
                     tail: vec![],
                     composition: Composition { composition: vec![vec![VarT::T('A')]] },
-                    weight: LogProb::new(0.7f32).unwrap(),
+                    weight: LogDomain::new(0.7f32).unwrap(),
                 },
             ],
         };

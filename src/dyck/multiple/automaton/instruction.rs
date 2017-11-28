@@ -25,8 +25,8 @@ impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstr
     fn apply(&self, ts: TreeStack<MDTreeElem<T>>) -> Vec<TreeStack<MDTreeElem<T>>> {
         use self::MultipleDyckInstruction::{Down, Up};
 
-        match self {
-            &Up(ref symbol, ref cell) => {
+        match *self {
+            Up(ref symbol, ref cell) => {
                 let mut succ = Vec::new();
 
                 // option 1: push a new child
@@ -38,10 +38,10 @@ impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstr
 
                 // option 2: up nondeterministcally
                 for ts_ in ts.ups() {
-                    if let &MDTreeElem::Node(None, ref subset) = ts_.current_symbol() {
-                        if subset.contains(&symbol) {
+                    if let MDTreeElem::Node(None, ref subset) = *ts_.current_symbol() {
+                        if subset.contains(symbol) {
                             let mut succset = subset.clone();
-                            succset.remove(&symbol);
+                            succset.remove(symbol);
                             succ.push(ts_.clone().set(
                                 MDTreeElem::Node(Some(symbol.clone()), succset),
                             ));
@@ -51,9 +51,9 @@ impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstr
 
                 succ
             }
-            &Down(ref symbol) => {
-                match ts.current_symbol() {
-                    &MDTreeElem::Node(Some(ref symbol_), ref subset) => {
+            Down(ref symbol) => {
+                match *ts.current_symbol() {
+                    MDTreeElem::Node(Some(ref symbol_), ref subset) => {
                         if symbol != symbol_ {
                             Vec::new()
                         } else if subset.is_empty() {
@@ -75,7 +75,6 @@ impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstr
                     _ => Vec::new(),
                 }
             }
-            //_ => Vec::new(),
         }
     }
 }

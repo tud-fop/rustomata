@@ -19,9 +19,9 @@ impl<T: Clone + Eq + Ord + Debug> MultipleDyckLanguage<T> {
 
     /// Unweightedly recognizes an element w ∈ Σ* of a multiple Dyck language with respect to
     /// Σ and a partition of Σ.
-    pub fn recognize(&self, word: &Vec<Bracket<T>>) -> bool {
+    pub fn recognize(&self, word: &[Bracket<T>]) -> bool {
         let &MultipleDyckLanguage(ref mda) = self;
-        let word_ = word.clone();
+        let word_ = word.to_owned();
         let mut b = mda.recognise(word_);
         b.next().is_some()
     }

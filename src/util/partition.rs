@@ -11,15 +11,17 @@ use serde::de::{Deserialize, Deserializer};
 #[derive(Debug, PartialEq)]
 pub struct Partition<T: Ord>(BTreeMap<T, Rc<BTreeSet<T>>>);
 
-impl<T: Ord + Clone> Partition<T> {
+impl<T> Partition<T>
+where T: Ord + Clone 
+{
     /// Takes a list of cells π₁…πₙ and returns a partition if they are pairwise distinct.
     pub fn new(cells: Vec<BTreeSet<T>>) -> Option<Self> {
         let mut partition = BTreeMap::new();
         
-        for cell in cells.into_iter() {
+        for cell in cells {
             let ptr = Rc::new(cell);
             for symbol in ptr.iter().cloned() {
-                if !partition.insert(symbol, ptr.clone()).is_none() {
+                if !partition.insert(symbol, Rc::clone(&ptr)).is_none() {
                     return None;
                 }
             }
@@ -57,7 +59,7 @@ impl<T: Ord> Partition<T> {
     }
 
     /// Returns an iterator over all elements in Σ.
-    pub fn alphabet<'a>(&'a self) -> Keys<'a, T, Rc<BTreeSet<T>>> {
+    pub fn alphabet(&self) -> Keys<T, Rc<BTreeSet<T>>> {
         let &Partition(ref map) = self;
 
         map.keys()

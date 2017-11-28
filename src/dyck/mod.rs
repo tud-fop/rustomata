@@ -16,7 +16,7 @@ pub enum Bracket<A: PartialEq> {
 pub fn recognize<A: PartialEq>(word: Vec<Bracket<A>>) -> bool {
     let mut stack: Vec<A> = Vec::new();
 
-    for bracket in word.into_iter() {
+    for bracket in word {
         match bracket {
             Bracket::Open(symbol) => {
                 stack.push(symbol);
@@ -47,7 +47,7 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
     use Automaton;
 
     let mut instructions = Vec::new();
-    for alpha in alphabet.clone().into_iter() {
+    for alpha in &alphabet {
         instructions.push(Transition {
             word: vec![Bracket::Open(alpha.clone())],
             weight: 1 as u8,
@@ -66,7 +66,7 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
             },
             _dummy: PhantomData,
         });
-        for beta in alphabet.clone().into_iter() {
+        for beta in &alphabet {
             instructions.push(Transition {
                 word: vec![Bracket::Open(alpha.clone())],
                 weight: 1 as u8,
@@ -90,18 +90,11 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
 
     let automaton = PushDownAutomaton::new(
         instructions,
-        PushDown {
-            elements: vec![None],
-            empty: None,
-        },
+        PushDown::from_vec(vec![None]),
     );
-    println!("{:?}", automaton);
+    let ffc = automaton.recognise(word).next();
 
-    for _ in automaton.recognise(word) {
-        return true;
-    }
-
-    false
+    ffc.is_some()
 }
 
 #[cfg(test)]

@@ -13,20 +13,15 @@ use Configuration;
 use dyck::Bracket;
 
 
+pub type Trans<T> = Transition<TreeStack<MDTreeElem<T>>, MultipleDyckInstruction<T>, Bracket<T>, u8>;
+
 /// A variant of a tree stack `Automaton` that is used to recognize multiple Dyck languages
 /// over symbols in `T`.
 #[derive(Debug)]
 pub struct MultipleDyckAutomaton<T: Ord + Clone> {
     transitions: HashMap<
         (),
-        BinaryHeap<
-            Transition<
-                TreeStack<MDTreeElem<T>>,
-                MultipleDyckInstruction<T>,
-                Bracket<T>,
-                u8,
-            >,
-        >,
+        BinaryHeap<Trans<T>>,
     >,
 }
 

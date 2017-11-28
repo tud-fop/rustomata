@@ -6,7 +6,7 @@ use std::io::{stdin, stdout, Read};
 use std::fs::File;
 
 use PMCFG;
-use log_prob::LogProb;
+use log_domain::LogDomain;
 use cs_representation::CSRepresentation;
 
 pub fn get_sub_command(name: &str) -> App {
@@ -57,7 +57,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             stdin().read_to_string(&mut grammar_string).expect(
                 "Could not read from stdin. Be sure to provide the gramar file as input.",
             );
-            let grammar: PMCFG<String, String, LogProb<f64>> = grammar_string.parse().expect(
+            let grammar: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().expect(
                 "Could not decode the grammar provided via stdin.",
             );
 
