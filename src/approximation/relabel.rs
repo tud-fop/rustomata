@@ -30,21 +30,19 @@ impl<A, T1, T2 : Ord, N1, N2> RlbElement<A, N1, N2, T1, T2>{
     }
 }
 
-impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
+impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
       A2:  Ord + PartialEq + Debug + Clone + Hash,
       N1: Clone + Eq + Hash,
       N2: Clone + Eq + Hash,
       T: Ord + Eq + Clone +Hash,
-      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDown<A1>, PushDown<A2>,
-        Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>,
-        Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>
-      for RlbElement<PushDown<A1>, N1, N2, Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, TransitionKey<PushDown<A2>, PushDownInstruction<A2>, T, W>>{
-    fn approximate_initial(&self, a : PushDown<A1>)-> PushDown<A2>{
+      W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDownInstruction<A1>, PushDownInstruction<A2>, T, W>
+      for RlbElement<PushDown<A1>, N1, N2, Transition<PushDownInstruction<A1>, T, W>, TransitionKey<PushDownInstruction<A2>, T, W>>{
+    fn approximate_initial(&self, a: PushDown<A1>)-> PushDown<A2>{
         a.relabel(&self.mapping)
     }
 
-    fn approximate_transition(&mut self, t :  Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>) ->
-        Transition<PushDown<A2>, PushDownInstruction<A2>, T, W> {
+    fn approximate_transition(&mut self, t:  Transition<PushDownInstruction<A1>, T, W>) ->
+        Transition<PushDownInstruction<A2>, T, W> {
         match t.instruction {
             PushDownInstruction::Replace {ref current_val, ref new_val} => {
                 let mut stc = Vec::new();
@@ -56,7 +54,6 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                     stn.push(nt.relabel(&self.mapping));
                 }
                 let t2 = Transition {
-                    _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::Replace {
@@ -82,7 +79,6 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                     stn.push(nt.relabel(&self.mapping));
                 }
                 let t2 = Transition {
-                    _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::ReplaceK {
@@ -102,7 +98,7 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
         }
     }
 
-    fn translate_run(&self, run: Vec<Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A1, T, W>>{
+    fn translate_run(&self, run: Vec<Transition<PushDownInstruction<A2>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A1, T, W>>{
         let mut res = Vec::new();
         for lv in run {
             let lvk = TransitionKey::new(&lv);
@@ -128,7 +124,7 @@ impl <A1 : Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
         BinaryHeap::from(res)
     }
 
-    fn add_transitions(&mut self, t1: &Transition<PushDown<A1>, PushDownInstruction<A1>, T, W>, t2: &Transition<PushDown<A2>, PushDownInstruction<A2>, T, W>){
+    fn add_transitions(&mut self, t1: &Transition<PushDownInstruction<A1>, T, W>, t2: &Transition<PushDownInstruction<A2>, T, W>){
         let tk = TransitionKey::new(t2);
         if !self.trans_map.contains_key(&tk) {
             self.trans_map.insert(tk.clone(), Vec::new());

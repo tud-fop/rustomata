@@ -23,54 +23,55 @@ pub enum TreeStackInstruction<A> {
 }
 
 
-impl<A: Ord + PartialEq + Clone + Hash> Instruction<TreeStack<A>>
-    for TreeStackInstruction<A> {
-        fn apply(&self, t: TreeStack<A>) -> Vec<TreeStack<A>> {
-            match *self {
-                TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
-                    if t.current_symbol() == current_val {
-                        match t.clone().up(n) {
-                            Ok(child) => {
-                                if child.current_symbol() == old_val {
-                                    vec![child.set(new_val.clone())]
-                                } else {
-                                    vec![]
-                                }
-                            },
-                            Err(_) => {
+impl<A: Ord + PartialEq + Clone + Hash> Instruction for TreeStackInstruction<A> {
+    type Storage = TreeStack<A>;
+
+    fn apply(&self, t: TreeStack<A>) -> Vec<TreeStack<A>> {
+        match *self {
+            TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } => {
+                if t.current_symbol() == current_val {
+                    match t.clone().up(n) {
+                        Ok(child) => {
+                            if child.current_symbol() == old_val {
+                                vec![child.set(new_val.clone())]
+                            } else {
                                 vec![]
-                            },
-                        }
-                    } else {
-                        vec![]
+                            }
+                        },
+                        Err(_) => {
+                            vec![]
+                        },
                     }
+                } else {
+                    vec![]
                 }
-                TreeStackInstruction::Push { n, ref current_val, ref new_val } => {
-                    if t.current_symbol() == current_val {
-                        t.clone().push(n, new_val.clone()).into_iter().collect()
-                    } else {
-                        vec![]
-                    }
+            }
+            TreeStackInstruction::Push { n, ref current_val, ref new_val } => {
+                if t.current_symbol() == current_val {
+                    t.clone().push(n, new_val.clone()).into_iter().collect()
+                } else {
+                    vec![]
                 }
-                TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } => {
-                    if t.current_symbol() == current_val {
-                        match t.clone().down() {
-                            Ok(parent) => {
-                                if parent.current_symbol() == old_val {
-                                    vec![parent.set(new_val.clone())]
-                                } else {
-                                    vec![]
-                                }
-                            },
-                            _ => vec![],
-                        }
-                    } else {
-                        vec![]
+            }
+            TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } => {
+                if t.current_symbol() == current_val {
+                    match t.clone().down() {
+                        Ok(parent) => {
+                            if parent.current_symbol() == old_val {
+                                vec![parent.set(new_val.clone())]
+                            } else {
+                                vec![]
+                            }
+                        },
+                        _ => vec![],
                     }
+                } else {
+                    vec![]
                 }
             }
         }
     }
+}
 
 
 impl<A: fmt::Display> fmt::Display for TreeStackInstruction<A> {

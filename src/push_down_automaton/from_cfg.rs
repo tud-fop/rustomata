@@ -9,8 +9,6 @@ use std::ops::{Add, Mul, Div};
 use self::num_traits::{One, Zero};
 use std::str::FromStr;
 
-use std::marker::PhantomData;
-
 use automata;
 use cfg::*;
 use push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
@@ -67,7 +65,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
 
             transitions.push(
                 automata::Transition {
-                    _dummy: PhantomData,
                     word: Vec::new(),
                     weight: r.weight.clone(),
                     instruction: PushDownInstruction::Replace {
@@ -84,7 +81,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             tvec.push(t.clone());
             transitions.push(
                 automata::Transition {
-                    _dummy: PhantomData,
                     word: tvec.clone(),
                     weight: W::one(),
                     instruction: PushDownInstruction::Replace {
@@ -103,7 +99,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
             tvec.push(PushState::Nt(ini));
             transitions.push(
                 automata::Transition {
-                    _dummy: PhantomData,
                     word: Vec::new(),
                     weight: W::one(),
                     instruction: PushDownInstruction::Replace {

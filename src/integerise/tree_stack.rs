@@ -17,16 +17,16 @@ use integerise::*;
 
 // items of the transition system
 type IntTreeStackConfiguration<W> = Configuration<TreeStack<usize>, usize, W>;
-type IntTreeStackTransition<W> = Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>;
+type IntTreeStackTransition<W> = Transition<TreeStackInstruction<usize>, usize, W>;
 type IntTreeStackItem<W> = (IntTreeStackConfiguration<W>, Pushdown<IntTreeStackTransition<W>>);
 type IntTreeStackVecItem<W> = (IntTreeStackConfiguration<W>, Vec<IntTreeStackTransition<W>>);
 
 // remove this when possible
-type IntTreeStackItemComplicated<'a, A, T, W> = IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
+type IntTreeStackItemComplicated<'a, A, T, W> = IntItem<'a, TreeStackInstruction<usize>, A, T, W>;
 
 // kinds of recognisers
-type ExactIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BinaryHeap<IntTreeStackItem<W>>, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
-type BeamIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BoundedPriorityQueue<W, IntTreeStackItem<W>>, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>;
+type ExactIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BinaryHeap<IntTreeStackItem<W>>, TreeStackInstruction<usize>, A, T, W>;
+type BeamIntTreeStackRecogniser<'a, A, T, W> = IntRecogniser<'a, BoundedPriorityQueue<W, IntTreeStackItem<W>>, TreeStackInstruction<usize>, A, T, W>;
 
 
 /// Integerised version of the `TreeStackAutomaton`. Holds the two `Integeriser` used to encode the input and the resulting `TreeStackAutomaton`
@@ -53,7 +53,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
 impl<A: Ord + Eq + Debug + Clone + Hash,
      T: Clone + Debug + Eq + Hash,
      W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord>
-    IntegerisedAutomaton<TreeStack<usize>, TreeStackInstruction<usize>, A, T, W> for IntTreeStackAutomaton<A, T, W> {
+    IntegerisedAutomaton<TreeStackInstruction<usize>, A, T, W> for IntTreeStackAutomaton<A, T, W> {
         type Key = A;
 
         fn recognise(&self, word: Vec<T>) -> ExactIntTreeStackRecogniser<A, T, W> {
@@ -76,7 +76,7 @@ impl<A: Ord + Eq + Debug + Clone + Hash,
             }
         }
 
-        fn check_run<'a>(&'a self, run: &[Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>]) -> Option<IntTreeStackItemComplicated<A, T, W>> {
+        fn check_run<'a>(&'a self, run: &[Transition<TreeStackInstruction<usize>, usize, W>]) -> Option<IntTreeStackItemComplicated<A, T, W>> {
             let heap = self.automaton.check(self.automaton.initial().clone(), run);
             if heap.is_empty(){
                 return None;
@@ -171,28 +171,26 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash> Integerisable<TreeStackInstructi
     }
 }
 
-impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>, A, B>
-    for Transition<TreeStack<A>, TreeStackInstruction<A>, B, W>{
-        fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>{
+impl<A:  Ord + PartialEq + Debug + Clone + Hash, B: Eq + Hash + Clone + Debug,  W: Ord + Eq + Clone> IntegerisableM<Transition<TreeStackInstruction<usize>, usize, W>, A, B>
+    for Transition<TreeStackInstruction<A>, B, W>{
+        fn integerise(&self, inter1: &mut HashIntegeriser<A>, inter2: &mut HashIntegeriser<B>)->Transition<TreeStackInstruction<usize>, usize, W>{
             let mut nword = Vec::new();
             for l in self.word.clone(){
                 nword.push(inter2.integerise(l));
             }
             Transition {
-                _dummy: PhantomData,
                 word: nword,
                 weight: self.weight.clone(),
                 instruction: self.instruction.integerise(inter1),
             }
         }
 
-        fn translate(s: Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Transition<TreeStack<A>, TreeStackInstruction<A>, B, W>{
+        fn translate(s: Transition<TreeStackInstruction<usize>, usize, W>, inter1: &HashIntegeriser<A>, inter2: &HashIntegeriser<B>)->Transition<TreeStackInstruction<A>, B, W>{
             let mut nword = Vec::new();
             for l in s.word.clone(){
                 nword.push(inter2.find_value(l).unwrap().clone());
             }
             Transition {
-                _dummy: PhantomData,
                 word: nword,
                 weight: s.weight.clone(),
                 instruction: Integerisable::translate(s.instruction, inter1),
@@ -252,16 +250,11 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       B: Ord + PartialEq + Debug + Clone + Hash,
       T: Eq + Clone + Hash + Debug,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
-      S: Clone + ApproximationStrategy<TreeStack<A>, PushDown<B>,
-                                       Transition<TreeStack<A>, TreeStackInstruction<A>, usize, W>,
-                                       Transition<PushDown<B>, PushDownInstruction<B>, usize, W>>
+      S: Clone + ApproximationStrategy<TreeStackInstruction<A>, PushDownInstruction<B>, usize, W>
       + IntApproximationStrategy<A, B, S2>,
-      S2: ApproximationStrategy<TreeStack<usize>, PushDown<usize>,
-                                Transition<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>,
-                                Transition<PushDown<usize>, PushDownInstruction<usize>, usize, W>>>
+      S2: ApproximationStrategy<TreeStackInstruction<usize>, PushDownInstruction<usize>, usize, W>>
     IntApproximation<S, S2, IntPushDownAutomaton<B, T, W>> for IntTreeStackAutomaton<A, T, W>
-    where W : Add<Output = W>{
-    
+{
     fn approximation(&self, strati : &S) -> Result<(IntPushDownAutomaton<B, T, W>, S2), String>{
         let (n_int, mut strat) = strati.clone().integerise(&self.nterm_integeriser);
         let initial1 = strat.approximate_initial(self.automaton.initial());
@@ -280,7 +273,6 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                                 PushDownInstruction::Replace {ref current_val, ref new_val} => {
                                     fina = new_val[0];
                                     let st = Transition {
-                                        _dummy: PhantomData,
                                         word: b.word.clone(),
                                         weight: b.weight.clone(),
                                         instruction: PushDownInstruction::Replace {
@@ -332,7 +324,7 @@ impl<A: Ord + PartialEq + fmt::Debug + Clone + Hash + fmt::Display,
 impl<'a,
      A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash + Debug,
-     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStack<usize>, TreeStackInstruction<usize>, A, T, W>{
+     W: Ord + Eq + Clone + Debug> IntItem<'a, TreeStackInstruction<usize>, A, T, W>{
     pub fn translate(&self) -> VecItem<TreeStack<A>, TreeStackInstruction<A>, T, W> {
         let mut nvec = Vec::new();
         let vec: Vec<_> = self.run.clone().into();

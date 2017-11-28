@@ -21,7 +21,7 @@ pub use self::from_pmcfg::*;
 pub use self::tree_stack::*;
 pub use self::tree_stack_instruction::*;
 
-type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>>;
+type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<Transition<TreeStackInstruction<A>, T, W>>>;
 
 /// Automaton with storage type `TreeStack<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
           T: Eq,
           W: Ord,
 {
-    pub fn new(transitions: Vec<Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>)
+    pub fn new(transitions: Vec<Transition<TreeStackInstruction<A>, T, W>>, initial: TreeStack<A>)
                -> TreeStackAutomaton<A, T, W> {
         let mut transition_map: TransitionMap<A, T, W>  = HashMap::new();
 
@@ -74,7 +74,7 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
         &self.transitions
     }
 
-    pub fn list_transitions(&self) -> Vec<&Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>> {
+    pub fn list_transitions(&self) -> Vec<&Transition<TreeStackInstruction<A>, T, W>> {
         let mut result = Vec::new();
         let mut keys: Vec<_> = self.transitions.keys().collect();
 
@@ -91,9 +91,9 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
 }
 
 
-impl<A, T, W> Automaton<TreeStack<A>, TreeStackInstruction<A>, T, W> for TreeStackAutomaton<A, T, W>
+impl<A, T, W> Automaton<TreeStackInstruction<A>, T, W> for TreeStackAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Clone + Debug + Eq + Hash,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
           W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
 {
     type Key = A;

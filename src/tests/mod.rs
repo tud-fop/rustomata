@@ -50,21 +50,18 @@ fn test_from_str_automaton() {
     assert_eq!(Ok(i3.clone()), i3_string.parse());
 
     let t1 = Transition {
-        _dummy: PhantomData,
         word: vec!["hello".to_string(), "world".to_string()],
         weight: LogDomain::new(0.5).unwrap(),
         instruction: i1,
     };
 
     let t2 = Transition {
-        _dummy: PhantomData,
         word: vec!["\"hello\\".to_string(), "world".to_string()],
         weight: LogDomain::new(0.5).unwrap(),
         instruction: i2,
     };
 
     let t3 = Transition {
-        _dummy: PhantomData,
         word: vec!["\"hello\\".to_string(), "world".to_string()],
         weight: LogDomain::new(0.5).unwrap(),
         instruction: i3,

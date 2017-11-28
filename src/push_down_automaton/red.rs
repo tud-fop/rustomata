@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::{Add, Mul};
 use self::num_traits::{One, Zero};
 
@@ -7,7 +6,7 @@ use automata;
 use automata::red::*;
 use push_down_automaton::*;
 
-type TransitionKeyMap<A, T, W> = HashMap<TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>, Vec<W>>;
+type TransitionKeyMap<A, T, W> = HashMap<TransitionKey<PushDownInstruction<A>, T, W>, Vec<W>>;
 
 impl<A: Ord + PartialEq + Debug + Clone + Hash,
      T: Eq + Clone + Hash,
@@ -33,7 +32,6 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
                     nw = nw * w;
                 }
                 let new_t = automata::Transition{
-                    _dummy : PhantomData,
                     word : tk.word.clone(),
                     weight : nw.clone(),
                     instruction : tk.instruction.clone(),
