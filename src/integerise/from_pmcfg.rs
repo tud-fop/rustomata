@@ -8,8 +8,6 @@ use std::iter::FromIterator;
 use std::vec::Vec;
 use num_traits::{One, Zero};
 use std::ops::{Add, Div};
-use std::marker::PhantomData;
-
 use integeriser::{Integeriser, HashIntegeriser};
 
 use automata;
@@ -79,7 +77,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
 
         for r in initial_rules {
             let t = automata::Transition {
-                _dummy: PhantomData,
                 word: Vec::new(),
                 weight: r.weight.clone(),
                 instruction: TreeStackInstruction::Push {
@@ -95,7 +92,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
             match down_info[&r][0] {
                 (j, ref word) => {
                     let t = automata::Transition {
-                        _dummy: PhantomData,
                         word: word.clone(),
                         weight: W::one(),
                         instruction: TreeStackInstruction::Down {
@@ -138,7 +134,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                         VarT::Var(i1, j1) => {
                             for ri in &rss[i1] {
                                 let t = automata::Transition {
-                                    _dummy: PhantomData,
                                     word: buffer.clone(),
                                     weight: match previous_component[i1] {
                                         None => ri.weight.clone(),
@@ -171,7 +166,6 @@ impl<N: Clone + fmt::Debug + Ord + PartialEq + Hash,
                                 );
 
                                 let t2 = automata::Transition {
-                                    _dummy: PhantomData,
                                     word: down_info[ri][j1].1.clone(),
                                     weight: W::one(),
                                     instruction: TreeStackInstruction::Down {

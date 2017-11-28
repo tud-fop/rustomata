@@ -13,7 +13,7 @@ impl<A: Ord + PartialEq + Debug + Clone + FromStr + Hash, T: Eq + FromStr, W: Eq
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let initial: A;
-        let mut transitions: Vec<automata::Transition<TreeStack<A>, TreeStackInstruction<A>, T, W>>
+        let mut transitions: Vec<automata::Transition<TreeStackInstruction<A>, T, W>>
                 = Vec::new();
 
         let mut it = s.lines();

@@ -21,7 +21,7 @@ pub use self::relabel::*;
 pub use self::red::*;
 
 type TransitionMap<A, T, W>
-    = HashMap<A, BinaryHeap<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>>;
+    = HashMap<A, BinaryHeap<Transition<PushDownInstruction<A>, T, W>>>;
 
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
           T: Eq + Clone + Hash,
           W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One,
 {
-    pub fn new(transitions: Vec<Transition<PushDown<A>,PushDownInstruction<A>, T, W>>,
+    pub fn new(transitions: Vec<Transition<PushDownInstruction<A>, T, W>>,
                initial: PushDown<A>)
                -> PushDownAutomaton<A,T,W>
     {
@@ -81,7 +81,6 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
             //Places all ReplaceK transitions also in for the empty symbol
             if emp {
                 let nt = Transition {
-                    _dummy: t._dummy,
                     word: t.word.clone(),
                     instruction: t.instruction.clone(),
                     weight: t.weight/nw.clone(),
@@ -105,7 +104,7 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
           T: Eq,
           W: Ord,
 {
-    pub fn list_transitions(&self) -> Vec<&Transition<PushDown<A>, PushDownInstruction<A>, T, W>> {
+    pub fn list_transitions(&self) -> Vec<&Transition<PushDownInstruction<A>, T, W>> {
         let mut result = Vec::new();
         let mut keys: Vec<_> = self.transitions.keys().collect();
 
@@ -123,9 +122,11 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
     }
 }
 
-impl<A> Instruction<PushDown<A>> for PushDownInstruction<A>
+impl<A> Instruction for PushDownInstruction<A>
     where A: Ord + PartialEq + Debug + Clone + Hash
 {
+    type Storage = PushDown<A>;
+
     fn apply(&self, p: PushDown<A>) -> Vec<PushDown<A>> {
         match *self {
             PushDownInstruction::Replace {ref current_val, ref new_val} =>
@@ -136,9 +137,9 @@ impl<A> Instruction<PushDown<A>> for PushDownInstruction<A>
     }
 }
 
-impl<A, T, W> Automaton<PushDown<A>, PushDownInstruction<A>, T, W> for PushDownAutomaton<A, T, W>
+impl<A, T, W> Automaton<PushDownInstruction<A>, T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Clone + Debug + Eq + Hash,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
           W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
 {
     type Key = A;

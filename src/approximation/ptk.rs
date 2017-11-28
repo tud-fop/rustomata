@@ -25,13 +25,10 @@ impl<A, T1, T2 : Ord> PDTopKElement<A, T1, T2>{
     }
 }
 
-impl<A, T, W> ApproximationStrategy<PushDown<A>,
-                                    PushDown<A>,
-                                    Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
-                                    Transition<PushDown<A>, PushDownInstruction<A>, T, W>>
+impl<A, T, W> ApproximationStrategy<PushDownInstruction<A>, PushDownInstruction<A>, T, W>
     for PDTopKElement<A,
-                      Transition<PushDown<A>, PushDownInstruction<A>, T, W>,
-                      TransitionKey<PushDown<A>, PushDownInstruction<A>, T, W>>
+                      Transition<PushDownInstruction<A>, T, W>,
+                      TransitionKey<PushDownInstruction<A>, T, W>>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Ord + Eq + Clone + Hash,
           W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One
@@ -40,13 +37,12 @@ impl<A, T, W> ApproximationStrategy<PushDown<A>,
         a
     }
 
-    fn approximate_transition(&mut self, t: Transition<PushDown<A>, PushDownInstruction<A>, T, W>) ->
-        Transition<PushDown<A>, PushDownInstruction<A>, T, W>{
+    fn approximate_transition(&mut self, t: Transition<PushDownInstruction<A>, T, W>) ->
+        Transition<PushDownInstruction<A>, T, W>{
         match t.instruction{
             PushDownInstruction::Replace { ref current_val, ref new_val }
             | PushDownInstruction::ReplaceK { ref current_val, ref new_val, .. } => {
                 let t2 = Transition {
-                    _dummy: PhantomData,
                     word: t.word.clone(),
                     weight: t.weight.clone(),
                     instruction: PushDownInstruction::ReplaceK {
@@ -66,7 +62,7 @@ impl<A, T, W> ApproximationStrategy<PushDown<A>,
         }
     }
 
-    fn translate_run(&self, run: Vec<Transition<PushDown<A>, PushDownInstruction<A>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A, T, W>>{
+    fn translate_run(&self, run: Vec<Transition<PushDownInstruction<A>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A, T, W>>{
         let mut res = Vec::new();
         for lv in run{
             let lvk = TransitionKey::new(&lv);
@@ -94,7 +90,7 @@ impl<A, T, W> ApproximationStrategy<PushDown<A>,
         BinaryHeap::from(res)
     }
 
-    fn add_transitions(&mut self, t1: &Transition<PushDown<A>, PushDownInstruction<A>, T, W>, t2: &Transition<PushDown<A>, PushDownInstruction<A>, T, W>){
+    fn add_transitions(&mut self, t1: &Transition<PushDownInstruction<A>, T, W>, t2: &Transition<PushDownInstruction<A>, T, W>){
         let tk = TransitionKey::new(t2);
         if !self.trans_map.contains_key(&tk) {
             self.trans_map.insert(tk.clone(), Vec::new());

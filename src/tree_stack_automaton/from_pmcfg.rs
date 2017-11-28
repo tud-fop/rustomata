@@ -7,8 +7,6 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
 use self::num_traits::One;
-use std::marker::PhantomData;
-
 use automata::Transition;
 use pmcfg::{PMCFG, PMCFGRule, VarT};
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
@@ -97,7 +95,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
         for r in initial_rules {
             transitions.push(
                 Transition {
-                    _dummy: PhantomData,
                     word: Vec::new(),
                     weight: r.weight.clone(),
                     instruction: TreeStackInstruction::Push {
@@ -112,7 +109,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                 (j, ref word) => {
                     transitions.push(
                         Transition {
-                            _dummy: PhantomData,
                             word: word.clone(),
                             weight: W::one(),
                             instruction: TreeStackInstruction::Down {
@@ -153,7 +149,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                         VarT::Var(i1, j1) => {
                             for ri in &rss[i1] {
                                 transitions.push(Transition {
-                                    _dummy: PhantomData,
                                     word: buffer.clone(),
                                     weight: match previous_component[i1] {
                                         None => ri.weight.clone(),
@@ -183,7 +178,6 @@ impl<N: Clone + Debug + Ord + PartialEq + Hash,
                                 });
 
                                 transitions.push(Transition {
-                                    _dummy: PhantomData,
                                     word: down_info[ri][j1].1.clone(),
                                     weight: W::one(),
                                     instruction: TreeStackInstruction::Down {

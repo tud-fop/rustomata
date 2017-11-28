@@ -13,31 +13,21 @@ use automata::*;
 use approximation::*;
 use integerise::*;
 
-type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<S1, I1, T1, W>>);
+type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<I1, T1, W>>);
 
 /// One level in a coarse-to-fine scheme.
 /// Translates a `run` via an `ApproximationStrategy` and checks whether the resulting
 /// `Vec`s of `Transition`s are accepted by the given `Automaton`.
-pub fn ctf_level<
-    S1: Eq + Clone + Debug,
-    S2: Eq + Clone + Debug,
-    I1: Eq + Clone + Debug + Instruction<S1>,
-    I2: Eq + Clone + Debug + Instruction<S2>,
-    T1: Eq + Clone + Debug,
-    T2: Eq + Clone + Debug,
-    W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
-    ST: ApproximationStrategy<
-        S1,
-        S2,
-        Transition<S1, I1, T1, W>,
-        Transition<S2, I2, T2, W>,
-    >,
-    A: Automaton<S1, I1, T1, W>,
->(
-    run: Vec<Transition<S2, I2, T2, W>>,
-    strat: &ST,
-    automaton: &A,
-) -> BinaryHeap<Item<S1, I1, T1, W>> {
+pub fn ctf_level<I1, I2, T, W, ST, A>
+    (run: Vec<Transition<I2, T, W>>, strat: &ST, automaton: &A) -> BinaryHeap<Item<I1::Storage, I1, T, W>>
+    where I1::Storage: Clone + Debug + Eq,
+          I1: Eq + Clone + Debug + Instruction + PartialOrd,
+          I2: Eq + Clone + Debug + Instruction,
+          T: Eq + Clone + Debug + PartialOrd,
+          W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
+          ST: ApproximationStrategy<I1, I2, T, W>,
+          A: Automaton<I1, T, W>,
+{
     let mut outp = BinaryHeap::new();
     for e in strat.translate_run(run) {
         if let Some(x) = automaton.check_run(&e) {
@@ -48,27 +38,17 @@ pub fn ctf_level<
 }
 
 /// Same as `ctf_level`, but for `IntegerisedAutomaton`
-pub fn ctf_level_i<
-    'a,
-    S1: Eq + Clone + Debug,
-    S2: Eq + Clone + Debug,
-    I1: Eq + Clone + Debug + Instruction<S1>,
-    I2: Eq + Clone + Debug + Instruction<S2>,
-    T1: Eq + Clone + Debug + Hash,
-    A1: Eq + Clone + Debug + Hash,
-    W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
-    ST: ApproximationStrategy<
-        S1,
-        S2,
-        Transition<S1, I1, usize, W>,
-        Transition<S2, I2, usize, W>,
-    >,
-    A: IntegerisedAutomaton<S1, I1, T1, A1, W>,
->(
-    run: Vec<Transition<S2, I2, usize, W>>,
-    strat: &ST,
-    automaton: &'a A,
-) -> BinaryHeap<(IntItem<'a, S1, I1, T1, A1, W>)> {
+pub fn ctf_level_i<'a, I1, I2, T, A1, W, ST, A>
+    (run: Vec<Transition<I2, usize, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, I1, T, A1, W>)>
+    where I1::Storage: Clone + Debug + Eq,
+          I1: Eq + Clone + Debug + Instruction,
+          I2: Eq + Clone + Debug + Instruction,
+          T: Eq + Clone + Debug + Hash,
+          A1: Eq + Clone + Debug + Hash,
+          W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
+          ST: ApproximationStrategy<I1, I2, usize, W>,
+          A: IntegerisedAutomaton<I1, T, A1, W>,
+{
     let mut outp = BinaryHeap::new();
     for e in strat.translate_run(run) {
         if let Some(x) = automaton.check_run(&e) {
@@ -104,7 +84,7 @@ impl<A: fmt::Display> fmt::Display for Run<A> {
 }
 
 /// returns the word recognised by a `run`
-pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &[Transition<S, I, T, W>]) -> Vec<T> {
+pub fn run_word<I: Instruction, T: Clone, W>(v: &[Transition<I, T, W>]) -> Vec<T> {
     let mut word = Vec::new();
     for t in v {
         let mut t2 = t.word.clone();
@@ -114,8 +94,8 @@ pub fn run_word<S, I: Instruction<S>, T: Clone, W>(v: &[Transition<S, I, T, W>])
 }
 
 /// returns the weight of a `run`
-pub fn run_weight<S, I: Instruction<S>, T, W: Mul<Output = W> + Copy + One>(
-    v: &[Transition<S, I, T, W>],
+pub fn run_weight<I: Instruction, T, W: Mul<Output = W> + Copy + One>(
+    v: &[Transition<I, T, W>],
 ) -> W {
     let mut weight = W::one();
     for t in v {

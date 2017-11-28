@@ -23,22 +23,24 @@ pub use self::red::TransitionKey;
 use coarse_to_fine::*;
 
 /// Something we can `apply` to a configuration.
-pub trait Instruction<A> {
-    fn apply(&self, A) -> Vec<A>;
+pub trait Instruction {
+    type Storage;
+
+    fn apply(&self, Self::Storage) -> Vec<Self::Storage>;
 }
 
 // items of the transition system
-type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<S, I, T, W>>);
-pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<S, I, T, W>>);
+type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
+pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 // map from key to transition
-type TransitionMap<K, S, I, T, W> = HashMap<K, BinaryHeap<Transition<S, I, T, W>>>;
+type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
 
 // kinds of recognisers
-type ExactRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, K>;
-type BeamRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<S, I, T, W>, K>;
+type ExactRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K>;
+type BeamRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K>;
 
-impl<S, I: Instruction<S>, T, W: Clone> Weighted for Item<S, I, T, W> {
+impl<S, I: Instruction<Storage=S>, T, W: Clone> Weighted for Item<S, I, T, W> {
     type Weight = W;
 
     fn get_weight(&self) -> W {
@@ -47,26 +49,28 @@ impl<S, I: Instruction<S>, T, W: Clone> Weighted for Item<S, I, T, W> {
 }
 
 /// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
-pub trait Automaton<S: Clone + Debug + Eq,
-                    I: Clone + Debug + Eq + Instruction<S>,
-                    T: Clone + Debug + Eq,
-                    W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord>
-    where Self::Key: Hash + Eq + Clone {
+pub trait Automaton<I, T, W>
+    where I: Clone + Debug + Eq + Instruction,
+          T: Clone + Debug + Eq,
+          W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord,
+          I::Storage: Clone + Debug + Eq,
+          Self::Key: Hash + Eq + Clone,
+{
     type Key;
 
-    fn extract_key(&Configuration<S, T, W>) -> &Self::Key;
+    fn extract_key(&Configuration<I::Storage, T, W>) -> &Self::Key;
 
-    fn transitions(&self) -> &TransitionMap<Self::Key, S, I, T, W>;
+    fn transitions(&self) -> &TransitionMap<Self::Key, I, T, W>;
 
     fn keys(&self) -> Vec<Self::Key> {
         self.transitions().keys().cloned().collect()
     }
 
-    fn initial(&self) -> S;
+    fn initial(&self) -> I::Storage;
 
-    fn is_terminal(&self, &Configuration<S, T, W>) -> bool;
+    fn is_terminal(&self, &Configuration<I::Storage, T, W>) -> bool;
 
-    fn recognise(&self, word: Vec<T>) -> ExactRecogniser<S, I, T, W, Self::Key> {
+    fn recognise(&self, word: Vec<T>) -> ExactRecogniser<I::Storage, I, T, W, Self::Key> {
         let i = Configuration {
             word: word,
             storage: self.initial().clone(),
@@ -84,7 +88,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
         }
     }
 
-    fn recognise_beam_search(&self, beam_width: usize, word: Vec<T>) -> BeamRecogniser<S, I, T, W, Self::Key> {
+    fn recognise_beam_search(&self, beam_width: usize, word: Vec<T>) -> BeamRecogniser<I::Storage, I, T, W, Self::Key> {
         let i = Configuration {
             word: word,
             storage: self.initial().clone(),
@@ -102,7 +106,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
         }
     }
 
-    fn check_run(&self, run: &[Transition<S, I, T, W>]) -> Option<VecItem<S, I, T, W>> {
+    fn check_run(&self, run: &[Transition<I, T, W>]) -> Option<VecItem<I::Storage, I, T, W>> {
         let heap = self.check(self.initial().clone(), run);
         if heap.is_empty(){
             return None;
@@ -116,7 +120,7 @@ pub trait Automaton<S: Clone + Debug + Eq,
     }
 
     //note: gives back the first configuration it finds
-    fn check<'a>(&'a self, storage: S, run: &[Transition<S, I, T, W>]) -> Vec<S> {
+    fn check<'a>(&'a self, storage: I::Storage, run: &[Transition<I, T, W>]) -> Vec<I::Storage> {
         let mut storage_heap = Vec::new();
         storage_heap.push(storage);
         for t in run {

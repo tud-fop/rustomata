@@ -1,5 +1,4 @@
 use std::vec::Vec;
-use std::marker::PhantomData;
 use std::str::FromStr;
 
 use automata::{Instruction, Transition};
@@ -51,7 +50,7 @@ fn vec_from_str<T: FromStr>(s: &str) -> Result<Vec<T>, String> {
     Ok(result)
 }
 
-impl<A, I: Instruction<A> + FromStr, T: FromStr, W: FromStr> FromStr for Transition<A, I, T, W> {
+impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I, T, W> {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -81,7 +80,6 @@ impl<A, I: Instruction<A> + FromStr, T: FromStr, W: FromStr> FromStr for Transit
             });
 
             Ok(Transition {
-                _dummy: PhantomData,
                 word: word,
                 weight: weight,
                 instruction: instruction,

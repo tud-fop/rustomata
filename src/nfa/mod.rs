@@ -13,8 +13,8 @@ use push_down_automaton::*;
 
 /// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`
 #[derive(Debug, PartialEq)]
-pub struct Dict<S, I: Instruction<S>, T: Eq + Hash, W: Eq + Ord>{
-    map: HashMap<NFATransition<usize, T, W>, Transition<S, I, T, W>>,
+pub struct Dict<I: Instruction, T: Eq + Hash, W: Eq + Ord>{
+    map: HashMap<NFATransition<usize, T, W>, Transition<I, T, W>>,
 }
 
 /// `Transition` equivalent for `NFA`
@@ -107,7 +107,7 @@ impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> PartialEq for NFATransition<S, T, 
     }
 }
 
-impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W>{
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W> {
     fn hash<H: Hasher>(&self, state: &mut H){
         self.from_state.hash(state);
         self.to_state.hash(state);
@@ -115,16 +115,16 @@ impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W>{
     }
 }
 
-impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W>{}
+impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W> {}
 
-impl<S: Clone + Debug, I: Instruction<S> + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Clone + Ord + Debug> Dict<S, I, T, W>{
-    pub fn new(map : HashMap<NFATransition<usize, T, W>, Transition<S, I, T, W>>)->Self{
+impl<I: Instruction + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Clone + Ord + Debug> Dict<I, T, W> {
+    pub fn new(map: HashMap<NFATransition<usize, T, W>, Transition<I, T, W>>)->Self {
         Dict{
             map: map,
         }
     }
 
-    pub fn translate(&self, v: Vec<NFATransition<usize, T, W>>)-> Vec<Transition<S, I, T, W>>{
+    pub fn translate(&self, v: Vec<NFATransition<usize, T, W>>)-> Vec<Transition<I, T, W>> {
         let mut outv = Vec::new();
         for t in v{
             match self.map.get(&t){
@@ -148,7 +148,7 @@ pub struct NFARecogniser<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> 
     //used: HashSet<Configuration<S, T, W>>,
 }
 
-impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> NFARecogniser<S, T, W>{
+impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> NFARecogniser<S, T, W> {
     fn accepts(&self, c: &Configuration<S, T, W>)-> bool{
         self.accepting.contains(&c.storage) && c.word.is_empty()
     }
@@ -184,9 +184,9 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
 /// Creates a `NFA` from a `PushDownAutomaton` including `Dict` to translate it back. Returns `None` when a `Replace` instruction is found
 pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
                T: PartialEq + Eq + Hash + Clone + Debug,
-               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>) -> Option<(NFA<usize, T, W>, Dict<PushDown<A>, PushDownInstruction<A>, T, W>)>{
+               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>) -> Option<(NFA<usize, T, W>, Dict<PushDownInstruction<A>, T, W>)>{
     let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
-    let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDown<A>, PushDownInstruction<A>, T, W>> = HashMap::new();
+    let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();
     let mut to_do = Vec::new();
     let mut states = HashSet::new();
     let mut initial_states = HashSet::new();
@@ -194,8 +194,8 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
 
     let mut transitions = HashMap::new();
 
-    initial_states.insert(integeriser.integerise(a.initial().clone()));
-    to_do.push(a.initial().clone());
+    initial_states.insert(integeriser.integerise(a.initial.clone()));
+    to_do.push(a.initial.clone());
 
     while let Some(c) = to_do.pop(){
         let ci = integeriser.integerise(c.clone());
@@ -203,7 +203,7 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transitions().get(c.current_symbol()) {
+        if let Some(rs) = a.transitions.get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {
