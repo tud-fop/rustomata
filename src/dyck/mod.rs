@@ -13,15 +13,15 @@ pub enum Bracket<A: PartialEq> {
 
 /// Reckognizes a bracket word as element of the Dyck language over the set of elements in `A`.
 /// Minimal implementation using `Vec`.
-pub fn recognize<A: PartialEq>(word: Vec<Bracket<A>>) -> bool {
-    let mut stack: Vec<A> = Vec::new();
+pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
+    let mut stack: Vec<&A> = Vec::new();
 
     for bracket in word {
         match bracket {
-            Bracket::Open(symbol) => {
+            &Bracket::Open(ref symbol) => {
                 stack.push(symbol);
             }
-            Bracket::Close(symbol) => match stack.pop() {
+            &Bracket::Close(ref symbol) => match stack.pop() {
                 None => return false,
                 Some(symbol_) => if symbol != symbol_ {
                     return false;

@@ -10,12 +10,26 @@ use pmcfg::{PMCFG, PMCFGRule, VarT};
 use dyck::multiple::{Bracket, MultipleDyckLanguage};
 use openfsa::fsa::{Arc, Automaton, generator};
 use log_domain::LogDomain;
+use dyck;
 
 use util::partition::Partition;
 
 /// A derivation tree of PMCFG rules.
 #[derive(PartialEq, Debug)]
 pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>);
+
+impl<'a, N: 'a, T: 'a> Derivation<'a, N, T> {
+    pub fn weight(&self) -> LogDomain<f32> {
+        let mut dweight = LogDomain::one();
+        let &Derivation(ref map) = self;
+        
+        for &&PMCFGRule{ weight, .. } in map.values() {
+            dweight = dweight * weight;
+        }
+        
+        dweight
+    }
+} 
 
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -126,6 +140,9 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                 vec![BTreeSet::new(); rule.tail.len()];
 
             for (component, composition) in rule.composition.composition.iter().enumerate() {
+                let rule_prob = comp_prob.pow( 
+                    1f32 / ((composition.iter().filter(|x| x.is_var()).count() + 1) as f32)
+                );
                 let mut first = Bracket::Open(BracketContent::Component(rule_id, component));
                 let mut from = Bracket::Open((rule.head.clone(), component));
                 let mut current_sequence = Vec::new();
@@ -147,7 +164,7 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                                 from,
                                 Bracket::Open((rule.tail[*i].clone(), *j)),
                                 bracketword,
-                                comp_prob,
+                                rule_prob,
                             ));
 
                             from = Bracket::Close((rule.tail[*i].clone(), *j));
@@ -169,7 +186,7 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
                     from,
                     Bracket::Close((rule.head.clone(), component)),
                     bracketword,
-                    comp_prob,
+                    rule_prob,
                 ));
             }
 
@@ -262,6 +279,7 @@ impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::st
             ref rules,
             ..
         } = self;
+
         CSGenerator {
             candidates: generator.clone().intersect(&filter).generate(n),
             checker: MultipleDyckLanguage::new(dyck),
@@ -317,10 +335,19 @@ impl<
             ref checker,
             rules,
         } = self;
+
+        let mut cans = 0;
+        let mut dycks = 0;
+
         for candidate_batch in candidates {
-            for candidate in candidate_batch {
-                if checker.recognize(&candidate) {
-                    return Some(CSRepresentation::from_brackets(rules, candidate));
+            for (candidate, weight) in candidate_batch {
+                cans += 1;
+                if dyck::recognize(&candidate){
+                    dycks += 1;
+                    if checker.recognize(&candidate) {
+                        eprintln!("found after {} candidates, where {} were dyck words", cans, dyck);
+                        return Some(CSRepresentation::from_brackets(rules, candidate));
+                    }
                 }
             }
         }
