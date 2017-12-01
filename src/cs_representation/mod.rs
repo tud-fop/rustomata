@@ -14,6 +14,11 @@ use dyck;
 
 use util::partition::Partition;
 
+pub mod generator_automaton;
+use cs_representation::generator_automaton::GeneratorStrategy;
+
+use std::fmt::{Display, Formatter, Error};
+
 /// A derivation tree of PMCFG rules.
 #[derive(PartialEq, Debug)]
 pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>);
@@ -93,6 +98,18 @@ pub enum BracketContent<T> {
     Variable(usize, usize, usize),
 }
 
+impl<T> Display for BracketContent<T>
+where T: Display
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            &BracketContent::Terminal(ref t) => write!(f, "_{{{}}}", t),
+            &BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
+            &BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{}, {}}}^{}", rule_id, i, j)
+        }
+    }
+}
+
 /// A cs representation of a grammar contains a generator automaton and a Dyck language.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CSRepresentation<N: Eq + Hash + Clone, T: Ord + Hash + Clone> {
@@ -107,117 +124,83 @@ pub struct CSRepresentation<N: Eq + Hash + Clone, T: Ord + Hash + Clone> {
     epsilon_brackets: Vec<BracketContent<T>>,
 }
 
-// implements ~(σ₁…σₙ) = ⟨σ₁⟩σ₁…⟨σₙ⟩σₙ
-fn terminal_brackets<T: PartialEq + Clone>(terminals: &[T]) -> Vec<Bracket<BracketContent<T>>> {
-    let mut result = Vec::new();
-
-    for t in terminals {
-        result.push(Bracket::Open(BracketContent::Terminal(t.clone())));
-        result.push(Bracket::Close(BracketContent::Terminal(t.clone())));
-    }
-
-    result
-}
-
-impl<N: Eq + Hash + Clone + ::std::fmt::Debug, T: Ord + Eq + Hash + Clone + ::std::fmt::Debug>
-    CSRepresentation<N, T> {
-    ///
-    pub fn new<G: Into<MCFG<N, T, LogDomain<f32>>>>(grammar: G) -> Self {
-        let mcfg = grammar.into();
-
-        let mut rules = HashIntegeriser::new();
-        let mut alphabet = HashSet::new();
-        let mut partition: Vec<BTreeSet<BracketContent<T>>> = Vec::new();
-        let mut arcs = Vec::new();
-        let mut epsilon_brackets = Vec::new();
-
-        for rule in mcfg.rules {
-            let comp_prob = rule.weight.pow(
-                1f32 / rule.composition.composition.len() as f32,
-            );
-            let rule_id = rules.integerise(rule.clone());
-            let mut variable_brackets: Vec<BTreeSet<BracketContent<T>>> =
-                vec![BTreeSet::new(); rule.tail.len()];
-
-            for (component, composition) in rule.composition.composition.iter().enumerate() {
-                let rule_prob = comp_prob.pow( 
-                    1f32 / ((composition.iter().filter(|x| x.is_var()).count() + 1) as f32)
-                );
-                let mut first = Bracket::Open(BracketContent::Component(rule_id, component));
-                let mut from = Bracket::Open((rule.head.clone(), component));
-                let mut current_sequence = Vec::new();
-                for symbol in composition {
-                    match *symbol {
-                        VarT::T(ref t) => {
-                            current_sequence.push(t.clone());
-                            alphabet.insert(t.clone());
-                        }
-                        VarT::Var(ref i, ref j) => {
-                            let mut bracketword = terminal_brackets(current_sequence.as_slice());
-                            bracketword.insert(0, first);
-                            bracketword.push(Bracket::Open(
-                                BracketContent::Variable(rule_id, *i, *j),
-                            ));
-                            current_sequence = Vec::new();
-
-                            arcs.push(Arc::new(
-                                from,
-                                Bracket::Open((rule.tail[*i].clone(), *j)),
-                                bracketword,
-                                rule_prob,
-                            ));
-
-                            from = Bracket::Close((rule.tail[*i].clone(), *j));
-                            first = Bracket::Close(BracketContent::Variable(rule_id, *i, *j));
-
-                            if let Some(cell) = variable_brackets.get_mut(*i) {
-                                    cell.insert(BracketContent::Variable(rule_id, *i, *j));
+fn get_partition<N, T, F>(rules: &HashIntegeriser<PMCFGRule<N, T, F>>) -> Vec<BTreeSet<BracketContent<T>>> 
+where
+    T: Clone + Hash + Eq + Ord,
+    N: Clone + Hash + Eq + Ord,
+    F: Clone
+{
+    let mut cells = Vec::new();
+    let mut terminals = HashSet::new();
+    
+    for rule_id in 0..(rules.size()) {
+        let rule = rules.find_value(rule_id).unwrap();
+        cells.push(
+            (0..(rule.composition.composition.len())).map(|j| BracketContent::Component(rule_id, j)).collect()
+        );
+        cells.extend(
+            {
+                let mut succs = vec![BTreeSet::new();rule.tail.len()];
+                for symbol in rule.composition.composition.iter().flat_map(|x| (*x).iter()) {
+                    match symbol {
+                        &VarT::T(ref t) => {
+                            if !terminals.contains(t) {
+                                terminals.insert(t.clone());
                             }
+                        },
+                        &VarT::Var(i, j) => {
+                            succs[i].insert(BracketContent::Variable(rule_id, i, j));
                         }
                     }
                 }
-                let mut bracketword = terminal_brackets(current_sequence.as_slice());
-                bracketword.insert(0, first);
-                bracketword.push(Bracket::Close(
-                    BracketContent::Component(rule_id, component),
-                ));
-
-                arcs.push(Arc::new(
-                    from,
-                    Bracket::Close((rule.head.clone(), component)),
-                    bracketword,
-                    rule_prob,
-                ));
+                succs.into_iter()
             }
+        )
+    }
+    cells.extend(
+        terminals.into_iter().map(|t| vec![BracketContent::Terminal(t)].into_iter().collect())
+    );
 
-            partition.extend(variable_brackets.clone().into_iter());
-            epsilon_brackets.extend(variable_brackets.iter().flat_map(|x| x.iter()).cloned());
+    cells
+}
 
-            // parition of component brackets
-            let component_brackets: BTreeSet<BracketContent<T>> =
-                (0..rule.composition.composition.len())
-                    .map(|comp| BracketContent::Component(rule_id, comp))
-                    .collect();
-            partition.push(component_brackets.clone());
-            epsilon_brackets.extend(component_brackets.into_iter());
+fn epsilon_brackets<T>(cells: &[BTreeSet<BracketContent<T>>]) -> Vec<BracketContent<T>>
+where
+    T: Clone
+{
+    let mut bracks = Vec::new();
+    for cell in cells {
+        if cell.iter().any(| bc | if let &BracketContent::Terminal(_) = bc { false } else { true } ) {
+            bracks.extend(cell.iter().cloned())
         }
+    }
+    bracks
+}
 
-        // unary partitions for terminals
-        for symbol in alphabet {
-            partition.push(vec![BracketContent::Terminal(symbol)].into_iter().collect());
+impl<N, T> CSRepresentation<N, T>
+where
+    N: Eq + Hash + Clone + ::std::fmt::Debug,
+    T: Ord + Eq + Hash + Clone + ::std::fmt::Debug
+{
+    ///
+    pub fn new<G: Into<MCFG<N, T, LogDomain<f32>>>>(strat: GeneratorStrategy, grammar: G) -> Self
+    where
+        N: Ord + Clone + Eq,
+        T: Ord + Clone + Eq
+    {
+        let MCFG{ rules, initial } = grammar.into();
+        let mut rulemap = HashIntegeriser::new();
+        for rule in rules {
+            rulemap.integerise(rule);
         }
-        let r = Automaton::from_arcs(
-            &Bracket::Open((mcfg.initial.clone(), 0)),
-            &[Bracket::Close((mcfg.initial.clone(), 0))],
-            arcs.as_slice(),
-        );
-        let md = Partition::new(partition).unwrap();
-
-        CSRepresentation {
-            generator: r,
-            dyck: md,
-            rules,
-            epsilon_brackets,
+        let cells = get_partition(&rulemap);
+        let eps = epsilon_brackets(&cells);
+        
+        CSRepresentation{
+            generator: strat.fsa(&rulemap, initial),
+            dyck: Partition::new(cells).unwrap(),
+            rules: rulemap,
+            epsilon_brackets: eps
         }
     }
 
@@ -345,7 +328,7 @@ impl<
                 if dyck::recognize(&candidate){
                     dycks += 1;
                     if checker.recognize(&candidate) {
-                        eprintln!("found after {} candidates, where {} were dyck words", cans, dyck);
+                        eprintln!("found after {} candidates, where {} were dyck words", cans, dycks);
                         return Some(CSRepresentation::from_brackets(rules, candidate));
                     }
                 }
@@ -368,6 +351,7 @@ mod test {
         use super::LogDomain;
         use super::Derivation;
         use super::MCFG;
+        use super::GeneratorStrategy;
 
         let grammar = MCFG {
             initial: "S",
@@ -399,13 +383,13 @@ mod test {
         );
 
         assert_eq!(
-            CSRepresentation::new(grammar.clone())
+            CSRepresentation::new(GeneratorStrategy::Naive, grammar.clone())
                 .generate(vec!['A'], 2usize)
                 .next(),
             Some(d1)
         );
         assert_eq!(
-            CSRepresentation::new(grammar.clone())
+            CSRepresentation::new(GeneratorStrategy::Naive, grammar.clone())
                 .generate(vec!['A', 'A'], 2usize)
                 .next(),
             Some(d2)

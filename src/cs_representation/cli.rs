@@ -1,24 +1,32 @@
 extern crate serde_json;
 extern crate bincode;
 
-use clap::{SubCommand, App, Arg, ArgMatches};
+use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
 use std::io::{stdin, stdout, Read};
 use std::fs::File;
 
 use PMCFG;
 use log_domain::LogDomain;
 use cs_representation::CSRepresentation;
+use cs_representation::generator_automaton::GeneratorStrategy;
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
         .about("Chomsky-Schützenberger representation of MCFGs")
             .subcommand(SubCommand::with_name("from-mcfg")
                 .about("Reads a grammar from stdin and prints an object
-                        that represents the grammar.")
-                .arg(Arg::with_name("pretty")
-                    .short("p").long("pretty")
-                    .takes_value(false)
-                    .help("Prints a readable format (json).")
+                        that Chomsky-Schützenberger-represents the grammar.")
+                .group(ArgGroup::with_name("strategy"))
+                .arg(Arg::with_name("naive")
+                    .help("Use a naive Generator automaton.")
+                    .long("naive")
+                    .group("strategy")
+                )
+                .arg(Arg::with_name("approx")
+                    .help("Use a regular approximation of a Dyck language as Generator automaton.")
+                    .long("dyck-approximation")
+                    .group("strategy")
+                    .takes_value(true)
                 )
             )
             .subcommand(SubCommand::with_name("parse")
@@ -27,7 +35,7 @@ pub fn get_sub_command(name: &str) -> App {
                 .arg(Arg::with_name("csfile")
                     .required(true)
                     .index(1)
-                    .help("The file that contains the CS representatino of a grammar.")
+                    .help("The file that contains the CS representation of a grammar.")
                 )
                 .arg(Arg::with_name("step")
                     .required(false)
@@ -48,6 +56,32 @@ pub fn get_sub_command(name: &str) -> App {
                     .help("The word to parse.")
                 )
             )
+            .subcommand(SubCommand::with_name("show")
+                .about("Shows details about the generator automaton and the partition
+                        associated with a Chomsky-Schützenberger representation of a gramar.")
+                .arg(Arg::with_name("file")
+                    .required(false)
+                    .short("f").long("file")
+                    .takes_value(true)
+                    .help("The file that contains the CS representation of a grammar.")
+                )
+                .subcommand(SubCommand::with_name("automaton")
+                    .about("Show details about the Generator automaton.")
+                    .arg(Arg::with_name("dump")
+                        .help("Dump a binary file readable using OpenFst.")
+                        .short("b").long("binary")
+                    )
+                    .arg(Arg::with_name("symbols")
+                        .help("Dump the symbol table to the specified file.")
+                        .takes_value(true)
+                        .requires("dump")
+                        .short("s").long("symbols")
+                    )
+                )
+                .subcommand(SubCommand::with_name("partition")
+                    .about("Show the partition that represents the multiple Dyck language.")
+                )
+            )
 }
 
 pub fn handle_sub_matches(submatches: &ArgMatches) {
@@ -61,13 +95,55 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 "Could not decode the grammar provided via stdin.",
             );
 
-            let csrep: CSRepresentation<String, String> = CSRepresentation::new(grammar);
+            let strategy = {
+                if params.is_present("strategy") {
+                    if params.is_present("naive"){
+                        GeneratorStrategy::Naive
+                    } else if let Some(depth) = params.value_of("approx") {
+                        GeneratorStrategy::Approx(depth.parse::<usize>()
+                            .expect("Please pass a natural number along with `--dyck-approximation`"))
+                    } else {
+                        GeneratorStrategy::Approx(1)
+                    }
+                } else {
+                    GeneratorStrategy::Approx(1)
+                }
+            };
+
+            let csrep: CSRepresentation<String, String> = CSRepresentation::new(strategy, grammar);
 
             if params.is_present("pretty") {
                 println!("{:?}", csrep.generator.to_arcs());
             } else {
                 bincode::serialize_into(&mut stdout(), &csrep, bincode::Infinite).unwrap();
             }
+        }
+        ("show", Some(params)) => {
+            
+            let csrep: CSRepresentation<String, String> = 
+                if let Some(filename) = params.value_of("file") {
+                    let mut file = File::open(filename).expect("Could not open file.");
+                    bincode::deserialize_from(&mut file, bincode::Infinite).expect("Could not deserialize contents of file.")
+                } else {
+                    bincode::deserialize_from(&mut stdin(), bincode::Infinite).expect("Could not deserialize contents stdin.")
+                };
+
+            match params.subcommand() {
+                ("automaton", Some(subparams)) => {
+                    if subparams.is_present("dump") {
+                        csrep.generator.write_binary(&mut stdout()).expect("Could not write automaton to stdout.");
+                        if let Some(sym) = subparams.value_of("symbols") {
+                            csrep.generator.write_symbols(&mut File::create(sym).expect("Could not open file.")).expect("Could not write to file.");
+                        }
+                    } else {
+                        println!("{}", csrep.generator);
+                    }
+
+                },
+                _ => ()
+            }
+
+
         }
         ("parse", Some(params)) => {
             let mut word_strings = String::new();

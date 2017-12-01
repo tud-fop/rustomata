@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 
 /// A bracket with some annotation of type `A`.
-#[derive(PartialEq, Debug, Eq, Clone, Hash, Serialize, Deserialize)]
+#[derive(PartialEq, PartialOrd, Debug, Eq, Clone, Hash, Serialize, Deserialize, Ord)]
 pub enum Bracket<A: PartialEq> {
     Open(A),
     Close(A),
@@ -35,12 +35,13 @@ pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
 
 /// Reckognizes a bracket word as element of the Dyck language over the set of elements in `A`.
 /// Implementation using `PushDownAutomaton`.
-pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
+pub fn recognize_with_pda<A>(
     alphabet: Vec<A>,
     word: Vec<Bracket<A>>,
-) -> bool {
+) -> bool 
+where A: Ord + Hash + Debug + Clone + PartialOrd + PartialEq + Eq
+{
     use PushDownInstruction::Replace;
-    use std::marker::PhantomData;
     use Transition;
     use PushDown;
     use PushDownAutomaton;
@@ -55,7 +56,6 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
                 current_val: vec![None],
                 new_val: vec![None, Some(alpha.clone())],
             },
-            _dummy: PhantomData,
         });
         instructions.push(Transition {
             word: vec![Bracket::Close(alpha.clone())],
@@ -64,7 +64,6 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
                 current_val: vec![Some(alpha.clone()), None],
                 new_val: vec![None],
             },
-            _dummy: PhantomData,
         });
         for beta in &alphabet {
             instructions.push(Transition {
@@ -74,7 +73,6 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
                     current_val: vec![Some(beta.clone())],
                     new_val: vec![Some(beta.clone()), Some(alpha.clone())],
                 },
-                _dummy: PhantomData,
             });
             instructions.push(Transition {
                 word: vec![Bracket::Close(alpha.clone())],
@@ -83,7 +81,6 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
                     current_val: vec![Some(alpha.clone()), Some(beta.clone())],
                     new_val: vec![Some(beta.clone())],
                 },
-                _dummy: PhantomData,
             });
         }
     }
@@ -95,6 +92,23 @@ pub fn recognize_with_pda<A: Ord + Hash + Debug + Clone>(
     let ffc = automaton.recognise(word).next();
 
     ffc.is_some()
+}
+
+use std::fmt::{Display, Formatter, Error};
+
+impl<T> Display for Bracket<T>
+where T: Display + PartialEq
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            &Bracket::Open(ref t) => {
+                write!(f, "⟨{}", t)
+            },
+            &Bracket::Close(ref t) => {
+                write!(f, "{}⟩", t)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -109,10 +123,10 @@ mod tests {
         ];
 
         for dyckword in words.into_iter() {
-            assert!(super::recognize(dyckword));
+            assert!(super::recognize(&dyckword));
         }
 
-        assert!(super::recognize(vec![
+        assert!(super::recognize(&vec![
             Open("eins"),
             Close("eins"),
             Open("zwei"),

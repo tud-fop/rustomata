@@ -21,7 +21,9 @@ pub enum MultipleDyckInstruction<T: Ord> {
 }
 
 
-impl<T: Clone + Ord> Instruction<TreeStack<MDTreeElem<T>>> for MultipleDyckInstruction<T> {
+impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
+    type Storage = TreeStack<MDTreeElem<T>>;
+    
     fn apply(&self, ts: TreeStack<MDTreeElem<T>>) -> Vec<TreeStack<MDTreeElem<T>>> {
         use self::MultipleDyckInstruction::{Down, Up};
 
