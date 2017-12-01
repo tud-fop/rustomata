@@ -1,4 +1,7 @@
 use std::rc::Rc;
+use std::hash::Hash;
+use recognisable::int_automaton::Integerisable1;
+use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
 #[derive(Debug, Clone)]
@@ -101,6 +104,20 @@ impl<A: Clone> TreeStack<A> {
             },
             None => Err(self),
         }
+    }
+}
+
+
+impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
+    type AInt = TreeStack<usize>;
+    type I = HashIntegeriser<A>;
+
+    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
+        self.map_mut(&mut move |v| integeriser.integerise(v.clone()))
+    }
+
+    fn un_integerise(aint: &Self::AInt, integeriser: &Self::I) -> Self {
+        aint.map(&|&v| integeriser.find_value(v).unwrap().clone())
     }
 }
 

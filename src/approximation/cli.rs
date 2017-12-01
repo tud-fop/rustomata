@@ -2,9 +2,10 @@ use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
 use pmcfg::PMCFG;
 use cfg::CFG;
-use integerise::{IntegerisedAutomaton, IntTreeStackAutomaton, IntPushDownAutomaton};
-use integerise::IntApproximation;
-use approximation::{PDTopKElement, RlbElement, TTSElement};
+use recognisable::Recognisable;
+use tree_stack_automaton::TreeStackAutomaton;
+use push_down_automaton::PushDownAutomaton;
+use approximation::{Approximation, PDTopKElement, RlbElement, TTSElement};
 use approximation::equivalence_classes::EquivalenceClass;
 
 use std::io::{self, Read};
@@ -115,7 +116,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntPushDownAutomaton::from(g);
+                    let a = PushDownAutomaton::from(g);
 
                     let classes_file_name = parse_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name).unwrap();
@@ -144,7 +145,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let g: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntPushDownAutomaton::from(g);
+                    let a = PushDownAutomaton::from(g);
 
                     let classes_file_name = parse_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name).unwrap();
@@ -177,7 +178,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                         .parse::<usize>()
                         .unwrap();
 
-                    let a = IntPushDownAutomaton::from(g);
+                    let a = PushDownAutomaton::from(g);
 
                     let ptk = PDTopKElement::new(size);
 
@@ -206,7 +207,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                         .parse::<usize>()
                         .unwrap();
 
-                    let a = IntPushDownAutomaton::from(g);
+                    let a = PushDownAutomaton::from(g);
 
                     let ptk = PDTopKElement::new(size);
 
@@ -226,7 +227,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let g: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntTreeStackAutomaton::from(g);
+                    let a = TreeStackAutomaton::from(g);
 
                     let tts = TTSElement::new();
 
@@ -249,7 +250,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let g: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntTreeStackAutomaton::from(g);
+                    let a = TreeStackAutomaton::from(g);
                     let tts = TTSElement::new();
 
                     let (b, _) = a.approximation(&tts).unwrap();

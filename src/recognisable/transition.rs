@@ -3,8 +3,10 @@ use std::ops::Mul;
 use std::fmt::{self, Debug, Display};
 use std::hash::{Hash, Hasher};
 
-use automata::Instruction;
-use automata::Configuration;
+use integeriser::{HashIntegeriser, Integeriser};
+
+use recognisable::{Configuration, Instruction};
+use recognisable::int_automaton::{Integerisable1, Integerisable2};
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
 #[derive(Clone, Debug)]
@@ -12,6 +14,32 @@ pub struct Transition<I, T, W> {
     pub word: Vec<T>,
     pub weight: W,
     pub instruction: I,
+}
+
+impl<I, IInt, T, W> Integerisable2 for Transition<I, T, W>
+    where I: Integerisable1<AInt=IInt>,
+          T: Clone + Eq + Hash,
+          W: Clone,
+{
+    type AInt = Transition<IInt, usize, W>;
+    type I1 = HashIntegeriser<T>;
+    type I2 = I::I;
+
+    fn integerise(&self, integeriser1: &mut Self::I1, integeriser2: &mut Self::I2) -> Self::AInt {
+        Transition {
+            word: self.word.iter().map(|t| integeriser1.integerise(t.clone())).collect(),
+            weight: self.weight.clone(),
+            instruction: self.instruction.integerise(integeriser2),
+        }
+    }
+
+    fn un_integerise(v: &Self::AInt, integeriser1: &Self::I1, integeriser2: &Self::I2) -> Self {
+        Transition {
+            word: v.word.iter().map(|i| integeriser1.find_value(*i).unwrap().clone()).collect(),
+            weight: v.weight.clone(),
+            instruction: I::un_integerise(&v.instruction, integeriser2),
+        }
+    }
 }
 
 impl<I, T, W> Hash for Transition<I, T, W>

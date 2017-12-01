@@ -11,10 +11,13 @@ use nfa::*;
 
 use log_domain::LogDomain;
 
+use approximation::Approximation;
 use approximation::tts::TTSElement;
 use approximation::relabel::{RlbElement, EquivalenceClass};
 use approximation::ptk::PDTopKElement;
-use integerise::*;
+use recognisable::Recognisable;
+
+use tree_stack_automaton::TreeStackAutomaton;
 
 /// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
 /// Does not test words that are longer than twenty
@@ -38,7 +41,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     // creates all automata that are to be used
     eprintln!("Automaton");
     let at_start = PreciseTime::now();
-    let automaton = IntTreeStackAutomaton::from(grammar);
+    let automaton = TreeStackAutomaton::from(grammar);
     let at_1 = PreciseTime::now();
     eprintln!("TTS");
     let (app1, ntts) = automaton.approximation(&tts).unwrap();
@@ -50,7 +53,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     let (app3, nptk) = app2.approximation(&ptk).unwrap();
     let at_4 = PreciseTime::now();
     eprintln!("NFA");
-    let nfa_s = if no_nfa { None } else { from_pd(&app3.automaton) };
+    let nfa_s = if no_nfa { None } else { from_pd(&app3) };
     let at_end = PreciseTime::now();
 
     // save times for initial startup
@@ -95,7 +98,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     if no_nfa {
         for (sentence, word) in to_check {
             eprintln!("{}:", sentence);
-            let mut r_set = HashSet::new();
+            let mut r_set: HashSet<Vec<_>> = HashSet::new();
             let mut same = true;
             //No approximation
             eprintln!("no Approximation");
@@ -103,7 +106,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             for parse in automaton.recognise(word.clone()).take(limit) {
                 //eprintln!("{}", Run::new(parse.translate().1));
                 eprintln!("Found run");
-                r_set.insert(parse.translate().1);
+                r_set.insert(parse.1.into());
             }
             let p1_end = PreciseTime::now();
 
@@ -112,11 +115,11 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let p2_start = PreciseTime::now();
             let mut c = 0;
             for parse3 in app1.recognise(word.clone()).take(limit1) {
-                let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                 for parse4 in s3 {
                     //eprintln!("{}", Run::new(parse4.translate().1));
                     eprintln!("Found run");
-                    if !r_set.contains(&parse4.translate().1){
+                    if !r_set.contains(&parse4.1){
                         same = false;
                     }
                     c += 1;
@@ -136,13 +139,13 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let mut c = 0;
             let mut c1 = 0;
             for parse2 in app2.recognise(word.clone()).take(limit2) {
-                let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                let s2 = coarse_to_fine::ctf_level(parse2.1.into(), &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                     for parse4 in s3{
                         //eprintln!("{}", Run::new(parse4.translate().1));
                         eprintln!("Found run");
-                        if !r_set.contains(&parse4.translate().1){
+                        if !r_set.contains(&parse4.1){
                             same = false;
                         }
                         c += 1;
@@ -168,15 +171,15 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let mut c1 = 0;
             let mut c2 = 0;
             for parse1 in app3.recognise(word.clone()).take(limit3) {
-                let s1 = coarse_to_fine::ctf_level_i(parse1.give_up().1, &nptk, &app2);
+                let s1 = coarse_to_fine::ctf_level(parse1.1.into(), &nptk, &app2);
                 for parse2 in s1{
-                    let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                    let s2 = coarse_to_fine::ctf_level(parse2.1.into(), &nrlb, &app1);
                     for parse3 in s2{
-                        let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                        let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                         for parse4 in s3{
                             //eprintln!("{}", Run::new(parse4.translate().1));
                             eprintln!("Found run");
-                            if !r_set.contains(&parse4.translate().1){
+                            if !r_set.contains(&parse4.1){
                                 same = false;
                             }
                             c += 1;
@@ -216,7 +219,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     } else {
         let (nfa, nfa_dict) = nfa_s.unwrap();
         for (sentence, word) in to_check {
-            let mut r_set = HashSet::new();
+            let mut r_set: HashSet<Vec<_>> = HashSet::new();
             let mut same = true;
             eprintln!("{}:", sentence);
 
@@ -226,7 +229,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             for parse in automaton.recognise(word.clone()).take(limit) {
                 //eprintln!("{}", Run::new(parse.translate().1));
                 eprintln!("Found run");
-                r_set.insert(parse.translate().1);
+                r_set.insert(parse.1.into());
             }
             let p1_end = PreciseTime::now();
 
@@ -235,11 +238,11 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let p2_start = PreciseTime::now();
             let mut c = 0;
             for parse3 in app1.recognise(word.clone()).take(limit1) {
-                let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                 for parse4 in s3{
                     //eprintln!("{}", Run::new(parse4.translate().1));
                     eprintln!("Found run");
-                    if !r_set.contains(&parse4.translate().1){
+                    if !r_set.contains(&parse4.1){
                         same = false;
                     }
                     c += 1;
@@ -259,13 +262,13 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let mut c = 0;
             let mut c1 = 0;
             for parse2 in app2.recognise(word.clone()).take(limit2) {
-                let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                let s2 = coarse_to_fine::ctf_level(parse2.1.into(), &nrlb, &app1);
                 for parse3 in s2{
-                    let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                     for parse4 in s3{
                         //eprintln!("{}", Run::new(parse4.translate().1));
                         eprintln!("Found run");
-                        if !r_set.contains(&parse4.translate().1){
+                        if !r_set.contains(&parse4.1){
                             same = false;
                         }
                         c += 1;
@@ -291,15 +294,15 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let mut c1 = 0;
             let mut c2 = 0;
             for parse1 in app3.recognise(word.clone()).take(limit3) {
-                let s1 = coarse_to_fine::ctf_level_i(parse1.give_up().1, &nptk, &app2);
+                let s1 = coarse_to_fine::ctf_level(parse1.1.into(), &nptk, &app2);
                 for parse2 in s1{
-                    let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                    let s2 = coarse_to_fine::ctf_level(parse2.1.into(), &nrlb, &app1);
                     for parse3 in s2{
-                        let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                        let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                         for parse4 in s3{
                             //eprintln!("{}", Run::new(parse4.translate().1));
                             eprintln!("Found run");
-                            if !r_set.contains(&parse4.translate().1){
+                            if !r_set.contains(&parse4.1){
                                 same = false;
                             }
                             c += 1;
@@ -329,17 +332,17 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             let mut c = 0;
             let mut c1 = 0;
             let mut c2 = 0;
-            for parsenfa in nfa.recognise(&app3.int_word(word)).take(limit3) {
+            for parsenfa in nfa.recognise(&word).take(limit3) {
                 let parse1 = nfa_dict.translate(parsenfa.1);
-                let s1 = coarse_to_fine::ctf_level_i(parse1, &nptk, &app2);
+                let s1 = coarse_to_fine::ctf_level(parse1, &nptk, &app2);
                 for parse2 in s1{
-                    let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &app1);
+                    let s2 = coarse_to_fine::ctf_level(parse2.1.into(), &nrlb, &app1);
                     for parse3 in s2{
-                        let s3 = coarse_to_fine::ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                        let s3 = coarse_to_fine::ctf_level(parse3.1.into(), &ntts, &automaton);
                         for parse4 in s3{
                             //eprintln!("{}", Run::new(parse4.translate().1));
                             eprintln!("Found run");
-                            if !r_set.contains(&parse4.translate().1){
+                            if !r_set.contains(&parse4.1){
                                 same = false;
                             }
                             c += 1;

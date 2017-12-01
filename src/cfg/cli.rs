@@ -1,7 +1,8 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
 use cfg::CFG;
-use integerise::{IntegerisedAutomaton, IntPushDownAutomaton};
+use recognisable::Recognisable;
+use push_down_automaton::PushDownAutomaton;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -49,7 +50,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
             let _ = grammar_file.read_to_string(&mut grammar_string);
             let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
-            let automaton = IntPushDownAutomaton::from(grammar);
+            let automaton = PushDownAutomaton::from(grammar);
 
             let mut corpus = String::new();
             let _ = io::stdin().read_to_string(&mut corpus);
@@ -62,12 +63,12 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
                             .recognise_beam_search(b.parse().unwrap(), word)
                             .take(n)
                         {
-                            println!("{:?}", parse.translate().0);
+                            println!("{:?}", parse.0);
                         }
                     }
                     None => {
                         for parse in automaton.recognise(word).take(n) {
-                            println!("{:?}", parse.translate().0);
+                            println!("{:?}", parse.0);
                         }
                     }
                 };
@@ -81,7 +82,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
             let _ = grammar_file.read_to_string(&mut grammar_string);
             let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
-            let automaton = IntPushDownAutomaton::from(grammar);
+            let automaton = PushDownAutomaton::from(grammar);
             println!("{}", automaton);
         }
         _ => (),

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
 
-use automata::{Transition, TransitionKey};
+use recognisable::{Transition, TransitionKey};
 use approximation::*;
 pub use approximation::equivalence_classes::EquivalenceClass;
 use push_down_automaton::*;

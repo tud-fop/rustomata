@@ -9,8 +9,8 @@ use std::vec::Vec;
 use num_traits::{One, Zero};
 use std::ops::{Add, Mul, Div};
 
-use automata::{Automaton, Configuration, Instruction, Transition};
-use automata::red::*;
+use recognisable::{self, Automaton, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::red::*;
 
 pub mod from_cfg;
 pub mod relabel;
@@ -30,8 +30,8 @@ pub struct PushDownAutomaton<A, T, W>
           T: Eq,
           W: Ord,
 {
-    pub transitions: TransitionMap<A, T, W>,
-    pub initial: PushDown<A>,
+    transitions: TransitionMap<A, T, W>,
+    initial: PushDown<A>,
 }
 
 /// Instruction on `PushDown<A>`s.
@@ -137,12 +137,13 @@ impl<A> Instruction for PushDownInstruction<A>
     }
 }
 
-impl<A, T, W> Automaton<PushDownInstruction<A>, T, W> for PushDownAutomaton<A, T, W>
+impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + PartialOrd,
           W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
 {
     type Key = A;
+    type I = PushDownInstruction<A>;
 
     fn extract_key(c: &Configuration<PushDown<A>, T, W>) -> &A {
         if c.storage.is_bottom() {
@@ -152,16 +153,32 @@ impl<A, T, W> Automaton<PushDownInstruction<A>, T, W> for PushDownAutomaton<A, T
         }
     }
 
-    fn transitions(&self) -> &TransitionMap<A, T, W> {
-        &self.transitions
+    fn transitions(&self) -> TransitionMap<A, T, W> {
+        self.transitions.clone()
     }
 
     fn initial(&self) -> PushDown<A> {
         self.initial.clone()
     }
 
-    fn is_terminal(&self, c: &Configuration<PushDown<A>, T, W>) -> bool{
+    fn is_terminal(c: &Configuration<PushDown<A>, T, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
+    }
+}
+
+impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
+    where A: Ord + PartialEq + Debug + Clone + Hash,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
+{
+    type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;
+
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
+        recognisable::automaton::recognise(self, word)
+    }
+
+    fn recognise_beam_search<'a>(&'a self, beam: usize, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
+        recognisable::automaton::recognise_beam(self, beam, word)
     }
 }
 

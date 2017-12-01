@@ -4,16 +4,19 @@ use std::vec::Vec;
 use std::str::FromStr;
 use std::num::ParseIntError;
 
-use automata;
+use recognisable::Transition;
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 
-impl<A: Ord + PartialEq + Debug + Clone + FromStr + Hash, T: Eq + FromStr, W: Eq + Ord + FromStr> FromStr
-    for TreeStackAutomaton<A, T, W> {
+impl<A, T, W> FromStr for TreeStackAutomaton<A, T, W>
+    where A: Clone + Debug + FromStr + Hash + Ord + PartialEq,
+          T: Clone + Eq + FromStr + Hash,
+          W: Clone + Eq + FromStr + Ord,
+{
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let initial: A;
-        let mut transitions: Vec<automata::Transition<TreeStackInstruction<A>, T, W>>
+        let mut transitions: Vec<Transition<TreeStackInstruction<A>, T, W>>
                 = Vec::new();
 
         let mut it = s.lines();

@@ -7,7 +7,7 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
 use self::num_traits::One;
-use automata::Transition;
+use recognisable::Transition;
 use pmcfg::{PMCFG, PMCFGRule, VarT};
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 

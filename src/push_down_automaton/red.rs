@@ -2,8 +2,7 @@ use std::fmt::Debug;
 use std::ops::{Add, Mul};
 use self::num_traits::{One, Zero};
 
-use automata;
-use automata::red::*;
+use recognisable::red::*;
 use push_down_automaton::*;
 
 type TransitionKeyMap<A, T, W> = HashMap<TransitionKey<PushDownInstruction<A>, T, W>, Vec<W>>;
@@ -31,7 +30,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
                 for w in tv.clone(){
                     nw = nw * w;
                 }
-                let new_t = automata::Transition{
+                let new_t = Transition {
                     word : tk.word.clone(),
                     weight : nw.clone(),
                     instruction : tk.instruction.clone(),
