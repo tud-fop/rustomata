@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
-use automata::*;
-use integerise::*;
+use recognisable::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::relabel::{EquivalenceClass, RlbElement};
@@ -203,7 +202,7 @@ fn test_from_str_pmcfg() {
 
     assert_eq!(Ok(g.clone()), g_string.parse());
 
-    let a = IntTreeStackAutomaton::from(g);
+    let a = TreeStackAutomaton::from(g);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
@@ -281,7 +280,7 @@ fn test_from_str_cfg() {
 
     assert_eq!(Ok(g.clone()), g_string.parse());
 
-    let a = IntPushDownAutomaton::from(g);
+    let a = PushDownAutomaton::from(g);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
@@ -309,7 +308,7 @@ fn test_relabel_pushdown() {
 
     let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
 
-    let a = IntPushDownAutomaton::from(g);
+    let a = PushDownAutomaton::from(g);
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
@@ -348,7 +347,7 @@ fn test_topk() {
 
     let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
 
-    let a = IntPushDownAutomaton::from(g);
+    let a = PushDownAutomaton::from(g);
 
     let ptk = PDTopKElement::new(4);
 
@@ -384,7 +383,7 @@ fn test_tts() {
 
     let g: PMCFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
 
-    let a = IntTreeStackAutomaton::from(g);
+    let a = TreeStackAutomaton::from(g);
 
     let tts = TTSElement::new();
 
@@ -421,7 +420,7 @@ fn test_relabel_check() {
 
     let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
 
-    let a = IntPushDownAutomaton::from(g);
+    let a = PushDownAutomaton::from(g);
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
@@ -433,11 +432,12 @@ fn test_relabel_check() {
 
     let (b, _) = a.approximation(&rlb).unwrap();
 
-    let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next().unwrap();
-    assert_ne!(None, b.check_run(&itemb.give_up().1));
+    let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next();
+    assert_ne!(None, itemb);
 
 }
 
+// TODO: Why does this test fail?
 #[test]
 fn test_ctf_scheme(){
     let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
@@ -459,7 +459,7 @@ fn test_ctf_scheme(){
 
     let g: PMCFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
 
-    let automaton = IntTreeStackAutomaton::from(g);
+    let automaton = TreeStackAutomaton::from(g);
 
     let tts = TTSElement::new();
 
@@ -496,11 +496,11 @@ fn test_ctf_scheme(){
     for sentence in corpus.lines() {
         println!("{}:\n", sentence);
         for parse1 in c.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).take(n1) {
-            let s1 = ctf_level_i(parse1.give_up().1, &nptk, &b);
+            let s1 = ctf_level(parse1.1.into(), &nptk, &b);
             for parse2 in s1{
-                let s2 = ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                let s2 = ctf_level(parse2.1.into(), &nrlb, &a);
                 for parse3 in s2{
-                    let s3 = ctf_level_i(parse3.give_up().1, &ntts, &automaton);
+                    let s3 = ctf_level(parse3.1.into(), &ntts, &automaton);
                     for parse4 in s3{
                         recog.push(parse4);
                         c4=c4+1;

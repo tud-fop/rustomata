@@ -1,4 +1,4 @@
-use automata::*;
+use recognisable::*;
 use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
 

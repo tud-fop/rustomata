@@ -1,12 +1,15 @@
 use std::fmt;
 use std::hash::Hash;
 
-use automata::Instruction;
+use recognisable::Instruction;
+use recognisable::int_automaton::Integerisable1;
 use tree_stack_automaton::TreeStack;
+
+use integeriser::{HashIntegeriser, Integeriser};
 
 
 /// Instruction on `TreeStack<A>`s.
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Hash)]
 pub enum TreeStackInstruction<A> {
     Up {
         n: usize,
@@ -19,6 +22,32 @@ pub enum TreeStackInstruction<A> {
         current_val: A,
         old_val: A,
         new_val: A,
+    }
+}
+
+
+impl<A> TreeStackInstruction<A> {
+    fn map<F, B>(&self, mut f: F) -> TreeStackInstruction<B>
+        where F: FnMut(&A) -> B
+    {
+        match *self {
+            TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } =>
+                TreeStackInstruction::Up { n: n,
+                                           current_val: f(current_val),
+                                           old_val: f(old_val),
+                                           new_val: f(new_val),
+                },
+            TreeStackInstruction::Push { n, ref current_val, ref new_val } =>
+                TreeStackInstruction::Push { n: n,
+                                             current_val: f(current_val),
+                                             new_val: f(new_val),
+                },
+            TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } =>
+                TreeStackInstruction::Down { current_val: f(current_val),
+                                             old_val: f(old_val),
+                                             new_val: f(new_val),
+                },
+        }
     }
 }
 
@@ -70,6 +99,20 @@ impl<A: Ord + PartialEq + Clone + Hash> Instruction for TreeStackInstruction<A> 
                 }
             }
         }
+    }
+}
+
+
+impl<A: Clone + Eq + Hash> Integerisable1 for TreeStackInstruction<A> {
+    type AInt = TreeStackInstruction<usize>;
+    type I = HashIntegeriser<A>;
+
+    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
+        self.map(|a| integeriser.integerise(a.clone()))
+    }
+
+    fn un_integerise(v: &Self::AInt, integeriser: &Self::I) -> Self {
+        v.map(|i| integeriser.find_value(*i).unwrap().clone())
     }
 }
 

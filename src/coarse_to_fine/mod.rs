@@ -4,14 +4,12 @@ pub mod benchmark;
 use std::collections::BinaryHeap;
 use std::cmp::Ord;
 use std::fmt::Debug;
-use std::hash::Hash;
 use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
 
-use automata::*;
+use recognisable::*;
 use approximation::*;
-use integerise::*;
 
 type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<I1, T1, W>>);
 
@@ -26,28 +24,7 @@ pub fn ctf_level<I1, I2, T, W, ST, A>
           T: Eq + Clone + Debug + PartialOrd,
           W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
           ST: ApproximationStrategy<I1, I2, T, W>,
-          A: Automaton<I1, T, W>,
-{
-    let mut outp = BinaryHeap::new();
-    for e in strat.translate_run(run) {
-        if let Some(x) = automaton.check_run(&e) {
-            outp.push(x);
-        }
-    }
-    outp
-}
-
-/// Same as `ctf_level`, but for `IntegerisedAutomaton`
-pub fn ctf_level_i<'a, I1, I2, T, A1, W, ST, A>
-    (run: Vec<Transition<I2, usize, W>>, strat: &ST, automaton: &'a A) -> BinaryHeap<(IntItem<'a, I1, T, A1, W>)>
-    where I1::Storage: Clone + Debug + Eq,
-          I1: Eq + Clone + Debug + Instruction,
-          I2: Eq + Clone + Debug + Instruction,
-          T: Eq + Clone + Debug + Hash,
-          A1: Eq + Clone + Debug + Hash,
-          W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
-          ST: ApproximationStrategy<I1, I2, usize, W>,
-          A: IntegerisedAutomaton<I1, T, A1, W>,
+          A: Automaton<T, W, I=I1>,
 {
     let mut outp = BinaryHeap::new();
     for e in strat.translate_run(run) {

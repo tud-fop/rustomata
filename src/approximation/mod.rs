@@ -11,7 +11,7 @@ pub mod tts;
 
 pub mod cli;
 
-use automata::{Instruction, Transition};
+use recognisable::{Automaton, Instruction, Transition};
 
 use push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
 use tree_stack_automaton::{TreeStackAutomaton, TreeStackInstruction};
@@ -45,18 +45,18 @@ pub trait Approximation<T, O> {
 impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           B: Ord + PartialEq + Debug + Clone + Hash,
-          T: Eq + Clone +Hash,
-          W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: Ord + Eq + Clone + Copy + Debug + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
           S: Clone + ApproximationStrategy<PushDownInstruction<A>, PushDownInstruction<B>, T, W>
 {
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
         let mut strat = strati.clone();
-        let initial = strat.approximate_initial(self.initial.clone());
+        let initial = strat.approximate_initial(self.initial());
 
         let mut transitions = Vec::new();
 
-        for (k, value) in self.transitions.clone(){
-            if !(k == *self.initial.empty()){
+        for (k, value) in self.transitions(){
+            if !(k == *self.initial().empty()){
                 for t in &value{
                     let b = strat.approximate_transition(t.clone());
                     transitions.push(b);

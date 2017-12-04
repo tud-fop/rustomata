@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::str::FromStr;
 
-use automata::{Instruction, Transition};
+use recognisable::{Instruction, Transition};
 
 /// Each item must be enclosed in quotation marks (i.e. `"⟨item⟩"`), `"` inside the `⟨item⟩` as well as `\` need to be escaped with `\`.
 fn vec_from_str<T: FromStr>(s: &str) -> Result<Vec<T>, String> {

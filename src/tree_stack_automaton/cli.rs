@@ -1,6 +1,6 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use automata::Automaton;
+use recognisable::Recognisable;
 use tree_stack_automaton::TreeStackAutomaton;
 
 use std::io::{self, Read};

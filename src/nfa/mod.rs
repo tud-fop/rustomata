@@ -8,7 +8,7 @@ use num_traits::One;
 
 use integeriser::{Integeriser, HashIntegeriser};
 
-use automata::*;
+use recognisable::*;
 use push_down_automaton::*;
 
 /// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`
@@ -182,9 +182,12 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug, W: One + 
 }
 
 /// Creates a `NFA` from a `PushDownAutomaton` including `Dict` to translate it back. Returns `None` when a `Replace` instruction is found
-pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
-               T: PartialEq + Eq + Hash + Clone + Debug,
-               W: PartialEq + Eq + Clone + Ord + Copy + Mul<Output=W> + Debug + One>(a: &PushDownAutomaton<A, T, W>) -> Option<(NFA<usize, T, W>, Dict<PushDownInstruction<A>, T, W>)>{
+pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
+                        -> Option<(NFA<usize, T, W>, Dict<PushDownInstruction<A>, T, W>)>
+    where A: Clone + Debug + Hash + Ord + PartialEq,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord
+{
     let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
     let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();
     let mut to_do = Vec::new();
@@ -194,8 +197,8 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
 
     let mut transitions = HashMap::new();
 
-    initial_states.insert(integeriser.integerise(a.initial.clone()));
-    to_do.push(a.initial.clone());
+    initial_states.insert(integeriser.integerise(a.initial()));
+    to_do.push(a.initial());
 
     while let Some(c) = to_do.pop(){
         let ci = integeriser.integerise(c.clone());
@@ -203,7 +206,7 @@ pub fn from_pd<A: PartialEq + Hash + Ord + Clone + Debug,
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transitions.get(c.current_symbol()) {
+        if let Some(rs) = a.transitions().get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {

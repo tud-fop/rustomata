@@ -3,8 +3,10 @@ use clap::{Arg, ArgMatches, App, SubCommand};
 use std::io::{self, Read};
 use std::fs::File;
 
-use integerise::{IntPushDownAutomaton, IntTreeStackAutomaton};
-use integerise::{IntApproximation, IntegerisedAutomaton};
+use recognisable::Recognisable;
+use push_down_automaton::PushDownAutomaton;
+use tree_stack_automaton::TreeStackAutomaton;
+use approximation::Approximation;
 use approximation::ptk::PDTopKElement;
 use approximation::relabel::RlbElement;
 use approximation::tts::TTSElement;
@@ -187,7 +189,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let grammar: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntPushDownAutomaton::from(grammar);
+                    let a = PushDownAutomaton::from(grammar);
 
                     let classes_file_name = cfg_parse_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name).unwrap();
@@ -238,11 +240,11 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                                 .collect(),
                         ).take(n1)
                         {
-                            let s1 = coarse_to_fine::ctf_level_i(parse1.give_up().1, &nptk, &b);
+                            let s1 = coarse_to_fine::ctf_level(parse1.1.into(), &nptk, &b);
                             for parse2 in s1 {
-                                let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                                let s2 = coarse_to_fine::ctf_level(parse2.1, &nrlb, &a);
                                 for parse3 in s2 {
-                                    println!("{}", coarse_to_fine::Run::new(parse3.translate().1));
+                                    println!("{}", coarse_to_fine::Run::new(parse3.1));
                                     c3 += 1;
                                     if c3 >= n3 {
                                         break;
@@ -267,7 +269,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let grammar: CFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let a = IntPushDownAutomaton::from(grammar);
+                    let a = PushDownAutomaton::from(grammar);
 
                     let classes_file_name = cfg_automaton_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name).unwrap();
@@ -306,7 +308,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let grammar: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let automaton = IntTreeStackAutomaton::from(grammar);
+                    let automaton = TreeStackAutomaton::from(grammar);
 
                     let tts = TTSElement::new();
 
@@ -370,19 +372,19 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                                 .collect(),
                         ).take(n1)
                         {
-                            let s1 = coarse_to_fine::ctf_level_i(parse1.give_up().1, &nptk, &b);
+                            let s1 = coarse_to_fine::ctf_level(parse1.1.into(), &nptk, &b);
                             for parse2 in s1 {
-                                let s2 = coarse_to_fine::ctf_level_i(parse2.give_up().1, &nrlb, &a);
+                                let s2 = coarse_to_fine::ctf_level(parse2.1, &nrlb, &a);
                                 for parse3 in s2 {
-                                    let s3 = coarse_to_fine::ctf_level_i(
-                                        parse3.give_up().1,
+                                    let s3 = coarse_to_fine::ctf_level(
+                                        parse3.1,
                                         &ntts,
                                         &automaton,
                                     );
                                     for parse4 in s3 {
                                         println!(
                                             "{}",
-                                            coarse_to_fine::Run::new(parse4.translate().1)
+                                            coarse_to_fine::Run::new(parse4.1)
                                         );
                                         c4 += 1;
                                         if c4 >= n4 {
@@ -413,7 +415,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let grammar: PMCFG<String, String, LogDomain<f64>> =
                         grammar_string.parse().unwrap();
 
-                    let automaton = IntTreeStackAutomaton::from(grammar);
+                    let automaton = TreeStackAutomaton::from(grammar);
 
                     let tts = TTSElement::new();
 

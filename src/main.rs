@@ -13,10 +13,10 @@ extern crate serde;
 
 
 mod approximation;
-mod automata;
+mod recognisable;
 mod cfg;
 mod coarse_to_fine;
-mod integerise;
+// mod integerise;
 mod nfa;
 mod dyck;
 mod cs_representation;
@@ -31,7 +31,7 @@ mod tests;
 use clap::App;
 
 pub use approximation::*;
-pub use automata::*;
+pub use recognisable::*;
 pub use cfg::*;
 pub use coarse_to_fine::*;
 pub use pmcfg::*;
