@@ -168,7 +168,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
 
 impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
+          T: Clone + Debug + Eq + Hash + Ord,
           W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
 {
     type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;

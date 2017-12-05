@@ -18,10 +18,10 @@ type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<I1, T1, W>>
 /// `Vec`s of `Transition`s are accepted by the given `Automaton`.
 pub fn ctf_level<I1, I2, T, W, ST, A>
     (run: Vec<Transition<I2, T, W>>, strat: &ST, automaton: &A) -> BinaryHeap<Item<I1::Storage, I1, T, W>>
-    where I1::Storage: Clone + Debug + Eq,
+    where I1::Storage: Clone + Debug + Eq + Ord,
           I1: Eq + Clone + Debug + Instruction + PartialOrd,
           I2: Eq + Clone + Debug + Instruction,
-          T: Eq + Clone + Debug + PartialOrd,
+          T: Eq + Clone + Debug + Ord,
           W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
           ST: ApproximationStrategy<I1, I2, T, W>,
           A: Automaton<T, W, I=I1>,

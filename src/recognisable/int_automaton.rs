@@ -73,8 +73,8 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
     where A: IntAutomaton<T, W>,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq,
-          T: Clone + Debug + Eq,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          T: Clone + Debug + Eq + Ord,
           W: Copy + Debug + One + Ord,
 {
     let i = Configuration {
@@ -112,8 +112,8 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
     where A: IntAutomaton<T, W>,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq,
-          T: Clone + Debug + Eq,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          T: Clone + Debug + Eq + Ord,
           W: Copy + Debug + One + Ord,
 {
     let i = Configuration {

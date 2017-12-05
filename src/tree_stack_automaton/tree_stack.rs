@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::rc::Rc;
 use std::hash::Hash;
 use recognisable::int_automaton::Integerisable1;
@@ -176,6 +177,26 @@ impl<A: PartialEq> PartialEq for TreeStack<A> {
 }
 
 impl<A: Eq> Eq for TreeStack<A> {}
+
+impl<A: PartialOrd> PartialOrd for TreeStack<A> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.value.partial_cmp(&other.value) {
+            None | Some(Ordering::Equal) =>
+                self.children.partial_cmp(&other.children),
+            x => x,
+        }
+    }
+}
+
+impl<A: Ord> Ord for TreeStack<A> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.value.cmp(&other.value) {
+            Ordering::Equal =>
+                self.children.cmp(&other.children),
+            x => x,
+        }
+    }
+}
 
 #[test]
 fn test_tree_stack() {
