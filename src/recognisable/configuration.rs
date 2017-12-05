@@ -26,7 +26,11 @@ impl<S: PartialEq, T: PartialEq, W> PartialEq for Configuration<S, T, W> {
 
 impl<S: Eq, T: Eq, W> Eq for Configuration<S, T, W> {}
 
-impl<S: PartialOrd + Eq, T: PartialOrd + Eq, W: PartialOrd + Eq> PartialOrd for Configuration<S, T, W> {
+impl<S, T, W> PartialOrd for Configuration<S, T, W>
+    where S: PartialOrd + Eq,
+          T: PartialOrd + Eq,
+          W: PartialOrd + Eq,
+{
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {
             None | Some(Ordering::Equal) =>
@@ -43,13 +47,23 @@ impl<S: PartialOrd + Eq, T: PartialOrd + Eq, W: PartialOrd + Eq> PartialOrd for 
     }
 }
 
-impl<S: Ord + Eq, T: Ord + Eq, W: Ord + Eq> Ord for Configuration<S, T, W> {
+impl<S, T, W> Ord for Configuration<S, T, W>
+    where S: Eq + Ord,
+          T: Eq + Ord,
+          W: Eq + Ord,
+{
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.weight == other.weight{
-            other.word.len().cmp(&self.word.len())
-        }
-        else{
-            self.weight.cmp(&other.weight)
+        match self.weight.cmp(&other.weight) {
+            Ordering::Equal =>
+                match other.word.len().cmp(&self.word.len()) {
+                    Ordering::Equal =>
+                        match self.word.cmp(&other.word) {
+                            Ordering::Equal => self.storage.cmp(&other.storage),
+                            x     => x
+                        },
+                    x => x,
+                },
+            x => x,
         }
     }
 }
