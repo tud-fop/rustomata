@@ -5,6 +5,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
+use std::rc::Rc;
 use std::vec::Vec;
 
 use num_traits::One;
@@ -36,7 +37,7 @@ pub trait Automaton<T, W>
 
     fn extract_key(&Configuration<<Self::I as Instruction>::Storage, T, W>) -> &Self::Key;
 
-    fn transitions(&self) -> TransitionMap<Self::Key, Self::I, T, W>;
+    fn transitions(&self) -> Rc<TransitionMap<Self::Key, Self::I, T, W>>;
 
     fn keys(&self) -> Vec<Self::Key> {
         self.transitions().keys().cloned().collect()
@@ -76,16 +77,14 @@ pub trait Automaton<T, W>
     }
 }
 
-// kinds of recognisers
-type ExactRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K, Item<S, I, T, W>>;
-
-pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>) -> Box<ExactRecogniser<'a, <A::I as Instruction>::Storage, A::I, T, W, A::Key>>
+pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
+                              -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
           A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word,
@@ -107,15 +106,15 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>) -> Box<ExactRecogniser<'a,
     )
 }
 
-type BeamRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K, Item<S, I, T, W>>;
 
-pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>) -> Box<BeamRecogniser<'a, <A::I as Instruction>::Storage, A::I, T, W, A::Key>>
+pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
+                                   -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
           A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word,

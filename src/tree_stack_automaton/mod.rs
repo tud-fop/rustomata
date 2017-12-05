@@ -1,17 +1,19 @@
 extern crate num_traits;
 
 use std::collections::{BinaryHeap, HashMap};
+use std::convert::From;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::ops::Mul;
+use std::rc::Rc;
 use std::vec::Vec;
-use integeriser::{HashIntegeriser, Integeriser};
-use num_traits::One;
-use util::push_down::Pushdown;
-use std::convert::From;
 
+use num_traits::One;
+
+use integeriser::{HashIntegeriser, Integeriser};
 use recognisable::{self, Automaton, Configuration, Item, IntAutomaton, Recognisable, Transition};
 use recognisable::int_automaton::{Integerisable1, Integerisable2};
+use util::push_down::Pushdown;
 
 mod from_pmcfg;
 mod from_str;
@@ -37,7 +39,7 @@ pub struct TreeStackAutomaton<A, T, W>
 {
     a_integeriser: HashIntegeriser<A>,
     t_integeriser: HashIntegeriser<T>,
-    transitions: TransitionMap<usize, usize, W>,
+    transitions: Rc<TransitionMap<usize, usize, W>>,
     initial: TreeStack<usize>,
 }
 
@@ -75,7 +77,7 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
         TreeStackAutomaton {
             a_integeriser: a_inter,
             t_integeriser: t_inter,
-            transitions: transition_map,
+            transitions: Rc::new(transition_map),
             initial: init,
         }
     }
@@ -131,18 +133,18 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         TreeStack::un_integerise(&self.initial, &self.a_integeriser).clone()
     }
 
-    fn transitions(&self) -> TransitionMap<A, T, W> {
-        let mut result = HashMap::new();
+    fn transitions(&self) -> Rc<TransitionMap<A, T, W>> {
+        let mut ts = HashMap::new();
 
         for k in self.transitions.keys() {
             let mut vec = BinaryHeap::new();
             for t in &self.transitions[k] {
                 vec.push(Transition::un_integerise(t, &self.t_integeriser, &self.a_integeriser));
             }
-            result.insert(self.a_integeriser.find_value(*k).unwrap().clone(), vec);
+            ts.insert(self.a_integeriser.find_value(*k).unwrap().clone(), vec);
         }
 
-        result
+        Rc::new(ts)
     }
 
     fn is_terminal(c: &Configuration<TreeStack<A>, T, W>) -> bool{
@@ -213,7 +215,7 @@ impl<A, T, W> IntAutomaton<T, W> for TreeStackAutomaton<A, T, W>
         }
     }
 
-    fn transitions_int(&self) -> TransitionMap<usize, usize, W> {
+    fn transitions_int(&self) -> Rc<TransitionMap<usize, usize, W>> {
         self.transitions.clone()
     }
 

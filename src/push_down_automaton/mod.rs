@@ -4,10 +4,11 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use std::ops::{Add, Mul, Div};
+use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
 use num_traits::{One, Zero};
-use std::ops::{Add, Mul, Div};
 
 use recognisable::{self, Automaton, Configuration, Instruction, Item, Recognisable, Transition};
 use recognisable::red::*;
@@ -30,7 +31,7 @@ pub struct PushDownAutomaton<A, T, W>
           T: Eq,
           W: Ord,
 {
-    transitions: TransitionMap<A, T, W>,
+    transitions: Rc<TransitionMap<A, T, W>>,
     initial: PushDown<A>,
 }
 
@@ -92,7 +93,7 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
         }
 
         let p = PushDownAutomaton {
-            transitions: transition_map,
+            transitions: Rc::new(transition_map),
             initial: initial,
         };
         p.reduce_redundancy()
@@ -153,7 +154,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         }
     }
 
-    fn transitions(&self) -> TransitionMap<A, T, W> {
+    fn transitions(&self) -> Rc<TransitionMap<A, T, W>> {
         self.transitions.clone()
     }
 
@@ -174,11 +175,11 @@ impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
     type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;
 
     fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognisable::automaton::recognise(self, word)
+        Box::new(recognisable::automaton::recognise(self, word))
     }
 
     fn recognise_beam_search<'a>(&'a self, beam: usize, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognisable::automaton::recognise_beam(self, beam, word)
+        Box::new(recognisable::automaton::recognise_beam(self, beam, word))
     }
 }
 

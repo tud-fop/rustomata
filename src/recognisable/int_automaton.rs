@@ -2,10 +2,11 @@ use std::collections::BinaryHeap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
+use std::rc::Rc;
 
 use num_traits::One;
 
-use recognisable::{Automaton, Configuration, Instruction, Item, Recogniser, Transition, TransitionMap};
+use recognisable::{Automaton, Configuration, Instruction, Item, Recogniser, TransitionMap};
 use integeriser::Integeriser;
 use util::agenda::{Agenda, BoundedPriorityQueue};
 use util::push_down::Pushdown;
@@ -49,9 +50,10 @@ pub trait IntAutomaton<T, W>: Automaton<T, W>
 
     fn is_terminal_int(&Configuration<<Self::IInt as Instruction>::Storage, usize, W>) -> bool;
 
-    fn item_map(&self, &Item<<Self::IInt as Instruction>::Storage, Self::IInt, usize, W>) -> Item<<Self::I as Instruction>::Storage, Self::I, T, W>;
+    fn item_map(&self, &Item<<Self::IInt as Instruction>::Storage, Self::IInt, usize, W>)
+                -> Item<<Self::I as Instruction>::Storage, Self::I, T, W>;
 
-    fn transitions_int(&self) -> TransitionMap<Self::IKey, Self::IInt, usize, W>;
+    fn transitions_int(&self) -> Rc<TransitionMap<Self::IKey, Self::IInt, usize, W>>;
 
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage;
 
@@ -59,23 +61,16 @@ pub trait IntAutomaton<T, W>: Automaton<T, W>
 }
 
 
-// recognisers
-type ExactRecogniserInt<'a, S, SInt, I, IInt, T, W, K> =
-    Recogniser<'a,
-               BinaryHeap<Item<SInt, IInt, usize, W>>,
-               Configuration<SInt, usize, W>,
-               Transition<IInt, usize, W>,
-               K,
-               Item<S, I, T, W>>;
-
 pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
-                                 -> Box<ExactRecogniserInt<'a, <A::I as Instruction>::Storage, <A::IInt as Instruction>:: Storage, A::I, A::IInt, T, W, A::IKey>>
+                              -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: IntAutomaton<T, W>,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq,
+          A::IInt: 'a,
+          A::IKey: 'a,
           <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
@@ -93,27 +88,22 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            item_map: Box::new(move |i| a.item_map(i)),
+            item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
 }
 
-type BeamRecogniserInt<'a, S, SInt, I, IInt, T, W, K> =
-    Recogniser<'a,
-               BoundedPriorityQueue<W, Item<SInt, IInt, usize, W>>,
-               Configuration<SInt, usize, W>,
-               Transition<IInt, usize, W>,
-               K,
-               Item<S, I, T, W>>;
 
 pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
-                                 -> Box<BeamRecogniserInt<'a, <A::I as Instruction>::Storage, <A::IInt as Instruction>:: Storage, A::I, A::IInt, T, W, A::IKey>>
+                               -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: IntAutomaton<T, W>,
           A::I: Clone + Debug + Eq + Instruction,
-          <A::I as Instruction>::Storage: Clone + Debug + Eq,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+<A::I as Instruction>::Storage: Clone + Debug + Eq,
+          A::IInt: 'a,
+          A::IKey: 'a,
+<A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
@@ -131,7 +121,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            item_map: Box::new(move |i| a.item_map(i)),
+            item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
 }

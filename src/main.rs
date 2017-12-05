@@ -11,7 +11,6 @@ mod approximation;
 mod recognisable;
 mod cfg;
 mod coarse_to_fine;
-// mod integerise;
 mod nfa;
 mod pmcfg;
 mod push_down_automaton;
@@ -23,6 +22,7 @@ mod tests;
 
 use clap::App;
 
+pub use util::*;
 pub use approximation::*;
 pub use recognisable::*;
 pub use cfg::*;

@@ -55,9 +55,9 @@ impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAut
 
         let mut transitions = Vec::new();
 
-        for (k, value) in self.transitions(){
-            if !(k == *self.initial().empty()){
-                for t in &value{
+        for (k, value) in self.transitions().iter() {
+            if !(*k == *self.initial().empty()){
+                for t in value {
                     let b = strat.approximate_transition(t.clone());
                     transitions.push(b);
                 }

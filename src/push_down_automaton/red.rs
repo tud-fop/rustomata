@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::ops::{Add, Mul};
-use self::num_traits::{One, Zero};
+use std::rc::Rc;
+
+use num_traits::{One, Zero};
 
 use recognisable::red::*;
 use push_down_automaton::*;
@@ -14,7 +16,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         let tm = self.transitions.clone();
         let mut transition_map: TransitionMap<A, T, W> = HashMap::new();
         // for every configuration
-        for (k,v) in tm {
+        for (k,v) in tm.iter() {
             // samples Transitions into Key(Instruction, Word), Value(Vec<Weight>) pairs.
             let mut c_map: TransitionKeyMap<A, T, W> = HashMap::new();
             for t in v{
@@ -44,7 +46,7 @@ impl<A: Ord + PartialEq + Debug + Clone + Hash,
         }
         PushDownAutomaton{
             initial : self.initial.clone(),
-            transitions: transition_map.clone(),
+            transitions: Rc::new(transition_map),
         }
     }
 }
