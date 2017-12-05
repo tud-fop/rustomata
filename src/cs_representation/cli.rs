@@ -8,7 +8,7 @@ use std::fs::File;
 use PMCFG;
 use log_domain::LogDomain;
 use cs_representation::CSRepresentation;
-use cs_representation::generator_automaton::GeneratorStrategy;
+use cs_representation::generator_automaton::{NaiveGeneratorAutomaton, ApproxGeneratorAutomaton};
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -95,22 +95,20 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 "Could not decode the grammar provided via stdin.",
             );
 
-            let strategy = {
+            let csrep: CSRepresentation<String, String> = {
                 if params.is_present("strategy") {
                     if params.is_present("naive"){
-                        GeneratorStrategy::Naive
+                        CSRepresentation::new(NaiveGeneratorAutomaton, grammar)
                     } else if let Some(depth) = params.value_of("approx") {
-                        GeneratorStrategy::Approx(depth.parse::<usize>()
-                            .expect("Please pass a natural number along with `--dyck-approximation`"))
+                        let strat = ApproxGeneratorAutomaton(depth.parse::<usize>().expect("Please pass a natural number along with `--dyck-approximation`"));
+                        CSRepresentation::new(strat, grammar)
                     } else {
-                        GeneratorStrategy::Approx(1)
+                        CSRepresentation::new(ApproxGeneratorAutomaton(1), grammar)
                     }
                 } else {
-                    GeneratorStrategy::Approx(1)
+                    CSRepresentation::new(ApproxGeneratorAutomaton(1), grammar)
                 }
             };
-
-            let csrep: CSRepresentation<String, String> = CSRepresentation::new(strategy, grammar);
 
             if params.is_present("pretty") {
                 println!("{:?}", csrep.generator.to_arcs());

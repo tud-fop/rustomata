@@ -15,7 +15,7 @@ use dyck;
 use util::partition::Partition;
 
 pub mod generator_automaton;
-use cs_representation::generator_automaton::GeneratorStrategy;
+use cs_representation::generator_automaton::{GeneratorAutomaton};
 
 use std::fmt::{Display, Formatter, Error};
 
@@ -23,18 +23,22 @@ use std::fmt::{Display, Formatter, Error};
 #[derive(PartialEq, Debug)]
 pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>);
 
-impl<'a, N: 'a, T: 'a> Derivation<'a, N, T> {
-    pub fn weight(&self) -> LogDomain<f32> {
-        let mut dweight = LogDomain::one();
-        let &Derivation(ref map) = self;
+// impl<'a, N, T> Derivation<'a, N, T>
+// where
+//     N: 'a,
+//     T: 'a
+// {
+//     pub fn weight(&self) -> LogDomain<f32> {
+//         let mut dweight = LogDomain::one();
+//         let &Derivation(ref map) = self;
         
-        for &&PMCFGRule{ weight, .. } in map.values() {
-            dweight = dweight * weight;
-        }
+//         for &&PMCFGRule{ weight, .. } in map.values() {
+//             dweight = dweight * weight;
+//         }
         
-        dweight
-    }
-} 
+//         dweight
+//     }
+// } 
 
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -102,10 +106,10 @@ impl<T> Display for BracketContent<T>
 where T: Display
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            &BracketContent::Terminal(ref t) => write!(f, "_{{{}}}", t),
-            &BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
-            &BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{}, {}}}^{}", rule_id, i, j)
+        match *self {
+            BracketContent::Terminal(ref t) => write!(f, "_{{{}}}", t),
+            BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
+            BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{},{}}}^{}", rule_id, i, j)
         }
     }
 }
@@ -142,13 +146,13 @@ where
             {
                 let mut succs = vec![BTreeSet::new();rule.tail.len()];
                 for symbol in rule.composition.composition.iter().flat_map(|x| (*x).iter()) {
-                    match symbol {
-                        &VarT::T(ref t) => {
+                    match *symbol {
+                        VarT::T(ref t) => {
                             if !terminals.contains(t) {
                                 terminals.insert(t.clone());
                             }
                         },
-                        &VarT::Var(i, j) => {
+                        VarT::Var(i, j) => {
                             succs[i].insert(BracketContent::Variable(rule_id, i, j));
                         }
                     }
@@ -170,7 +174,7 @@ where
 {
     let mut bracks = Vec::new();
     for cell in cells {
-        if cell.iter().any(| bc | if let &BracketContent::Terminal(_) = bc { false } else { true } ) {
+        if cell.iter().any(| bc | if let BracketContent::Terminal(_) = *bc { false } else { true } ) {
             bracks.extend(cell.iter().cloned())
         }
     }
@@ -183,8 +187,9 @@ where
     T: Ord + Eq + Hash + Clone + ::std::fmt::Debug
 {
     ///
-    pub fn new<G: Into<MCFG<N, T, LogDomain<f32>>>>(strat: GeneratorStrategy, grammar: G) -> Self
+    pub fn new<S, G: Into<MCFG<N, T, LogDomain<f32>>>>(strat: S, grammar: G) -> Self
     where
+        S: GeneratorAutomaton,
         N: Ord + Clone + Eq,
         T: Ord + Clone + Eq
     {
@@ -197,7 +202,7 @@ where
         let eps = epsilon_brackets(&cells);
         
         CSRepresentation{
-            generator: strat.fsa(&rulemap, initial),
+            generator: strat.convert(&rulemap, initial),
             dyck: Partition::new(cells).unwrap(),
             rules: rulemap,
             epsilon_brackets: eps
@@ -216,13 +221,13 @@ where
                 0,
                 vec![Bracket::Open(epsilon_bracket.clone())],
                 LogDomain::one(),
-            ));
+            ).unwrap());
             arcs.push(Arc::new(
                 0,
                 0,
                 vec![Bracket::Close(epsilon_bracket)],
                 LogDomain::one(),
-            ));
+            ).unwrap());
         }
         for (i, sigma) in word.into_iter().enumerate() {
             arcs.push(Arc::new(
@@ -233,27 +238,27 @@ where
                     Bracket::Close(BracketContent::Terminal(sigma.clone())),
                 ],
                 LogDomain::one(),
-            ));
+            ).unwrap());
             for epsilon_bracket in self.epsilon_brackets.iter().cloned() {
                 arcs.push(Arc::new(
                     i + 1,
                     i + 1,
                     vec![Bracket::Open(epsilon_bracket.clone())],
                     LogDomain::one(),
-                ));
+                ).unwrap());
                 arcs.push(Arc::new(
                     i + 1,
                     i + 1,
                     vec![Bracket::Close(epsilon_bracket)],
                     LogDomain::one(),
-                ));
+                ).unwrap());
             }
         }
 
         let filter = self.generator.from_arcs_with_same_labels(
-            &0,
-            &[fin],
-            arcs.as_slice(),
+            0,
+            vec![fin],
+            arcs,
         );
 
         let &CSRepresentation {
@@ -305,11 +310,11 @@ pub struct CSGenerator<'a, T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::De
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 }
 
-impl<
-    'a,
+impl<'a, N, T> Iterator for CSGenerator<'a, T, N>
+where
     T: PartialEq + Hash + Clone + Eq + Ord + fmt::Debug,
     N: Hash + Eq + Clone + fmt::Debug,
-> Iterator for CSGenerator<'a, T, N> {
+{
     type Item = Derivation<'a, N, T>;
 
     fn next(&mut self) -> Option<Derivation<'a, N, T>> {
@@ -323,7 +328,7 @@ impl<
         let mut dycks = 0;
 
         for candidate_batch in candidates {
-            for (candidate, weight) in candidate_batch {
+            for (candidate, _) in candidate_batch {
                 cans += 1;
                 if dyck::recognize(&candidate){
                     dycks += 1;
@@ -351,7 +356,7 @@ mod test {
         use super::LogDomain;
         use super::Derivation;
         use super::MCFG;
-        use super::GeneratorStrategy;
+        use cs_representation::generator_automaton::naive::{NaiveGeneratorAutomaton};
 
         let grammar = MCFG {
             initial: "S",
@@ -383,13 +388,13 @@ mod test {
         );
 
         assert_eq!(
-            CSRepresentation::new(GeneratorStrategy::Naive, grammar.clone())
+            CSRepresentation::new(NaiveGeneratorAutomaton, grammar.clone())
                 .generate(vec!['A'], 2usize)
                 .next(),
             Some(d1)
         );
         assert_eq!(
-            CSRepresentation::new(GeneratorStrategy::Naive, grammar.clone())
+            CSRepresentation::new(NaiveGeneratorAutomaton, grammar.clone())
                 .generate(vec!['A', 'A'], 2usize)
                 .next(),
             Some(d2)

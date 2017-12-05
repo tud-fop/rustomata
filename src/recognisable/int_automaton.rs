@@ -1,4 +1,4 @@
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
@@ -93,7 +93,8 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            item_map: Box::new(move |i| a.item_map(i)),
+            item_map: Box::new(move | x,y | a.item_map(&(x,y))),
+            already_found: BTreeSet::new()
         }
     )
 }
@@ -131,7 +132,8 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            item_map: Box::new(move |i| a.item_map(i)),
+            item_map: Box::new(move | x,y | a.item_map(&(x,y))),
+            already_found: BTreeSet::new()
         }
     )
 }

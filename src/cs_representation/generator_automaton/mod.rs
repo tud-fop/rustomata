@@ -5,28 +5,27 @@ use log_domain::LogDomain;
 use std::hash::Hash;
 
 use pmcfg::PMCFGRule;
-use dyck::Bracket;
+use dyck;
 use cs_representation::BracketContent;
 
-mod naive;
-mod approx;
+pub mod naive;
+pub mod approx;
 
-pub enum GeneratorStrategy {
-    Naive,
-    Approx(usize)
-}
+pub use cs_representation::generator_automaton::naive::NaiveGeneratorAutomaton;
+pub use cs_representation::generator_automaton::approx::ApproxGeneratorAutomaton;
 
-pub type GeneratorFsa<T> = Automaton<Bracket<BracketContent<T>>>;
-
-impl GeneratorStrategy {
-    pub fn fsa<N, T>(self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, init: N) -> GeneratorFsa<T>
+pub trait GeneratorAutomaton {
+    /// Creates a Generator automaton from a set of integerised rules.
+    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<Delta<T>>
     where
-        T: Clone + PartialEq + Hash + Eq + Ord,
-        N: Clone + Hash + Eq + Ord
-    {
-        match self {
-            GeneratorStrategy::Approx(depth) => approx::generator(rules, init, depth),
-            GeneratorStrategy::Naive => naive::generator(rules, init)
-        }
-    }
+        T: Eq + Hash + Clone + Ord,
+        N: Eq + Hash + Clone + Ord;
 }
+
+/// The alphabet Δ(Σ) with respect to a grammar (N, Σ, P, S) consisting of three types of brackets:
+/// * ⟨_σ and ⟩_σ for each σ ∈ Σ,
+/// * ⟨_{p, j} and ⟩_{p, j} for each p ∈ P and j ∈ fanout(p)
+/// * ⟨^{i}_{p, j} and ⟩^i_{p, j} for each p ∈ P, i ∈ rank(p) and j ∈ fanout_i(p).
+pub type Delta<T> = dyck::Bracket<BracketContent<T>>;
+/// A State in a Generator automaton corresponds to the start or end of a component produced by a nonterminal.
+pub type State<N> = dyck::Bracket<(N, usize)>;

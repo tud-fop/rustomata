@@ -1,7 +1,7 @@
 extern crate num_traits;
 
 use std::cmp::Ord;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
@@ -102,7 +102,8 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>) -> Box<ExactRecogniser<'a,
             filtered_rules: a.transitions(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(|i| i.clone()),
+            item_map: Box::new(| x, y | (x,y)),
+            already_found: BTreeSet::new()
         }
     )
 }
@@ -132,7 +133,8 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>) -> Box<B
             filtered_rules: a.transitions(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(|i| i.clone()),
+            item_map: Box::new(| x, y | (x,y)),
+            already_found: BTreeSet::new()
         }
     )
 }

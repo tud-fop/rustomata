@@ -7,11 +7,17 @@ use std::hash::Hash;
 use pmcfg::VarT;
 use openfsa::fsa::{Automaton, Arc};
 
-pub fn generator<N, T>(rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, start: N) -> Automaton<Bracket<BracketContent<T>>>
-where
-    N: Hash + Eq + Clone,
-    T: Hash + Eq + Clone
-{
+use super::{GeneratorAutomaton, Delta};
+
+/// The naive implementation of a Generator automaton.
+pub struct NaiveGeneratorAutomaton;
+
+impl GeneratorAutomaton for NaiveGeneratorAutomaton {
+    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<Delta<T>>
+    where
+        N: Hash + Eq + Clone,
+        T: Hash + Eq + Clone
+    {
         let mut arcs = Vec::new();
 
         for rule_id in 0..(rules.size()) {
@@ -38,7 +44,7 @@ where
                                 Bracket::Open((rule.tail[i].clone(), j)),
                                 terminals,
                                 rule_prob,
-                            ));
+                            ).unwrap());
 
                             state = Bracket::Close((rule.tail[i].clone(), j));
                             terminals = vec![Bracket::Close(BracketContent::Variable(rule_id, i, j))];
@@ -52,13 +58,14 @@ where
                     Bracket::Close((rule.head.clone(), component)),
                     terminals,
                     rule_prob,
-                ));
+                ).unwrap());
             }
         }
         
         Automaton::from_arcs(
-            &Bracket::Open((start.clone(), 0)),
-            &[Bracket::Close((start, 0))],
-            arcs.as_slice(),
+            Bracket::Open((initial.clone(), 0)),
+            vec![Bracket::Close((initial, 0))],
+            arcs,
         )
+    }
 }

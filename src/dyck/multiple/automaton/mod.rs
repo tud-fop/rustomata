@@ -7,7 +7,7 @@ use std::fmt::Debug;
 
 use Transition;
 use TreeStack;
-use automata::Automaton;
+use recognisable::{Automaton, TransitionMap};
 use Configuration;
 
 use dyck::Bracket;
@@ -52,10 +52,11 @@ impl<T: Ord + Clone> MultipleDyckAutomaton<T> {
     }
 }
 
-impl<
-    T: Clone + Eq + Debug + Ord,
-> Automaton<MultipleDyckInstruction<T>, Bracket<T>, u8>
-    for MultipleDyckAutomaton<T> {
+impl<T> Automaton<Bracket<T>, u8> for MultipleDyckAutomaton<T>
+where
+    T: Clone + Eq + Debug + Ord
+{
+    type I = MultipleDyckInstruction<T>;
     type Key = ();
 
     fn extract_key(_: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> &() {
@@ -64,24 +65,15 @@ impl<
 
     fn transitions(
         &self,
-    ) -> &HashMap<
-        (),
-        BinaryHeap<
-            Transition<
-                MultipleDyckInstruction<T>,
-                Bracket<T>,
-                u8,
-            >,
-        >,
-    > {
-        &self.transitions
+    ) -> TransitionMap<(), MultipleDyckInstruction<T>, Bracket<T>, u8> {
+        self.transitions.clone()
     }
 
     fn initial(&self) -> TreeStack<MDTreeElem<T>> {
         TreeStack::new(MDTreeElem::Root)
     }
 
-    fn is_terminal(&self, conf: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> bool {
+    fn is_terminal(conf: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> bool {
         conf.word.is_empty() && conf.storage == TreeStack::new(MDTreeElem::Root)
     }
 }

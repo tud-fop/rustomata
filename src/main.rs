@@ -16,7 +16,6 @@ mod approximation;
 mod recognisable;
 mod cfg;
 mod coarse_to_fine;
-// mod integerise;
 mod nfa;
 mod dyck;
 mod cs_representation;

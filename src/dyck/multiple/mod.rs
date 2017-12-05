@@ -2,7 +2,7 @@ mod automaton;
 use dyck::multiple::automaton::MultipleDyckAutomaton;
 use util::partition::Partition;
 pub use dyck::Bracket;
-use automata::Automaton;
+use recognisable::automaton::recognise;
 use std::fmt::Debug;
 
 
@@ -22,7 +22,7 @@ impl<T: Clone + Eq + Ord + Debug> MultipleDyckLanguage<T> {
     pub fn recognize(&self, word: &[Bracket<T>]) -> bool {
         let &MultipleDyckLanguage(ref mda) = self;
         let word_ = word.to_owned();
-        let mut b = mda.recognise(word_);
+        let mut b = recognise(mda, word_);
         b.next().is_some()
     }
 }

@@ -45,7 +45,7 @@ where A: Ord + Hash + Debug + Clone + PartialOrd + PartialEq + Eq
     use Transition;
     use PushDown;
     use PushDownAutomaton;
-    use Automaton;
+    use recognisable::automaton::recognise;
 
     let mut instructions = Vec::new();
     for alpha in &alphabet {
@@ -89,7 +89,7 @@ where A: Ord + Hash + Debug + Clone + PartialOrd + PartialEq + Eq
         instructions,
         PushDown::from_vec(vec![None]),
     );
-    let ffc = automaton.recognise(word).next();
+    let ffc = recognise(&automaton, word).next();
 
     ffc.is_some()
 }
@@ -105,7 +105,7 @@ where T: Display + PartialEq
                 write!(f, "⟨{}", t)
             },
             &Bracket::Close(ref t) => {
-                write!(f, "{}⟩", t)
+                write!(f, "⟩{}", t)
             }
         }
     }
