@@ -4,22 +4,21 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::ops::{Add, Mul, Div};
+use std::ops::{AddAssign, Mul};
 use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
 use num_traits::{One, Zero};
 
 use recognisable::{self, Automaton, Configuration, Instruction, Item, Recognisable, Transition};
-use recognisable::red::*;
 
 pub mod from_cfg;
 pub mod relabel;
-pub mod red;
+// pub mod red;
 
 pub use self::from_cfg::*;
 pub use self::relabel::*;
-pub use self::red::*;
+// pub use self::red::*;
 
 type TransitionMap<A, T, W>
     = HashMap<A, BinaryHeap<Transition<PushDownInstruction<A>, T, W>>>;
@@ -52,51 +51,50 @@ pub struct PushDown<A> {
 impl<A, T, W> PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Eq + Clone + Hash,
-          W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One,
+          W: Ord + Eq + Clone + AddAssign + Zero,
 {
     pub fn new(transitions: Vec<Transition<PushDownInstruction<A>, T, W>>,
                initial: PushDown<A>)
                -> PushDownAutomaton<A,T,W>
     {
         let mut transition_map = HashMap::new();
-        let emp_transitions = transitions.len();
-        let mut nw = W::one();
-        for _ in 2..emp_transitions{
-            nw = nw+W::one();
-        }
-        let b = initial.empty.clone();
 
         for t in transitions {
-            let mut emp = false;
-            let a =
-                match t.instruction {
-                    PushDownInstruction::Replace { ref current_val, .. } => current_val.first().unwrap().clone(),
-                    PushDownInstruction::ReplaceK { ref current_val, .. } => {
-                        emp = true;
-                        current_val.first().unwrap().clone()
-                    },
-                };
+            match t.instruction {
+                PushDownInstruction::Replace { ref current_val, .. } => {
+                    let a = current_val.first().unwrap().clone();
+                    *transition_map
+                        .entry(a)
+                        .or_insert(HashMap::new())
+                        .entry((t.word, t.instruction.clone()))
+                        .or_insert(W::zero()) += t.weight;
+                },
+                PushDownInstruction::ReplaceK { ref current_val, .. } => {
+                    let a = current_val.first().unwrap().clone();
 
-            transition_map.entry(a).or_insert_with(BinaryHeap::new).push(t.clone());
+                    *transition_map
+                        .entry(a)
+                        .or_insert(HashMap::new())
+                        .entry((t.word.clone(), t.instruction.clone()))
+                        .or_insert(W::zero()) += t.weight.clone();
 
-            //Places all ReplaceK transitions also in for the empty symbol
-            if emp {
-                let nt = Transition {
-                    word: t.word.clone(),
-                    instruction: t.instruction.clone(),
-                    weight: t.weight/nw.clone(),
-                };
-
-                transition_map.entry(b.clone()).or_insert_with(BinaryHeap::new).push(nt);
+                    // Places all ReplaceK transitions also in for the empty symbol
+                    *transition_map
+                        .entry(initial.empty.clone())
+                        .or_insert(HashMap::new())
+                        .entry((t.word, t.instruction.clone()))
+                        .or_insert(W::zero()) += t.weight;
+                },
             }
-
         }
 
-        let p = PushDownAutomaton {
-            transitions: Rc::new(transition_map),
+        let f = |(k, hm): (_, HashMap<_, _>)| (k, hm.into_iter()
+            .map(|((w, i), wt)| Transition {word: w, instruction: i, weight: wt}).collect());
+
+        PushDownAutomaton {
+            transitions: Rc::new(transition_map.into_iter().map(f).collect()),
             initial: initial,
-        };
-        p.reduce_redundancy()
+        }
     }
 }
 

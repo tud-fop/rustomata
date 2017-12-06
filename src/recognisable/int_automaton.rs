@@ -98,10 +98,10 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
                                -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: IntAutomaton<T, W>,
           A::I: Clone + Debug + Eq + Instruction,
-<A::I as Instruction>::Storage: Clone + Debug + Eq,
+          <A::I as Instruction>::Storage: Clone + Debug + Eq,
           A::IInt: 'a,
           A::IKey: 'a,
-<A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
           T: Clone + Debug + Eq + Ord + 'a,
           W: Copy + Debug + One + Ord + 'a,
 {

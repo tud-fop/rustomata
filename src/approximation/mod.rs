@@ -1,7 +1,7 @@
 use std::collections::{BinaryHeap};
 use std::hash::Hash;
 use std::fmt::Debug;
-use std::ops::{Add, Mul, Div};
+use std::ops::{AddAssign, Mul, Div};
 use num_traits::{Zero, One};
 
 pub mod equivalence_classes;
@@ -46,7 +46,7 @@ impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>> for PushDownAut
     where A: Ord + PartialEq + Debug + Clone + Hash,
           B: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: Ord + Eq + Clone + Copy + Debug + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
+          W: Ord + Eq + Clone + Copy + Debug + AddAssign + Mul<Output = W> + Div<Output = W> + Zero + One,
           S: Clone + ApproximationStrategy<PushDownInstruction<A>, PushDownInstruction<B>, T, W>
 {
     fn approximation(&self, strati : &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{
@@ -74,7 +74,7 @@ impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>> for TreeStackAu
     where A: Ord + PartialEq + Debug + Clone + Hash,
           B: Ord + PartialEq + Debug + Clone + Hash,
           T: Eq + Clone +Hash,
-          W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One,
+          W: Ord + Eq + Clone + AddAssign + Mul<Output = W> + Div<Output = W> + Zero + One,
           S: Clone + ApproximationStrategy<TreeStackInstruction<A>, PushDownInstruction<B>, T, W>,
 {
     fn approximation(&self, strati: &S) -> Result<(PushDownAutomaton<B, T, W>, S), String>{

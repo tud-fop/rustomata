@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
+use std::ops::Add;
 
-use recognisable::{Transition, TransitionKey};
+use recognisable::Transition;
 use approximation::*;
 pub use approximation::equivalence_classes::EquivalenceClass;
 use push_down_automaton::*;
@@ -14,18 +14,16 @@ pub trait Relabel<N1, N2, O>{
 
 /// `ApproximationStrategy` that uses the `Relabel` trait to relabel internal values via a `EquivalenceClass`
 #[derive(Clone)]
-pub struct RlbElement<A, N1, N2, T1, T2>{
-    pub dummy: PhantomData<A>,
+pub struct RlbElement<N1, N2, T1, T2>{
     pub trans_map: BTreeMap<T2,Vec<T1>>,
     pub mapping: EquivalenceClass<N1, N2>
 }
 
-impl<A, T1, T2 : Ord, N1, N2> RlbElement<A, N1, N2, T1, T2>{
-    pub fn new(mapping: EquivalenceClass<N1, N2>) -> RlbElement<A, N1, N2, T1, T2>{
+impl<T1, T2: Ord, N1, N2> RlbElement<N1, N2, T1, T2>{
+    pub fn new(mapping: EquivalenceClass<N1, N2>) -> RlbElement<N1, N2, T1, T2>{
         RlbElement{
-            dummy : PhantomData,
-            trans_map : BTreeMap::new(),
-            mapping : mapping,
+            trans_map: BTreeMap::new(),
+            mapping: mapping,
         }
     }
 }
@@ -36,7 +34,7 @@ impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
       N2: Clone + Eq + Hash,
       T: Ord + Eq + Clone +Hash,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output = W> + Div<Output = W> + Zero + One> ApproximationStrategy<PushDownInstruction<A1>, PushDownInstruction<A2>, T, W>
-      for RlbElement<PushDown<A1>, N1, N2, Transition<PushDownInstruction<A1>, T, W>, TransitionKey<PushDownInstruction<A2>, T, W>>{
+      for RlbElement<N1, N2, Transition<PushDownInstruction<A1>, T, W>, Transition<PushDownInstruction<A2>, T, W>>{
     fn approximate_initial(&self, a: PushDown<A1>)-> PushDown<A2>{
         a.relabel(&self.mapping)
     }
@@ -61,12 +59,11 @@ impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                         new_val: stn.clone(),
                     }
                 };
-                let tk = TransitionKey::new(&t2);
-                if !self.trans_map.contains_key(&tk) {
-                    self.trans_map.insert(tk.clone(), Vec::new());
+                if !self.trans_map.contains_key(&t2) {
+                    self.trans_map.insert(t2.clone(), Vec::new());
                     ()
                 }
-                self.trans_map.get_mut(&tk).unwrap().push(t.clone());
+                self.trans_map.get_mut(&t2).unwrap().push(t.clone());
                 t2
             },
             PushDownInstruction::ReplaceK {ref current_val, ref new_val, limit} => {
@@ -87,12 +84,11 @@ impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
                         limit: limit,
                     }
                 };
-                let tk = TransitionKey::new(&t2);
-                if !self.trans_map.contains_key(&tk) {
-                    self.trans_map.insert(tk.clone(), Vec::new());
+                if !self.trans_map.contains_key(&t2) {
+                    self.trans_map.insert(t2.clone(), Vec::new());
                     ()
                 }
-                self.trans_map.get_mut(&tk).unwrap().push(t.clone());
+                self.trans_map.get_mut(&t2).unwrap().push(t.clone());
                 t2
             },
         }
@@ -101,8 +97,7 @@ impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     fn translate_run(&self, run: Vec<Transition<PushDownInstruction<A2>, T, W>>) -> BinaryHeap<PushDownTransitionSequence<A1, T, W>>{
         let mut res = Vec::new();
         for lv in run {
-            let lvk = TransitionKey::new(&lv);
-            match self.trans_map.get(&lvk) {
+            match self.trans_map.get(&lv) {
                 Some(v) => {
                     if res.is_empty() {
                         res.push(v.clone())
@@ -125,12 +120,11 @@ impl <A1: Ord + PartialEq + Debug + Clone + Hash + Relabel<N1, N2, A2>,
     }
 
     fn add_transitions(&mut self, t1: &Transition<PushDownInstruction<A1>, T, W>, t2: &Transition<PushDownInstruction<A2>, T, W>){
-        let tk = TransitionKey::new(t2);
-        if !self.trans_map.contains_key(&tk) {
-            self.trans_map.insert(tk.clone(), Vec::new());
+        if !self.trans_map.contains_key(&t2) {
+            self.trans_map.insert(t2.clone(), Vec::new());
             ()
         }
-        self.trans_map.get_mut(&tk).unwrap().push(t1.clone());
+        self.trans_map.get_mut(&t2).unwrap().push(t1.clone());
     }
 }
 

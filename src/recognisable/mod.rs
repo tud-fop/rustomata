@@ -8,7 +8,6 @@ pub mod from_str;
 mod configuration;
 mod recogniser;
 mod transition;
-pub mod red;           // TODO: still needed?
 pub mod automaton;     // TODO: make private
 pub mod int_automaton; // TODO: make private
 
@@ -17,7 +16,6 @@ pub use self::int_automaton::IntAutomaton;
 pub use self::configuration::Configuration;
 pub use self::recogniser::Recogniser;
 pub use self::transition::Transition;
-pub use self::red::TransitionKey;
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction {

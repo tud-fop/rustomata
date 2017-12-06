@@ -1,29 +1,27 @@
-use std::marker::PhantomData;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
+use std::ops::Add;
 
-use recognisable::{Transition, TransitionKey};
+use recognisable::Transition;
 use approximation::*;
 use tree_stack_automaton::*;
 use push_down_automaton::*;
 
 /// `ÀpproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]
-pub struct TTSElement<A, T1, T2>{
-    pub _dummy: PhantomData<A>,
+pub struct TTSElement<T1, T2>{
     pub trans_map: BTreeMap<T2,Vec<T1>>,
 }
 
-impl<A, T1, T2: Ord> TTSElement<A, T1, T2> {
-    pub fn new() -> TTSElement<A, T1, T2> {
+impl<T1, T2: Ord> TTSElement<T1, T2> {
+    pub fn new() -> TTSElement<T1, T2> {
         TTSElement{
-            _dummy: PhantomData,
             trans_map: BTreeMap::new(),
         }
     }
 }
 
-impl<A, T1, T2: Ord> Default for TTSElement<A, T1, T2> {
+impl<T1, T2: Ord> Default for TTSElement<T1, T2> {
     fn default() -> Self {
         TTSElement::new()
     }
@@ -33,7 +31,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
       T: Ord + Eq + Clone +Hash + Debug,
       W: Ord + Eq + Clone + Add<Output=W> + Mul<Output=W> + Div<Output=W> + Zero + One + Debug>
     ApproximationStrategy<TreeStackInstruction<A>, PushDownInstruction<A>, T, W>
-      for TTSElement<A, Transition<TreeStackInstruction<A>, T, W>, TransitionKey<PushDownInstruction<A>, T, W>>{
+      for TTSElement<Transition<TreeStackInstruction<A>, T, W>, Transition<PushDownInstruction<A>, T, W>>{
 
     fn approximate_initial(&self, a: TreeStack<A>)-> PushDown<A>{
         let nempty = a.current_symbol().clone();
@@ -54,12 +52,11 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                         new_val: vec![current_val.clone(), new_val.clone()],
                     }
                 };
-                let tk = TransitionKey::new(&t2);
-                if !self.trans_map.contains_key(&tk) {
-                    self.trans_map.insert(tk.clone(), Vec::new());
+                if !self.trans_map.contains_key(&t2) {
+                    self.trans_map.insert(t2.clone(), Vec::new());
                     ()
                 }
-                self.trans_map.get_mut(&tk).unwrap().push(t.clone());
+                self.trans_map.get_mut(&t2).unwrap().push(t.clone());
                 t2
             }
             TreeStackInstruction::Down { ref current_val, ref old_val, ref new_val } => {
@@ -71,12 +68,11 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
                         new_val: vec![new_val.clone()],
                     }
                 };
-                let tk = TransitionKey::new(&t2);
-                if !self.trans_map.contains_key(&tk) {
-                    self.trans_map.insert(tk.clone(), Vec::new());
+                if !self.trans_map.contains_key(&t2) {
+                    self.trans_map.insert(t2.clone(), Vec::new());
                     ()
                 }
-                self.trans_map.get_mut(&tk).unwrap().push(t.clone());
+                self.trans_map.get_mut(&t2).unwrap().push(t.clone());
                 t2
             },
         }
@@ -85,8 +81,7 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     fn translate_run(&self, run: Vec<Transition<PushDownInstruction<A>, T, W>>) -> BinaryHeap<TreeStackTransitionSequence<A, T, W>> {
         let mut res = Vec::new();
         for lv in run{
-            let lvk = TransitionKey::new(&lv);
-            match self.trans_map.get(&lvk){
+            match self.trans_map.get(&lv){
                 Some(v) =>{
                     if res.is_empty() {
                         res.push(v.clone())
@@ -111,11 +106,10 @@ impl <A: Ord + PartialEq + Debug + Clone + Hash,
     }
 
     fn add_transitions(&mut self, t1: &Transition<TreeStackInstruction<A>, T, W>, t2: &Transition<PushDownInstruction<A>, T, W>){
-        let tk = TransitionKey::new(t2);
-        if !self.trans_map.contains_key(&tk) {
-            self.trans_map.insert(tk.clone(), Vec::new());
+        if !self.trans_map.contains_key(&t2) {
+            self.trans_map.insert(t2.clone(), Vec::new());
             ()
         }
-        self.trans_map.get_mut(&tk).unwrap().push(t1.clone());
+        self.trans_map.get_mut(&t2).unwrap().push(t1.clone());
     }
 }
