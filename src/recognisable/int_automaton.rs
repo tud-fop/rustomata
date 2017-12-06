@@ -6,34 +6,11 @@ use std::rc::Rc;
 
 use num_traits::One;
 
-use recognisable::{Automaton, Configuration, Instruction, Item, Recogniser, TransitionMap};
-use integeriser::Integeriser;
+use recognisable::{Configuration, Instruction, Item, Recogniser};
+use recognisable::automaton::{Automaton, TransitionMap};
 use util::agenda::{Agenda, BoundedPriorityQueue};
 use util::push_down::Pushdown;
 
-pub trait Integerisable1  // TODO move to util::integerisable
-    where Self::I: Integeriser,
-{
-    type AInt; /// type of the integerised self
-    type I;    /// type of the integeriser
-
-    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt;
-
-    fn un_integerise(&Self::AInt, integeriser: &Self::I) -> Self;
-}
-
-pub trait Integerisable2  // TODO move to util::integerisable
-    where Self::I1: Integeriser,
-          Self::I2: Integeriser,
-{
-    type AInt; /// type of the integerised self
-    type I1;   /// type of the first integeriser
-    type I2;   /// type of the second integeriser
-
-    fn integerise(&self, integeriser1: &mut Self::I1, integeriser2: &mut Self::I2) -> Self::AInt;
-
-    fn un_integerise(&Self::AInt, integeriser1: &Self::I1, integeriser2: &Self::I2) -> Self;
-}
 
 pub trait IntAutomaton<T, W>: Automaton<T, W>
     where T: Clone + Debug + Eq,

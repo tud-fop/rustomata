@@ -9,6 +9,7 @@ use num_traits::One;
 use integeriser::{Integeriser, HashIntegeriser};
 
 use recognisable::*;
+use recognisable::automaton::Automaton;
 use push_down_automaton::*;
 
 /// Dictonary able to translate a `NFA` back into a `PushDownAutomaton`

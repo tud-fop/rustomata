@@ -11,8 +11,10 @@ use std::vec::Vec;
 use num_traits::One;
 
 use integeriser::{HashIntegeriser, Integeriser};
-use recognisable::{self, Automaton, Configuration, Item, IntAutomaton, Recognisable, Transition};
-use recognisable::int_automaton::{Integerisable1, Integerisable2};
+use recognisable::{Configuration, Item, Recognisable, Transition};
+use recognisable::automaton::Automaton;
+use recognisable::int_automaton::{self, IntAutomaton};
+use util::integerisable::{Integerisable1, Integerisable2};
 use util::push_down::Pushdown;
 
 mod from_pmcfg;
@@ -161,11 +163,11 @@ impl<A, T, W> Recognisable<T, W> for TreeStackAutomaton<A, T, W>
     type Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>;
 
     fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognisable::int_automaton::recognise(self, word)
+        int_automaton::recognise(self, word)
     }
 
     fn recognise_beam_search<'a>(&'a self, beam: usize, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognisable::int_automaton::recognise_beam(self, beam, word)
+        int_automaton::recognise_beam(self, beam, word)
     }
 }
 

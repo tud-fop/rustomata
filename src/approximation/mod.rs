@@ -11,7 +11,8 @@ pub mod tts;
 
 pub mod cli;
 
-use recognisable::{Automaton, Instruction, Transition};
+use recognisable::{Instruction, Transition};
+use recognisable::automaton::Automaton;
 
 use push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
 use tree_stack_automaton::{TreeStackAutomaton, TreeStackInstruction};

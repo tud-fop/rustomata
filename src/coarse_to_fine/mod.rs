@@ -8,6 +8,8 @@ use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
 
+use recognisable::automaton::Automaton;
+
 use recognisable::*;
 use approximation::*;
 

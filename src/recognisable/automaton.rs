@@ -11,14 +11,10 @@ use std::vec::Vec;
 use num_traits::One;
 
 use coarse_to_fine::{run_weight, run_word};
-use recognisable::{Configuration, Instruction, Recogniser, Transition};
+use recognisable::{Configuration, Instruction, Item, Recogniser, Transition, VecItem};
 use util::push_down::Pushdown;
 use util::agenda::{Agenda, BoundedPriorityQueue};
 
-
-// items of the transition system
-pub type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
-pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;

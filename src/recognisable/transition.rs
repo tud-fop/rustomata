@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use integeriser::{HashIntegeriser, Integeriser};
 
 use recognisable::{Configuration, Instruction};
-use recognisable::int_automaton::{Integerisable1, Integerisable2};
+use util::integerisable::{Integerisable1, Integerisable2};
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
 #[derive(Clone, Debug)]

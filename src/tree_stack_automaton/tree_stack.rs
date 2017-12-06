@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::rc::Rc;
 use std::hash::Hash;
-use recognisable::int_automaton::Integerisable1;
+use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.

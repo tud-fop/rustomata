@@ -10,7 +10,8 @@ use std::slice::Iter;
 use std::vec::Vec;
 use num_traits::{One, Zero};
 
-use recognisable::{self, Automaton, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::automaton::Automaton;
 
 pub mod from_cfg;
 pub mod relabel;
