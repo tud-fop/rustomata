@@ -7,13 +7,14 @@ use std::hash::Hash;
 use pmcfg::VarT;
 use openfsa::fsa::{Automaton, Arc};
 
-use super::{GeneratorAutomaton, Delta};
+use super::{GeneratorAutomaton};
+use cs_representation::bracket_fragment::BracketFragment;
 
 /// The naive implementation of a Generator automaton.
 pub struct NaiveGeneratorAutomaton;
 
 impl GeneratorAutomaton for NaiveGeneratorAutomaton {
-    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<Delta<T>>
+    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<BracketFragment<T>>
     where
         N: Hash + Eq + Clone,
         T: Hash + Eq + Clone
@@ -39,12 +40,14 @@ impl GeneratorAutomaton for NaiveGeneratorAutomaton {
                         }
                         VarT::Var(i, j) => {
                             terminals.push(Bracket::Open(BracketContent::Variable(rule_id, i, j)));
-                            arcs.push(Arc::new(
-                                state,
-                                Bracket::Open((rule.tail[i].clone(), j)),
-                                terminals,
-                                rule_prob,
-                            ).unwrap());
+                            arcs.push(
+                                Arc{
+                                    from: state,
+                                    to: Bracket::Open((rule.tail[i].clone(), j)),
+                                    label: BracketFragment(terminals),
+                                    weight: rule_prob,
+                                }
+                            );
 
                             state = Bracket::Close((rule.tail[i].clone(), j));
                             terminals = vec![Bracket::Close(BracketContent::Variable(rule_id, i, j))];
@@ -53,12 +56,14 @@ impl GeneratorAutomaton for NaiveGeneratorAutomaton {
                 }
                 terminals.push(Bracket::Close(BracketContent::Component(rule_id, component)));
 
-                arcs.push(Arc::new(
-                    state,
-                    Bracket::Close((rule.head.clone(), component)),
-                    terminals,
-                    rule_prob,
-                ).unwrap());
+                arcs.push(
+                    Arc{
+                        from: state,
+                        to: Bracket::Close((rule.head.clone(), component)),
+                        label: BracketFragment(terminals),
+                        weight: rule_prob,
+                    }
+                );
             }
         }
         
