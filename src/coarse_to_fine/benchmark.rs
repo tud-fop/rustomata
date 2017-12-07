@@ -17,14 +17,15 @@ use approximation::relabel::{RlbElement, EquivalenceClass};
 use approximation::ptk::PDTopKElement;
 use recognisable::Recognisable;
 
-use tree_stack_automaton::TreeStackAutomaton;
+use tree_stack_automaton::{TreeStackAutomaton, PosState};
 
-/// Test a multitude of combinations for coarse-to-fine parsing and takes their times. Results in extra file `benchmark-results.txt`
-/// Does not test words that are longer than twenty
+/// Test a multitude of combinations for coarse-to-fine parsing and takes their times.
+/// Results in extra file `benchmark-results.txt`.
+/// Does not test words that are longer than twenty.
 pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: EquivalenceClass<String, String>, ptk_size: usize, limit: usize, limit1: usize, limit2: usize, limit3: usize, corpus: &str, check: usize, no_nfa: bool){
     // File that contains the results
-    let mut f = File::create("benchmark-results.txt").unwrap();
-    let _ = write!(&mut f, "Benchmarking results \n\n");
+    let mut file = File::create("benchmark-results.txt").unwrap();
+    let _ = write!(&mut file, "Benchmarking results \n\n");
     let w = 14;
 
     eprintln!("Start Initialisation");
@@ -33,7 +34,8 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     let ap_start = PreciseTime::now();
     let tts = TTSElement::new();
     let ap_1 = PreciseTime::now();
-    let rlb = RlbElement::new(eq);
+    let f = |ps: &PosState<PMCFGRule<_, _, _>>| ps.map(|r| r.map_nonterminals(|nt| eq.project(nt)));
+    let rlb = RlbElement::new(&f);
     let ap_2 = PreciseTime::now();
     let ptk = PDTopKElement::new(ptk_size);
     let ap_end = PreciseTime::now();
@@ -44,20 +46,20 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
     let automaton = TreeStackAutomaton::from(grammar);
     let at_1 = PreciseTime::now();
     eprintln!("TTS");
-    let (app1, ntts) = automaton.approximation(&tts).unwrap();
+    let (app1, ntts) = automaton.approximation(tts).unwrap();
     let at_2 = PreciseTime::now();
     eprintln!("RLB");
-    let (app2, nrlb) = app1.approximation(&rlb).unwrap();
+    let (app2, nrlb) = app1.approximation(rlb).unwrap();
     let at_3 = PreciseTime::now();
     eprintln!("PTK");
-    let (app3, nptk) = app2.approximation(&ptk).unwrap();
+    let (app3, nptk) = app2.approximation(ptk).unwrap();
     let at_4 = PreciseTime::now();
     eprintln!("NFA");
     let nfa_s = if no_nfa { None } else { from_pd(&app3) };
     let at_end = PreciseTime::now();
 
     // save times for initial startup
-    let _ = write!(&mut f, "Construction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n",
+    let _ = write!(&mut file, "Construction TTS: {}\nConstruction RLB: {}\nConstruction PTK: {}\n\nGeneration Automata: {}\nApproximation TTS: {}\nApproximation RLB: {}\nApproximation PTK: {}\nNFAs: {}\n\nRecognition times:\n",
                    ap_start.to(ap_1),
                    ap_1.to(ap_2),
                    ap_2.to(ap_end),
@@ -67,7 +69,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
                    at_3.to(at_4),
                    at_4.to(at_end)
     );
-    let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+    let _ = write!(&mut file, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
                    "Word", "Normal", "1-Layer", "2-Layers", "3-Layers", "3-Layers + NFA", "id. output", width = w);
     let mut outercount = 0;
     eprintln!("Start Test");
@@ -211,7 +213,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             outercount += 1;
 
             //save results and times for this sentence
-            let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+            let _ = write!(&mut file, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
                            outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), same, width = w);
 
 
@@ -368,7 +370,7 @@ pub fn benchmark(grammar: PMCFG<String, String, LogDomain<f64>>, eq: Equivalence
             outercount += 1;
 
             //save results and times for this sentence
-            let _ = write!(&mut f, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
+            let _ = write!(&mut file, "\n{0: <width$} | {1: <width$} | {2: <width$} | {3: <width$} | {4: <width$} | {5: <width$} | {6: <width$} \n",
                            outercount, p1_start.to(p1_end), p2_start.to(p2_end), p3_start.to(p3_end), p4_start.to(p4_end), p5_start.to(p5_end), same, width = w);
         }
     }

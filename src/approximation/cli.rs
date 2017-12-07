@@ -5,6 +5,7 @@ use cfg::CFG;
 use recognisable::Recognisable;
 use tree_stack_automaton::TreeStackAutomaton;
 use push_down_automaton::PushDownAutomaton;
+use push_down_automaton::from_cfg::PushState;
 use approximation::{Approximation, PDTopKElement, RlbElement, TTSElement};
 use approximation::equivalence_classes::EquivalenceClass;
 
@@ -124,9 +125,10 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let _ = classes_file.read_to_string(&mut classes_string);
                     let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(&rlb).unwrap();
+                    let (b, _) = a.approximation(rlb).unwrap();
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -153,9 +155,10 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let _ = classes_file.read_to_string(&mut classes_string);
                     let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(&rlb).unwrap();
+                    let (b, _) = a.approximation(rlb).unwrap();
 
                     println!("{}", b);
                 }
@@ -182,7 +185,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (b, _) = a.approximation(&ptk).unwrap();
+                    let (b, _) = a.approximation(ptk).unwrap();
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -211,7 +214,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (b, _) = a.approximation(&ptk).unwrap();
+                    let (b, _) = a.approximation(ptk).unwrap();
                     println!("{}", b);
                 }
                 _ => (),
@@ -231,7 +234,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let tts = TTSElement::new();
 
-                    let (b, _) = a.approximation(&tts).unwrap();
+                    let (b, _) = a.approximation(tts).unwrap();
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -253,7 +256,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let a = TreeStackAutomaton::from(g);
                     let tts = TTSElement::new();
 
-                    let (b, _) = a.approximation(&tts).unwrap();
+                    let (b, _) = a.approximation(tts).unwrap();
                     println!("{}", b);
                 }
                 _ => (),

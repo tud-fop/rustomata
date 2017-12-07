@@ -1,6 +1,7 @@
 mod configuration;
 mod recogniser;
 mod transition;
+
 pub mod automaton;
 pub mod from_str;
 pub mod int_automaton;

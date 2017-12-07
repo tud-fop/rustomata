@@ -14,12 +14,10 @@ use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transit
 use recognisable::automaton::Automaton;
 
 pub mod from_cfg;
-pub mod relabel;
-// pub mod red;
+// pub mod relabel;
 
 pub use self::from_cfg::*;
-pub use self::relabel::*;
-// pub use self::red::*;
+// pub use self::relabel::*;
 
 type TransitionMap<A, T, W>
     = HashMap<A, BinaryHeap<Transition<PushDownInstruction<A>, T, W>>>;
@@ -198,6 +196,15 @@ impl<A> PushDown<A>
 
     pub fn iter(&self) -> Iter<A> {
         self.elements.iter()
+    }
+
+    pub fn map<F, B>(&self, f: F) -> PushDown<B>
+        where F: Fn(&A) -> B
+    {
+        PushDown {
+            empty: f(&self.empty),
+            elements: self.elements.iter().map(f).collect(),
+        }
     }
 }
 

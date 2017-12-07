@@ -21,7 +21,7 @@ mod from_pmcfg;
 mod from_str;
 mod tree_stack;
 mod tree_stack_instruction;
-mod relabel;
+// mod relabel;
 
 pub mod cli;
 

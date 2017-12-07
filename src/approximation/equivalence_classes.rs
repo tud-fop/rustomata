@@ -38,10 +38,10 @@ impl<A: Clone + Eq + Hash, B: Clone + Debug + Eq + Hash> EquivalenceClass<A, B> 
     }
 
     // returns the equivalence class of a given value
-    pub fn project(&self, key: &A)-> &B {
+    pub fn project(&self, key: &A) -> B {
         match self.map.get(key) {
-            None => &self.default,
-            Some(e) => e,
+            None => self.default.clone(),
+            Some(e) => e.clone(),
         }
     }
 }

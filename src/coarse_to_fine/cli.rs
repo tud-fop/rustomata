@@ -5,7 +5,9 @@ use std::fs::File;
 
 use recognisable::Recognisable;
 use push_down_automaton::PushDownAutomaton;
+use push_down_automaton::from_cfg::PushState;
 use tree_stack_automaton::TreeStackAutomaton;
+use tree_stack_automaton::PosState;
 use approximation::Approximation;
 use approximation::ptk::PDTopKElement;
 use approximation::relabel::RlbElement;
@@ -13,7 +15,7 @@ use approximation::tts::TTSElement;
 use coarse_to_fine::{self, benchmark, equivalence_classes};
 use coarse_to_fine::equivalence_classes::EquivalenceClass;
 use cfg::CFG;
-use pmcfg::PMCFG;
+use pmcfg::{PMCFG, PMCFGRule};
 use log_domain::LogDomain;
 
 pub fn get_sub_command() -> App<'static, 'static> {
@@ -197,9 +199,10 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let _ = classes_file.read_to_string(&mut classes_string);
                     let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, nrlb) = a.approximation(&rlb).unwrap();
+                    let (b, nrlb) = a.approximation(rlb).unwrap();
 
                     let size = cfg_parse_matches
                         .value_of("topk-size")
@@ -209,7 +212,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (c, nptk) = b.approximation(&ptk).unwrap();
+                    let (c, nptk) = b.approximation(ptk).unwrap();
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -277,9 +280,10 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let _ = classes_file.read_to_string(&mut classes_string);
                     let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(&rlb).unwrap();
+                    let (b, _) = a.approximation(rlb).unwrap();
 
                     println!("Step 1 (relabel): \n\n{}", b);
 
@@ -291,7 +295,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (c, _) = b.approximation(&ptk).unwrap();
+                    let (c, _) = b.approximation(ptk).unwrap();
 
                     println!("Step 2 (restrict to size): \n\n{}", c);
                 }
@@ -312,7 +316,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
 
                     let tts = TTSElement::new();
 
-                    let (a, ntts) = automaton.approximation(&tts).unwrap();
+                    let (a, ntts) = automaton.approximation(tts).unwrap();
 
                     let classes_file_name = mcfg_parse_matches.value_of("classes").unwrap();
                     let mut classes_file = File::open(classes_file_name).unwrap();
@@ -323,9 +327,10 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                         String,
                     > = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PosState<PMCFGRule<_, _, _>>| ps.map(|r| r.map_nonterminals(|nt| e.project(nt)));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, nrlb) = a.approximation(&rlb).unwrap();
+                    let (b, nrlb) = a.approximation(rlb).unwrap();
 
                     let size = mcfg_parse_matches
                         .value_of("topk-size")
@@ -335,7 +340,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (c, nptk) = b.approximation(&ptk).unwrap();
+                    let (c, nptk) = b.approximation(ptk).unwrap();
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -419,7 +424,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
 
                     let tts = TTSElement::new();
 
-                    let (a, _) = automaton.approximation(&tts).unwrap();
+                    let (a, _) = automaton.approximation(tts).unwrap();
 
                     println!("Step 1 (transform to push-down): \n\n{}", a);
 
@@ -432,9 +437,10 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                         String,
                     > = classes_string.parse().unwrap();
 
-                    let rlb = RlbElement::new(e);
+                    let f = |ps: &PosState<PMCFGRule<_, _, _>>| ps.map(|r| r.map_nonterminals(|nt| e.project(nt)));
+                    let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(&rlb).unwrap();
+                    let (b, _) = a.approximation(rlb).unwrap();
 
                     println!("Step 2 (relabel): \n\n{}", b);
 
@@ -447,7 +453,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let ptk = PDTopKElement::new(size);
 
 
-                    let (c, _) = b.approximation(&ptk).unwrap();
+                    let (c, _) = b.approximation(ptk).unwrap();
 
                     println!("Step 3 (restrict to size): \n\n{}", c);
                 }

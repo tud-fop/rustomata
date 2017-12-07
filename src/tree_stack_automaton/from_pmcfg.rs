@@ -22,6 +22,18 @@ pub enum PosState<X> {
     Position(X, usize, usize),
 }
 
+impl<X> PosState<X> {
+    pub fn map<F, Y>(&self, f: F) -> PosState<Y>
+        where F: Fn(&X) -> Y,
+    {
+        match *self {
+            PosState::Designated => PosState::Designated,
+            PosState::Initial => PosState::Initial,
+            PosState::Position(ref x, i, j) => PosState::Position(f(x), i, j),
+        }
+    }
+}
+
 impl<X: Display> Display for PosState<X> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
