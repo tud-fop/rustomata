@@ -182,7 +182,10 @@ impl<A: PartialOrd> PartialOrd for TreeStack<A> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.value.partial_cmp(&other.value) {
             None | Some(Ordering::Equal) =>
-                self.children.partial_cmp(&other.children),
+                match self.parent.partial_cmp(&other.parent) {
+                    None | Some(Ordering::Equal) => self.children.partial_cmp(&other.children),
+                    x => x,
+                }
             x => x,
         }
     }
@@ -192,7 +195,10 @@ impl<A: Ord> Ord for TreeStack<A> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.value.cmp(&other.value) {
             Ordering::Equal =>
-                self.children.cmp(&other.children),
+                match self.parent.cmp(&other.parent) {
+                    Ordering::Equal => self.children.cmp(&other.children),
+                    x => x,
+                }
             x => x,
         }
     }
