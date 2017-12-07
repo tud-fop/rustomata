@@ -9,6 +9,7 @@ use PMCFG;
 use log_domain::LogDomain;
 use cs_representation::CSRepresentation;
 use cs_representation::generator_automaton::{NaiveGeneratorAutomaton, ApproxGeneratorAutomaton};
+use cs_representation::filter_automaton::{NaiveFilterAutomaton};
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -95,7 +96,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 "Could not decode the grammar provided via stdin.",
             );
 
-            let csrep: CSRepresentation<String, String> = {
+            let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>> = {
                 if params.is_present("strategy") {
                     if params.is_present("naive"){
                         CSRepresentation::new(NaiveGeneratorAutomaton, grammar)
@@ -118,7 +119,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
         }
         ("show", Some(params)) => {
             
-            let csrep: CSRepresentation<String, String> = 
+            let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>> = 
                 if let Some(filename) = params.value_of("file") {
                     let mut file = File::open(filename).expect("Could not open file.");
                     bincode::deserialize_from(&mut file, bincode::Infinite).expect("Could not deserialize contents of file.")
@@ -154,7 +155,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             }
 
             let mut csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
-            let csrep: CSRepresentation<String, String> =
+            let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>> =
                 bincode::deserialize_from(&mut csfile, bincode::Infinite).unwrap();
 
             let step: usize = match params.value_of("step") {
@@ -169,7 +170,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             for line in word_strings.lines() {
                 let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
-                for derivation in csrep.generate(words, step).take(n) {
+                for derivation in csrep.generate(words.as_slice(), step).take(n) {
                     println!("{}", derivation);
                 }
             }

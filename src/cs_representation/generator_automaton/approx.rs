@@ -10,9 +10,11 @@ use util::push_down::Pushdown;
 use dyck::Bracket;
 use recognisable::Recogniser;
 
-use super::{GeneratorAutomaton, State, Delta};
+use cs_representation::bracket_fragment::BracketFragment;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+use super::{GeneratorAutomaton, State};
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 enum KellerOp<S> {
     Nothing,
     Remove(S),
@@ -20,7 +22,7 @@ enum KellerOp<S> {
     Replace(S, S)
 }
 type KellerElem = (usize, usize, usize);     // rule, component, index
-type Transition<N, T> = (State<N>, Vec<Delta<T>>, KellerOp<KellerElem>, State<N>, LogDomain<f32>);
+type Transition<N, T> = (State<N>, BracketFragment<T>, KellerOp<KellerElem>, State<N>, LogDomain<f32>);
 
 fn mcfg_to_stack_transitions<N, T>(
     rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
@@ -51,7 +53,7 @@ where
                         transitions.push(
                             (
                                 q,
-                                terminals,
+                                BracketFragment(terminals),
                                 if let Some(e) = stackop {
                                     KellerOp::Replace(e, (rule_id, component_id, symbol_id))
                                 } else {
@@ -71,7 +73,7 @@ where
             transitions.push(
                 (
                     q,
-                    terminals,
+                    BracketFragment(terminals),
                     if let Some(e) = stackop {
                         KellerOp::Remove(e)
                     } else {
@@ -87,7 +89,7 @@ where
 }
 
 type ApproxState<N> = (State<N>, Vec<KellerElem>); 
-type ApproxStackTransitionIterator<N, T> = Recogniser<'static, Vec<(Arc<ApproxState<N>, Delta<T>>, Pushdown<Transition<N, T>>)>, Arc<ApproxState<N>, Delta<T>>, Transition<N, T>, State<N>, Arc<ApproxState<N>, Delta<T>>>;
+type ApproxStackTransitionIterator<N, T> = Recogniser<'static, Vec<(Arc<ApproxState<N>, BracketFragment<T>>, Pushdown<Transition<N, T>>)>, Arc<ApproxState<N>, BracketFragment<T>>, Transition<N, T>, State<N>, Arc<ApproxState<N>, BracketFragment<T>>>;
 
 fn stack_transitions_to_finite_transitions<N, T>(
     sa_transitions: Vec<Transition<N, T>>,
@@ -98,20 +100,36 @@ where
     N: Clone + PartialEq + Hash + Eq + Ord,
     T: Clone + PartialEq + Ord
 {
-    let mut initial_agenda: Vec<(Arc<ApproxState<N>, Delta<T>>, Pushdown<Transition<N, T>>)> = Vec::new();
+    let mut initial_agenda: Vec<(Arc<ApproxState<N>, BracketFragment<T>>, Pushdown<Transition<N, T>>)> = Vec::new();
     let mut rulemap: HashMap<State<N>, BinaryHeap<Transition<N, T>>> = HashMap::new();
     
     for (q0, word, so, q1, w) in sa_transitions {
         if q0 == *start {
             if let KellerOp::Nothing = so {
                 initial_agenda.push(
-                    (Arc::new((q0.clone(), Vec::new()), (q1.clone(), Vec::new()), word.clone(), w).unwrap(), Pushdown::new())
+                    (
+                        Arc{ 
+                            from: (q0.clone(), Vec::new()),
+                            to: (q1.clone(), Vec::new()),
+                            label: word.clone(),
+                            weight: w
+                        },
+                        Pushdown::new()
+                    )
                 );
             } else if let KellerOp::Add(e) = so {
                 let mut stack = vec![e];
                 stack.truncate(depth);
                 initial_agenda.push(
-                    (Arc::new((q0.clone(), Vec::new()), (q1.clone(), stack), word.clone(), w).unwrap(), Pushdown::new())
+                    (
+                        Arc{ 
+                            from: (q0.clone(), Vec::new()),
+                            to: (q1.clone(), stack),
+                            label: word.clone(),
+                            weight: w
+                        },
+                        Pushdown::new()
+                    )
                 );
             }
         }
@@ -132,39 +150,50 @@ where
             let s0 = stack.clone();
             let mut s1 = stack.clone();
 
-            match *so {
+            if let Some((s0, s1)) = match *so {
                 KellerOp::Nothing => {
-                    vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                    Some((s0, s1))
                 },
                 KellerOp::Add(ref e) => {
                     s1.insert(0, e.clone());
                     s1.truncate(depth);
-                    vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                    Some((s0, s1))
                 },
                 KellerOp::Remove(ref e) => {
                     if s1.is_empty() {
-                        vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                        Some((s0, s1))
                     } else if &(s1[0]) == e {
                         s1.remove(0);
-                        vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                        Some((s0, s1))
                     } else { 
-                        Vec::new()
+                        None
                     }
                 },
                 KellerOp::Replace(ref from, ref to) => {
                     if s1.is_empty() {
                         s1.insert(0, to.clone());
                         s1.truncate(depth);
-                        vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                        Some((s0, s1))
                     } else if &(s1[0]) == from {
                         s1.remove(0);
                         s1.insert(0, to.clone());
                         s1.truncate(depth);
-                        vec![Arc::new((q0.clone(), s0), (q1.clone(), s1), word.clone(), *w).unwrap()]
+                        Some((s0, s1))
                     } else {
-                        Vec::new()
+                        None
                     }
                 }
+            } {
+                vec![
+                    Arc{
+                        from: (q0.clone(), s0),
+                        to: (q1.clone(), s1),
+                        label: word.clone(),
+                        weight: *w
+                    }
+                ]
+            } else {
+                Vec::new()
             }
         } ),
         accepting: Box::new(| _ | true),
@@ -177,40 +206,49 @@ where
 pub struct ApproxGeneratorAutomaton(pub usize);
 
 impl GeneratorAutomaton for ApproxGeneratorAutomaton {
-    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<Delta<T>>
+    fn convert<T, N>(&self, rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Automaton<BracketFragment<T>>
     where
         T: Clone + Hash + Eq + Ord,
         N: Clone + Hash + Eq + Ord
     {
         let (stack_transitions, start, stop) = mcfg_to_stack_transitions(rules, initial);
-        let arcs: Vec<Arc<ApproxState<N>, Delta<T>>> = stack_transitions_to_finite_transitions(stack_transitions, &start, self.0).collect();
+        let arcs: Vec<Arc<ApproxState<N>, BracketFragment<T>>> = stack_transitions_to_finite_transitions(stack_transitions, &start, self.0).collect();
 
         Automaton::from_arcs((start, vec![]), vec![(stop, vec![])], arcs)
     }
 }
 
-#[test]
-fn approx() {
+#[cfg(test)]
+mod test {
+
     use std::fs::File;
     use std::io::Read;
     use pmcfg::PMCFG;
     use cs_representation::MCFG;
+    use log_domain::LogDomain;
+    use integeriser::{Integeriser, HashIntegeriser};
+    use super::{mcfg_to_stack_transitions, stack_transitions_to_finite_transitions};
+    use dyck::Bracket;
 
-    let mut grammar_string = String::new();
-    File::open("examples/example_mcfg.gr").unwrap().read_to_string(&mut grammar_string).expect("failed to read file");
-    
-    let pmcfg: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
-    let grammar: MCFG<String, String, LogDomain<f32>> = pmcfg.into();
-    let initial = grammar.initial;
-    let mut rules = HashIntegeriser::new();
-    for rule in grammar.rules {
-        rules.integerise(rule);
+    #[test]
+    fn approx() {
+        let mut grammar_string = String::new();
+        File::open("examples/example_mcfg.gr").unwrap().read_to_string(&mut grammar_string).expect("failed to read file");
+        
+        let pmcfg: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+        let grammar: MCFG<String, String, LogDomain<f32>> = pmcfg.into();
+        let initial = grammar.initial;
+        let mut rules = HashIntegeriser::new();
+        for rule in grammar.rules {
+            rules.integerise(rule);
+        }
+        let (stack_approx, _, _) = mcfg_to_stack_transitions(&rules, initial);
+
+        eprintln!("{:?}", stack_approx);
+
+        for reg_trans in stack_transitions_to_finite_transitions(stack_approx, &Bracket::Open(("S".to_string(), 0)), 3) {
+            eprintln!("{:?}", reg_trans);
+        }
     }
-    let (stack_approx, _, _) = mcfg_to_stack_transitions(&rules, initial);
 
-    // println!("{:?}", stack_approx);
-
-    for reg_trans in stack_transitions_to_finite_transitions(stack_approx, &Bracket::Open(("S".to_string(), 0)), 3) {
-        // println!("{:?}", reg_trans);
-    }
 }
