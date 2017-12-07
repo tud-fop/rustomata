@@ -9,6 +9,7 @@ use std::hash::Hash;
 use util::push_down::Pushdown;
 use dyck::Bracket;
 use recognisable::Recogniser;
+use std::rc::Rc;
 
 use super::{GeneratorAutomaton, State, Delta};
 
@@ -124,7 +125,7 @@ where
             let (ref a, _) = c.to;
             a
         }),
-        filtered_rules: rulemap,
+        filtered_rules: Rc::new(rulemap),
         apply: Box::new( move |c, r| {
             let (ref q0, ref word, ref so, ref q1, ref w) = *r;
             let (_, ref stack) = c.to;
@@ -169,7 +170,7 @@ where
         } ),
         accepting: Box::new(| _ | true),
         already_found: BTreeSet::new(),
-        item_map: Box::new(| x, _ | x)
+        item_map: Box::new(| &(ref x, _) | x.clone())
     }
 }
 

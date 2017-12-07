@@ -7,10 +7,11 @@ use std::fmt::Debug;
 
 use Transition;
 use TreeStack;
-use recognisable::{Automaton, TransitionMap};
+use recognisable::automaton::{Automaton, TransitionMap};
 use Configuration;
 
 use dyck::Bracket;
+use std::rc::Rc;
 
 
 pub type Trans<T> = Transition<MultipleDyckInstruction<T>, Bracket<T>, u8>;
@@ -19,10 +20,7 @@ pub type Trans<T> = Transition<MultipleDyckInstruction<T>, Bracket<T>, u8>;
 /// over symbols in `T`.
 #[derive(Debug)]
 pub struct MultipleDyckAutomaton<T: Ord + Clone> {
-    transitions: HashMap<
-        (),
-        BinaryHeap<Trans<T>>,
-    >,
+    transitions: Rc<HashMap<(), BinaryHeap<Trans<T>>>>,
 }
 
 impl<T: Ord + Clone> MultipleDyckAutomaton<T> {
@@ -48,7 +46,7 @@ impl<T: Ord + Clone> MultipleDyckAutomaton<T> {
 
         let mut map = HashMap::new();
         map.insert((), heap);
-        MultipleDyckAutomaton { transitions: map }
+        MultipleDyckAutomaton { transitions: Rc::new(map) }
     }
 }
 
@@ -65,8 +63,8 @@ where
 
     fn transitions(
         &self,
-    ) -> TransitionMap<(), MultipleDyckInstruction<T>, Bracket<T>, u8> {
-        self.transitions.clone()
+    ) -> Rc<TransitionMap<(), MultipleDyckInstruction<T>, Bracket<T>, u8>> {
+        Rc::clone(&self.transitions)
     }
 
     fn initial(&self) -> TreeStack<MDTreeElem<T>> {

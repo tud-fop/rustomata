@@ -29,6 +29,7 @@ mod tests;
 
 use clap::App;
 
+pub use util::*;
 pub use approximation::*;
 pub use recognisable::*;
 pub use cfg::*;

@@ -2,7 +2,7 @@ use std::fmt;
 use std::hash::Hash;
 
 use recognisable::Instruction;
-use recognisable::int_automaton::Integerisable1;
+use util::integerisable::Integerisable1;
 use tree_stack_automaton::TreeStack;
 
 use integeriser::{HashIntegeriser, Integeriser};

@@ -8,10 +8,12 @@ use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
 
+use recognisable::automaton::Automaton;
+
 use recognisable::*;
 use approximation::*;
 
-type Item<S1, I1, T1, W> = (Configuration<S1, T1, W>, Vec<Transition<I1, T1, W>>);
+type Item<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 /// One level in a coarse-to-fine scheme.
 /// Translates a `run` via an `ApproximationStrategy` and checks whether the resulting

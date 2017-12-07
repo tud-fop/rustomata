@@ -1,23 +1,18 @@
-extern crate num_traits;
-
-use std::vec::Vec;
-
-use util::agenda::Weighted;
-
-pub mod from_str;
 mod configuration;
 mod recogniser;
 mod transition;
-pub mod red;           // TODO: still needed?
-pub mod automaton;     // TODO: make private
-pub mod int_automaton; // TODO: make private
+pub mod automaton;
+pub mod from_str;
+pub mod int_automaton;
 
-pub use self::automaton::{Automaton, Item, TransitionMap};
-pub use self::int_automaton::IntAutomaton;
+use std::vec::Vec;
+use util::agenda::Weighted;
+use util::push_down::Pushdown;
+
 pub use self::configuration::Configuration;
 pub use self::recogniser::Recogniser;
 pub use self::transition::Transition;
-pub use self::red::TransitionKey;
+
 
 /// Something we can `apply` to a configuration.
 pub trait Instruction {
@@ -25,6 +20,11 @@ pub trait Instruction {
 
     fn apply(&self, Self::Storage) -> Vec<Self::Storage>;
 }
+
+
+/// items of the transition system
+pub type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
+pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 impl<S, I: Instruction<Storage=S>, T, W: Clone> Weighted for Item<S, I, T, W> {
     type Weight = W;

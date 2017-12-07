@@ -5,19 +5,16 @@ use std::collections::{BinaryHeap, HashMap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
+use std::rc::Rc;
 use std::vec::Vec;
 
 use num_traits::One;
 
 use coarse_to_fine::{run_weight, run_word};
-use recognisable::{Configuration, Instruction, Recogniser, Transition};
+use recognisable::{Configuration, Instruction, Item, Recogniser, Transition, VecItem};
 use util::push_down::Pushdown;
 use util::agenda::{Agenda, BoundedPriorityQueue};
 
-
-// items of the transition system
-pub type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
-pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
@@ -25,7 +22,7 @@ pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>
 
 /// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
 pub trait Automaton<T, W>
-    where Self::I: Clone + Debug + Eq + Instruction,
+    where Self::I: Clone + Eq + Instruction,
           T: Clone + Debug + Eq,
           W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord,
           <Self::I as Instruction>::Storage: Clone + Debug + Eq,
@@ -36,7 +33,7 @@ pub trait Automaton<T, W>
 
     fn extract_key(&Configuration<<Self::I as Instruction>::Storage, T, W>) -> &Self::Key;
 
-    fn transitions(&self) -> TransitionMap<Self::Key, Self::I, T, W>;
+    fn transitions(&self) -> Rc<TransitionMap<Self::Key, Self::I, T, W>>;
 
     fn keys(&self) -> Vec<Self::Key> {
         self.transitions().keys().cloned().collect()
@@ -76,16 +73,14 @@ pub trait Automaton<T, W>
     }
 }
 
-// kinds of recognisers
-type ExactRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BinaryHeap<Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K, Item<S, I, T, W>>;
-
-pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>) -> Box<ExactRecogniser<'a, <A::I as Instruction>::Storage, A::I, T, W, A::Key>>
+pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
+                              -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
           A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word,
@@ -102,21 +97,21 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>) -> Box<ExactRecogniser<'a,
             filtered_rules: a.transitions(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(| x, y | (x,y)),
+            item_map: Box::new(|i| i.clone()),
             already_found: BTreeSet::new()
         }
     )
 }
 
-type BeamRecogniser<'a, S, I, T, W, K> = Recogniser<'a, BoundedPriorityQueue<W, Item<S, I, T, W>>, Configuration<S, T, W>, Transition<I, T, W>, K, Item<S, I, T, W>>;
 
-pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>) -> Box<BeamRecogniser<'a, <A::I as Instruction>::Storage, A::I, T, W, A::Key>>
+pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
+                                   -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
           A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord,
+          T: Clone + Debug + Eq + Ord + 'a,
+          W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
         word: word,
@@ -133,7 +128,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>) -> Box<B
             filtered_rules: a.transitions(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(| x, y | (x,y)),
+            item_map: Box::new(|i| i.clone()),
             already_found: BTreeSet::new()
         }
     )
