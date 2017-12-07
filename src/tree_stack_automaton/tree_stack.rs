@@ -19,23 +19,16 @@ impl<A> TreeStack<A> {
     }
 
     /// Applies a function `Fn(&A) -> B`to every node in a `TreeStack<A>`.
-    pub fn map<B>(&self, f: &Fn(&A) -> B) -> TreeStack<B> {
+    pub fn map<F, B>(&self, f: &mut F) -> TreeStack<B>
+        where F: FnMut(&A) -> B,
+    {
+        let new_value = f(&self.value);
         let new_parent = match self.parent {
             Some((i, ref p)) => Some((i, Rc::new(p.map(f)))),
             None => None,
         };
         let new_children = self.children.iter().map(|o| o.clone().map(|v| Rc::new(v.map(f)))).collect();
-        TreeStack { parent: new_parent, value: f(&self.value), children: new_children }
-    }
-
-    /// Applies a function `FnMut(&A) -> B`to every node in a `TreeStack<A>`.
-    pub fn map_mut<B: Clone>(&self, f: &mut FnMut(&A) -> B) -> TreeStack<B> {
-        let new_parent = match self.parent {
-            Some((i, ref p)) => Some((i, Rc::new(p.map_mut(f)))),
-            None => None,
-        };
-        let new_children = self.children.iter().map(|o| o.clone().map(|v| Rc::new(v.map_mut(f)))).collect();
-        TreeStack { parent: new_parent, value: f(&self.value), children: new_children }
+        TreeStack { parent: new_parent, value: new_value, children: new_children }
     }
 
     /// Returns `True` if the stack pointer points to the bottom node.
@@ -114,11 +107,11 @@ impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
     type I = HashIntegeriser<A>;
 
     fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
-        self.map_mut(&mut move |v| integeriser.integerise(v.clone()))
+        self.map(&mut move |v| integeriser.integerise(v.clone()))
     }
 
     fn un_integerise(aint: &Self::AInt, integeriser: &Self::I) -> Self {
-        aint.map(&|&v| integeriser.find_value(v).unwrap().clone())
+        aint.map(&mut |&v| integeriser.find_value(v).unwrap().clone())
     }
 }
 
