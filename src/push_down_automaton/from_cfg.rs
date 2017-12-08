@@ -22,6 +22,21 @@ pub enum PushState<X, Y> {
     T(Y),
 }
 
+impl<A, Y> PushState<A, Y>
+    where Y: Clone,
+{
+    pub fn map<F, B>(&self, f: F) -> PushState<B, Y>
+        where F: Fn(&A) -> B,
+    {
+        match *self {
+            PushState::Designated => PushState::Designated,
+            PushState::Initial => PushState::Initial,
+            PushState::Nt(ref a) => PushState::Nt(f(a)),
+            PushState::T(ref x) => PushState::T(x.clone()),
+        }
+    }
+}
+
 impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

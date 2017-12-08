@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 mod from_str;
-mod relabel;
+// mod relabel;
 
 pub mod cli;
 
@@ -47,7 +47,23 @@ pub struct PMCFGRule<N, T, W> {
     pub weight: W,
 }
 
-/// A weighted PMCFG.
+impl<N, T, W> PMCFGRule<N, T, W>
+    where T: Clone,
+          W: Clone,
+{
+    pub fn map_nonterminals<F, M>(&self, f: F) -> PMCFGRule<M, T, W>
+        where F: Fn(&N) -> M,
+    {
+        PMCFGRule {
+            head: f(&self.head),
+            tail: self.tail.iter().map(f).collect(),
+            composition: self.composition.clone(),
+            weight: self.weight.clone()
+        }
+    }
+}
+
+/// A weighted MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
     pub _dummy: PhantomData<T>,

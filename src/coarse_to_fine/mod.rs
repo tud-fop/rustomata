@@ -19,17 +19,17 @@ type Item<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 /// Translates a `run` via an `ApproximationStrategy` and checks whether the resulting
 /// `Vec`s of `Transition`s are accepted by the given `Automaton`.
 pub fn ctf_level<I1, I2, T, W, ST, A>
-    (run: Vec<Transition<I2, T, W>>, strat: &ST, automaton: &A) -> BinaryHeap<Item<I1::Storage, I1, T, W>>
+    (run: Vec<Transition<I2, T, W>>, strat: &ApproximationInstance<ST, T, W>, automaton: &A) -> BinaryHeap<Item<I1::Storage, I1, T, W>>
     where I1::Storage: Clone + Debug + Eq + Ord,
           I1: Eq + Clone + Debug + Instruction + PartialOrd,
           I2: Eq + Clone + Debug + Instruction,
           T: Eq + Clone + Debug + Ord,
           W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
-          ST: ApproximationStrategy<I1, I2, T, W>,
+          ST: ApproximationStrategy<I1=I1, I2=I2>,
           A: Automaton<T, W, I=I1>,
 {
     let mut outp = BinaryHeap::new();
-    for e in strat.translate_run(run) {
+    for e in strat.unapproximate_run(run) {
         if let Some(x) = automaton.check_run(&e) {
             outp.push(x);
         }
