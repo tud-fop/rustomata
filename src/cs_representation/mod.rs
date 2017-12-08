@@ -220,7 +220,7 @@ where
 fn from_brackets<N, T>(
     rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
     word: Vec<Bracket<BracketContent<T>>>,
-) -> Derivation<N, T>
+) -> Option<Derivation<N, T>>
 where
     N: Hash + Eq + Clone,
     T: Hash + Eq + Clone
@@ -231,9 +231,12 @@ where
     for sigma in word {
         match sigma {
             Bracket::Open(BracketContent::Component(rule_id, _)) => {
-                tree.insert(pos.clone(), rules.find_value(rule_id).unwrap());
+                let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
+                if rule_at_pos != &rule_id {
+                    return None;
+                }
             }
-            Bracket::Open(BracketContent::Variable(_, i, _)) => {
+            Bracket::Open(BracketContent::Variable(rule_id, i, _)) => {
                 pos.push(i);
             }
             Bracket::Close(BracketContent::Variable(_, _, _)) => {
@@ -243,7 +246,7 @@ where
         }
     }
 
-    Derivation(tree)
+    Some(Derivation(tree.into_iter().map(|(pos, i)| (pos, rules.find_value(i).unwrap())).collect()))
 }
 
 /// Iterates Dyck words that represent a derivation for a word according to
@@ -273,18 +276,19 @@ where
         let mut dycks = 0;
 
         for candidate_batch in candidates {
+            eprintln!("starting batch");
             for (candidate_fragments, _) in candidate_batch {
                 let candidate: Vec<Delta<T>> = BracketFragment::concat_owned(candidate_fragments);
                 cans += 1;
                 if dyck::recognize(&candidate){
-                    eprintln!("{:?}", candidate);
                     dycks += 1;
-                    if checker.recognize(&candidate) {
+                    if let Some(derivation) = from_brackets(rules, candidate) {
                         eprintln!("found after {} candidates, where {} were dyck words", cans, dycks);
-                        return Some(from_brackets(rules, candidate));
+                        return Some(derivation);
                     }
                 }
             }
+            eprintln!("finshed batch");
         }
         None
     }
