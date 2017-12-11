@@ -119,6 +119,7 @@ impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>, T, W> for PushD
     where A: Ord + PartialEq + Debug + Clone + Hash,
           B: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + PartialOrd,
+          <Self as Automaton<T, W>>::TInt: Eq,
           W: Ord + Eq + Clone + Copy + Debug + AddAssign + Mul<Output = W> + Div<Output = W> + Zero + One,
           S: ApproximationStrategy<I1=PushDownInstruction<A>, I2=PushDownInstruction<B>>
 {
@@ -129,7 +130,7 @@ impl<S, A, B, T, W> Approximation<S, PushDownAutomaton<B, T, W>, T, W> for PushD
 
         let mut transitions = Vec::new();
 
-        for (k, value) in self.transitions().iter() {
+        for (k, value) in self.transition_map().iter() {
             if !(*k == *self.initial().empty()){
                 for t in value {
                     let b = strat.approximate_transition(t.clone());

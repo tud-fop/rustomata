@@ -1,47 +1,48 @@
-extern crate num_traits;
-
-use std::cmp::Ord;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
 use std::rc::Rc;
-use std::vec::Vec;
 
 use num_traits::One;
 
 // use coarse_to_fine::{run_weight, run_word};
-use recognisable::{Configuration, Instruction, Item, Recogniser, Transition, VecItem};
-use util::push_down::Pushdown;
+use recognisable::{Configuration, Instruction, Item, Recogniser, Transition};
 use util::agenda::{Agenda, BoundedPriorityQueue};
-
+use util::push_down::Pushdown;
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
 
-
-/// Something that has `transitions`, an `initial` configuration, and a predicate characterising terminal configurations `is_terminal`.
+// TODO: slim down interface
 pub trait Automaton<T, W>
-    where Self::I: Clone + Debug + Eq + Instruction,
-          T: Clone + Debug + Eq,
-          W: One + Mul<Output = W> + Clone + Copy + Debug + Eq + Ord,
+    where T: Clone + Debug + Eq,
+          W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord,
+          Self::IKey: Hash + Eq + Clone,
+          Self::I: Clone + Debug + Eq + Instruction,
+          Self::IInt: Clone + Debug + Eq + Instruction,
           <Self::I as Instruction>::Storage: Clone + Debug + Eq,
-          Self::Key: Hash + Eq + Clone,
+          <Self::IInt as Instruction>::Storage: Clone + Debug + Eq,
 {
-    type I;   /// instructions
-    type Key;
+    type I;    /// instructions
+    type IInt; /// internal representation of instructions
+    type TInt; /// internal representation of terminal symbols
+    type IKey; /// key for the configurations
 
-    fn extract_key(&Configuration<<Self::I as Instruction>::Storage, T, W>) -> &Self::Key;
+    fn extract_key_int(&Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> &Self::IKey;
 
-    fn transitions(&self) -> Rc<TransitionMap<Self::Key, Self::I, T, W>>;
+    fn is_terminal_int(&Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> bool;
 
-    fn keys(&self) -> Vec<Self::Key> {
-        self.transitions().keys().cloned().collect()
-    }
+    fn item_map(&self, &Item<<Self::IInt as Instruction>::Storage, Self::IInt, Self::TInt, W>)
+                -> Item<<Self::I as Instruction>::Storage, Self::I, T, W>;
 
-    fn initial(&self) -> <Self::I as Instruction>::Storage;
+    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>;
 
-    fn is_terminal(&Configuration<<Self::I as Instruction>::Storage, T, W>) -> bool;
+    fn transition_map(&self) -> Rc<TransitionMap<Self::IKey, Self::IInt, Self::TInt, W>>;
+
+    fn initial(&self) -> <Self::IInt as Instruction>::Storage;
+
+    fn terminal_to_int(&self, &T) -> Self::TInt;
 
     /*
     // TODO: remove
@@ -81,61 +82,70 @@ pub trait Automaton<T, W>
      */
 }
 
+
 pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
                               -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
-          A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
-          <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          <A::I as Instruction>::Storage: Clone + Debug + Eq,
+          A::IInt: 'a,
+          A::IKey: 'a,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
           T: Clone + Debug + Eq + Ord + 'a,
+          A::TInt: Clone + Debug + Eq + Ord,
           W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
-        word: word,
+        word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
         storage: a.initial(),
         weight: W::one(),
     };
+
     let mut init_heap = BinaryHeap::new();
     init_heap.enqueue((i, Pushdown::new()));
 
     Box::new(
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key(c)),
-            filtered_rules: a.transitions(),
+            configuration_characteristic: Box::new(|c| A::extract_key_int(c)),
+            filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(|i| i.clone()),
+            accepting: Box::new(|c| A::is_terminal_int(c)),
+            item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
 }
 
 
 pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
-                                   -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
+                               -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
-          A::Key: Hash,
           A::I: Clone + Debug + Eq + Instruction,
-          <A::I as Instruction>::Storage: Clone + Debug + Eq + Ord,
+          <A::I as Instruction>::Storage: Clone + Debug + Eq,
+          A::IInt: 'a,
+          A::IKey: 'a,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
           T: Clone + Debug + Eq + Ord + 'a,
+          A::TInt: Clone + Debug + Eq + Ord,
           W: Copy + Debug + One + Ord + 'a,
 {
     let i = Configuration {
-        word: word,
+        word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
         storage: a.initial(),
         weight: W::one(),
     };
+
     let mut init_heap = BoundedPriorityQueue::new(beam);
     init_heap.enqueue((i, Pushdown::new()));
 
     Box::new(
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key(c)),
-            filtered_rules: a.transitions(),
+            configuration_characteristic: Box::new(|c| A::extract_key_int(c)),
+            filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal(c)),
-            item_map: Box::new(|i| i.clone()),
+            accepting: Box::new(|c| A::is_terminal_int(c)),
+            item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
 }

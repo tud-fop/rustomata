@@ -4,7 +4,6 @@ mod transition;
 
 pub mod automaton;
 pub mod from_str;
-pub mod int_automaton;
 
 use std::vec::Vec;
 use util::agenda::Weighted;

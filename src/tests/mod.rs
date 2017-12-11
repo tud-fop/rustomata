@@ -94,16 +94,16 @@ fn test_from_str_automaton() {
     automaton_string.push_str(t3_string.as_str());
     automaton_string.push_str("\n");
 
-    let automaton_parse: Result<TreeStackAutomaton<String, String, LogDomain<f64>>, _> = automaton_string.parse();
+    let automaton_parse: TreeStackAutomaton<String, String, LogDomain<f64>> = automaton_string.parse().unwrap();
 
-    assert_eq!(
-        automaton.list_transitions(),
-        automaton_parse.clone().unwrap().list_transitions()
-    );
+    let ts1: Vec<_> = automaton.list_transitions().collect();
+    let ts2: Vec<_> = automaton_parse.list_transitions().collect();
+
+    assert_eq!(ts1, ts2);
 
     assert_eq!(
         automaton.initial(),
-        automaton_parse.unwrap().initial()
+        automaton_parse.initial()
     );
 }
 

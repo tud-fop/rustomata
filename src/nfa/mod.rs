@@ -207,7 +207,7 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transitions().get(c.current_symbol()) {
+        if let Some(rs) = a.transition_map().get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {

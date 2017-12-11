@@ -4,8 +4,7 @@ use pmcfg::PMCFG;
 use cfg::CFG;
 use recognisable::Recognisable;
 use tree_stack_automaton::TreeStackAutomaton;
-use push_down_automaton::PushDownAutomaton;
-use push_down_automaton::from_cfg::PushState;
+use push_down_automaton::{PushDownAutomaton, PushState};
 use approximation::{Approximation, PDTopKElement, RlbElement, TTSElement};
 use approximation::equivalence_classes::EquivalenceClass;
 
