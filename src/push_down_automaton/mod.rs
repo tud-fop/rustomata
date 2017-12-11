@@ -129,12 +129,12 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
           T: Clone + Debug + Eq + Hash + PartialOrd,
           W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
 {
-    type IKey = A;
+    type Key = A;
     type I = PushDownInstruction<A>;
     type IInt = PushDownInstruction<A>;
     type TInt = T;
 
-    fn extract_key_int(c: &Configuration<PushDown<A>, T, W>) -> &A {
+    fn extract_key(c: &Configuration<PushDown<A>, T, W>) -> &A {
         if c.storage.is_bottom() {
             &c.storage.empty
         } else {
@@ -156,7 +156,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         self.initial.clone()
     }
 
-    fn is_terminal_int(c: &Configuration<PushDown<A>, T, W>) -> bool {
+    fn is_terminal(c: &Configuration<PushDown<A>, T, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
     }
 

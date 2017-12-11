@@ -141,15 +141,15 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
     type I = TreeStackInstruction<A>;
     type IInt = TreeStackInstruction<usize>;
     type TInt = usize;
-    type IKey = usize;
+    type Key = usize;
 
-    fn extract_key_int(c: &Configuration<TreeStack<usize>, usize, W>) -> &usize {
+    fn extract_key(c: &Configuration<TreeStack<usize>, usize, W>) -> &usize {
         match *c {
             Configuration { ref storage, .. } => storage.current_symbol(),
         }
     }
 
-    fn is_terminal_int(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
+    fn is_terminal(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
         c.word.is_empty() && c.storage.is_at_bottom()
     }
 

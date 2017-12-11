@@ -1,7 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::ops::Mul;
 use std::rc::Rc;
 
 use num_traits::One;
@@ -14,35 +13,64 @@ use util::push_down::Pushdown;
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
 
-// TODO: slim down interface
+/// An `Automaton` is something that has `transitions`, an `initial` storage configuration, and a predicate characterising terminal configurations `is_terminal`.
+///
+/// * `T` is the type of the terminal symbols that are read by the automaton.
+/// * `W` is the type of the weights that are used by the automaton.
+///
+/// To allow for optimisations (e.g. integerisation), `Self::I` and `T` are internally represented by `Self::IInt` and `Self::TInt`, respectively.
+///
+/// * The internal representation should be used for computation-intensive tasks.
+/// * The outer representation should be used for pretty-printing etc.
 pub trait Automaton<T, W>
-    where T: Clone + Debug + Eq,
-          W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord,
-          Self::IKey: Hash + Eq + Clone,
-          Self::I: Clone + Debug + Eq + Instruction,
+    where Self::Key: Eq + Hash,
+          Self::I: Instruction,
           Self::IInt: Clone + Debug + Eq + Instruction,
-          <Self::I as Instruction>::Storage: Clone + Debug + Eq,
-          <Self::IInt as Instruction>::Storage: Clone + Debug + Eq,
 {
-    type I;    /// instructions
-    type IInt; /// internal representation of instructions
-    type TInt; /// internal representation of terminal symbols
-    type IKey; /// key for the configurations
+    /// A key to match `Configuration`s to probably applicable `Transitions`.
+    type Key;
 
-    fn extract_key_int(&Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> &Self::IKey;
+    /// The `Instruction`s of this `Automaton`.
+    type I;
 
-    fn is_terminal_int(&Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> bool;
+    /// The internal representation of the `Instructions`.
+    type IInt;
 
-    fn item_map(&self, &Item<<Self::IInt as Instruction>::Storage, Self::IInt, Self::TInt, W>)
+    /// The internal representation of the terminal symbols
+    type TInt;
+
+
+    /// Returns a boxed `Iterator` over the `Transitions` of this `self`.
+    fn transitions<'a>(&'a self)
+                       -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>;
+
+
+    /// Maps items from the internal representation to the desired output.
+    fn item_map(&self,
+                i: &Item<<Self::IInt as Instruction>::Storage, Self::IInt, Self::TInt, W>)
                 -> Item<<Self::I as Instruction>::Storage, Self::I, T, W>;
 
-    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>;
+    /// Translates a terminal symbol to its internal representation.
+    fn terminal_to_int(&self, t: &T)
+                       -> Self::TInt;
 
-    fn transition_map(&self) -> Rc<TransitionMap<Self::IKey, Self::IInt, Self::TInt, W>>;
 
-    fn initial(&self) -> <Self::IInt as Instruction>::Storage;
+    /// Returns the `Self::Key` for the given `Configuration` (in its internal representation).
+    fn extract_key(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>)
+                   -> &Self::Key;
 
-    fn terminal_to_int(&self, &T) -> Self::TInt;
+    /// Returns whether the given `Configuration`  (in its internal representation) is terminal,
+    /// i.e. if it is a `Configuration` in which the `Automaton` may stop and accept.
+    fn is_terminal(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>)
+                   -> bool;
+
+    /// Returns a `Map` from `Self::Key` to the matching `Transition`s (in their internal representation).
+    fn transition_map(&self)
+                      -> Rc<TransitionMap<Self::Key, Self::IInt, Self::TInt, W>>;
+
+    /// Returns the initial storage configuration (in its internal representation).
+    fn initial(&self)
+               -> <Self::IInt as Instruction>::Storage;
 
     /*
     // TODO: remove
@@ -89,7 +117,7 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq,
           A::IInt: 'a,
-          A::IKey: 'a,
+          A::Key: 'a,
           <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
           T: Clone + Debug + Eq + Ord + 'a,
           A::TInt: Clone + Debug + Eq + Ord,
@@ -107,10 +135,10 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
     Box::new(
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key_int(c)),
+            configuration_characteristic: Box::new(|c| A::extract_key(c)),
             filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal_int(c)),
+            accepting: Box::new(|c| A::is_terminal(c)),
             item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
@@ -123,7 +151,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
           A::I: Clone + Debug + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Debug + Eq,
           A::IInt: 'a,
-          A::IKey: 'a,
+          A::Key: 'a,
           <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
           T: Clone + Debug + Eq + Ord + 'a,
           A::TInt: Clone + Debug + Eq + Ord,
@@ -141,10 +169,10 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
     Box::new(
         Recogniser {
             agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key_int(c)),
+            configuration_characteristic: Box::new(|c| A::extract_key(c)),
             filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal_int(c)),
+            accepting: Box::new(|c| A::is_terminal(c)),
             item_map: Box::new(move |i| a.item_map(&i)),
         }
     )
