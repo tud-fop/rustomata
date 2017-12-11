@@ -10,7 +10,7 @@ use std::vec::Vec;
 
 use num_traits::One;
 
-use coarse_to_fine::{run_weight, run_word};
+// use coarse_to_fine::{run_weight, run_word};
 use recognisable::{Configuration, Instruction, Item, Recogniser, Transition, VecItem};
 use util::push_down::Pushdown;
 use util::agenda::{Agenda, BoundedPriorityQueue};
@@ -43,7 +43,11 @@ pub trait Automaton<T, W>
 
     fn is_terminal(&Configuration<<Self::I as Instruction>::Storage, T, W>) -> bool;
 
-    fn check_run(&self, run: &[Transition<Self::I, T, W>]) -> Option<VecItem<<Self::I as Instruction>::Storage, Self::I, T, W>> {
+    /*
+    // TODO: remove
+    fn check_run(&self, run: &[Transition<Self::IInt, T, W>])
+                 -> Option<VecItem<<Self::IInt as Instruction>::Storage, Self::IInt, T, W>>
+    {
         let heap = self.check(self.initial().clone(), run);
         if heap.is_empty(){
             return None;
@@ -56,8 +60,11 @@ pub trait Automaton<T, W>
         Some((c, run.to_owned()))
     }
 
-    //note: gives back the first configuration it finds
-    fn check<'b>(&'b self, storage: <Self::I as Instruction>::Storage, run: &[Transition<Self::I, T, W>]) -> Vec<<Self::I as Instruction>::Storage> {
+    // TODO: remove
+    // note: gives back the first configuration it finds
+    fn check<'b>(&'b self, storage: <Self::IInt as Instruction>::Storage, run: &[Transition<Self::IInt, T, W>])
+                 -> Vec<<Self::IInt as Instruction>::Storage>
+    {
         let mut storage_heap = Vec::new();
         storage_heap.push(storage);
         for t in run {
@@ -71,6 +78,7 @@ pub trait Automaton<T, W>
         }
         storage_heap
     }
+     */
 }
 
 pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
