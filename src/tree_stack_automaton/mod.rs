@@ -49,16 +49,16 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
           T: Clone + Eq + Hash,
           W: Clone + Ord,
 {
-    pub fn new(transitions: Vec<Transition<TreeStackInstruction<A>, T, W>>,
-               initial: TreeStack<A>)
-               -> TreeStackAutomaton<A, T, W>
+    pub fn new<It>(transitions: It, initial: TreeStack<A>)
+                   -> TreeStackAutomaton<A, T, W>
+        where It: IntoIterator<Item=Transition<TreeStackInstruction<A>, T, W>>,
     {
         let mut a_inter = HashIntegeriser::new();
         let mut t_inter = HashIntegeriser::new();
         let init: TreeStack<usize> = initial.integerise(&mut a_inter);
         let mut transition_map: TransitionMap<usize, usize, W>  = HashMap::new();
 
-        for t in transitions.iter().map(|t| t.integerise(&mut t_inter, &mut a_inter)) {
+        for t in transitions.into_iter().map(|t| t.integerise(&mut t_inter, &mut a_inter)) {
             let a =
                 match t.instruction {
                     TreeStackInstruction::Up     { ref current_val, .. }
@@ -180,15 +180,25 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         }
     }
 
+    fn from_transitions<It>(transitions: It, initial: TreeStack<A>) -> Self
+        where It: IntoIterator<Item=Transition<TreeStackInstruction<A>, T, W>>
+    {
+        TreeStackAutomaton::new(transitions, initial)
+    }
+
     fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<TreeStackInstruction<A>, T, W>> + 'a> {
         self.list_transitions()
+    }
+
+    fn initial(&self) -> TreeStack<A> {
+        self.initial.map(&mut |i| self.a_integeriser.find_value(*i).unwrap().clone())
     }
 
     fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {
         self.transitions.clone()
     }
 
-    fn initial(&self) -> TreeStack<usize> {
+    fn initial_int(&self) -> TreeStack<usize> {
         self.initial.clone()
     }
 

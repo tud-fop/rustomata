@@ -3,10 +3,10 @@ use std::marker::PhantomData;
 use recognisable::*;
 use pmcfg::*;
 use cfg::*;
+use approximation::ApproximationStrategy;
 use approximation::relabel::{EquivalenceClass, RlbElement};
 use approximation::ptk::PDTopKElement;
 use approximation::tts::TTSElement;
-use approximation::Approximation;
 use nfa::*;
 use push_down_automaton::*;
 use tree_stack_automaton::*;
@@ -318,7 +318,7 @@ fn test_relabel_pushdown() {
     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
     let rlb = RlbElement::new(&f);
 
-    let (b, _) = a.approximation(rlb).unwrap();
+    let (b, _) = rlb.approximate_automaton(&a);
 
     assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
     assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
@@ -351,7 +351,7 @@ fn test_topk() {
 
     let ptk = PDTopKElement::new(4);
 
-    let (b, _) = a.clone().approximation(ptk).unwrap();
+    let (b, _) = ptk.approximate_automaton(&a);
 
     assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
@@ -387,7 +387,7 @@ fn test_tts() {
 
     let tts = TTSElement::new();
 
-    let (b, _) = a.clone().approximation(tts).unwrap();
+    let (b, _) = tts.approximate_automaton(&a);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
@@ -431,7 +431,7 @@ fn test_relabel_check() {
     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
     let rlb = RlbElement::new(&f);
 
-    let (b, _) = a.approximation(rlb).unwrap();
+    let (b, _) = rlb.approximate_automaton(&a);
 
     let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next();
     assert_ne!(None, itemb);
@@ -548,7 +548,7 @@ fn test_ptk_to_nfa(){
 
     let ptk = PDTopKElement::new(4);
 
-    let (b, _) = a.clone().approximation(ptk).unwrap();
+    let (b, _) = ptk.approximate_automaton(&a);
 
     let n = from_pd(&b);
 

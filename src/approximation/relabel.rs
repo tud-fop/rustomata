@@ -1,6 +1,8 @@
 use approximation::*;
 pub use approximation::equivalence_classes::EquivalenceClass;
+use num_traits::Zero;
 use push_down_automaton::*;
+use std::ops::AddAssign;
 
 /// `ApproximationStrategy` that uses the `Relabel` trait to relabel internal values via a `EquivalenceClass`
 pub struct RlbElement<'a, A1, A2>
@@ -18,12 +20,17 @@ impl<'a, A1, A2> RlbElement<'a, A1, A2> {
     }
 }
 
-impl<'a, A1, A2> ApproximationStrategy for RlbElement<'a, A1, A2>
+impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
     where A1: Clone + Debug + Hash + Ord,
           A2: Clone + Debug + Hash + Ord,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: AddAssign + Copy + Debug + One + Ord + Zero,
 {
     type I1 = PushDownInstruction<A1>;
     type I2 = PushDownInstruction<A2>;
+    type A1 = PushDownAutomaton<A1, T, W>;
+    type A2 = PushDownAutomaton<A2, T, W>;
+
 
     fn approximate_storage(&self, pd: PushDown<A1>)-> PushDown<A2> {
         pd.map(self.mapping)

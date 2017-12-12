@@ -5,7 +5,6 @@ use std::rc::Rc;
 
 use num_traits::One;
 
-// use coarse_to_fine::{run_weight, run_word};
 use recognisable::{Configuration, Instruction, Item, Recogniser, Transition};
 use util::agenda::{Agenda, BoundedPriorityQueue};
 use util::push_down::Pushdown;
@@ -40,10 +39,18 @@ pub trait Automaton<T, W>
     type TInt;
 
 
-    /// Returns a boxed `Iterator` over the `Transitions` of this `self`.
+    /// Builds an `Automaton` from transitions and an initial storage configuration.
+    fn from_transitions<It>(transitions: It, initial: <Self::I as Instruction>::Storage)
+                            -> Self
+        where It: IntoIterator<Item=Transition<Self::I, T, W>>;
+
+    /// Returns a boxed `Iterator` over the `Transitions` of this `Automaton`.
     fn transitions<'a>(&'a self)
                        -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>;
 
+
+    /// Returns the initial storage configuration.
+    fn initial(&self) -> <Self::I as Instruction>::Storage;
 
     /// Maps items from the internal representation to the desired output.
     fn item_map(&self,
@@ -69,7 +76,7 @@ pub trait Automaton<T, W>
                       -> Rc<TransitionMap<Self::Key, Self::IInt, Self::TInt, W>>;
 
     /// Returns the initial storage configuration (in its internal representation).
-    fn initial(&self)
+    fn initial_int(&self)
                -> <Self::IInt as Instruction>::Storage;
 
     /*
@@ -125,7 +132,7 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
-        storage: a.initial(),
+        storage: a.initial_int(),
         weight: W::one(),
     };
 
@@ -159,7 +166,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
-        storage: a.initial(),
+        storage: a.initial_int(),
         weight: W::one(),
     };
 
