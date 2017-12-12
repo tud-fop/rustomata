@@ -7,8 +7,7 @@ use std::fmt;
 use integeriser::{HashIntegeriser, Integeriser};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-use pmcfg::{PMCFGRule, VarT, PMCFG};
-use dyck::multiple::{Bracket, MultipleDyckLanguage};
+use pmcfg::{PMCFG, PMCFGRule, VarT};
 use openfsa::fsa::{Automaton};
 use log_domain::LogDomain;
 use dyck;
@@ -31,23 +30,6 @@ use std::fmt::{Display, Error, Formatter};
 pub struct Derivation<'a, N: 'a, T: 'a>(
     BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>,
 );
-
-// impl<'a, N, T> Derivation<'a, N, T>
-// where
-//     N: 'a,
-//     T: 'a
-// {
-//     pub fn weight(&self) -> LogDomain<f32> {
-//         let mut dweight = LogDomain::one();
-//         let &Derivation(ref map) = self;
-
-//         for &&PMCFGRule{ weight, .. } in map.values() {
-//             dweight = dweight * weight;
-//         }
-
-//         dweight
-//     }
-// }
 
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -227,7 +209,6 @@ where
         eprintln!("generate: intersection & dump");
         CSGenerator {
             candidates: g,
-            checker: MultipleDyckLanguage::new(&self.dyck),
             rules: &self.rules,
         }
     }
@@ -235,7 +216,7 @@ where
 
 fn from_brackets<N, T>(
     rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
-    word: Vec<Bracket<BracketContent<T>>>,
+    word: Vec<Delta<T>>,
 ) -> Option<Derivation<N, T>>
 where
     N: Hash + Eq + Clone,
@@ -246,16 +227,16 @@ where
 
     for sigma in word {
         match sigma {
-            Bracket::Open(BracketContent::Component(rule_id, _)) => {
+            dyck::Bracket::Open(BracketContent::Component(rule_id, _)) => {
                 let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
                 if rule_at_pos != &rule_id {
                     return None;
                 }
             }
-            Bracket::Open(BracketContent::Variable(_, i, _)) => {
+            dyck::Bracket::Open(BracketContent::Variable(_, i, _)) => {
                 pos.push(i);
             }
-            Bracket::Close(BracketContent::Variable(_, _, _)) => {
+            dyck::Bracket::Close(BracketContent::Variable(_, _, _)) => {
                 pos.pop();
             }
             _ => (),
@@ -277,7 +258,6 @@ pub struct CSGenerator<
     N: 'a + Hash + Eq,
 > {
     candidates: Box<Iterator<Item=Vec<BracketFragment<T>>>>,
-    checker: MultipleDyckLanguage<BracketContent<T>>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 }
 
@@ -291,7 +271,6 @@ where
     fn next(&mut self) -> Option<Derivation<'a, N, T>> {
         let &mut CSGenerator {
             ref mut candidates,
-            ref checker,
             rules,
         } = self;
 
@@ -369,7 +348,7 @@ mod test {
             CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
                 NaiveGeneratorAutomaton,
                 grammar.clone()
-            ).generate(&['A'], 2)
+            ).generate(&['A'], 10)
                 .next(),
             Some(d1)
         );
@@ -377,7 +356,7 @@ mod test {
             CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
                 NaiveGeneratorAutomaton,
                 grammar.clone()
-            ).generate(&['A', 'A'], 2)
+            ).generate(&['A', 'A'], 10)
                 .next(),
             Some(d2)
         );

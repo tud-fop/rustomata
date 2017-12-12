@@ -4,8 +4,7 @@ use std::io::{self, Read};
 use std::fs::File;
 
 use recognisable::Recognisable;
-use push_down_automaton::PushDownAutomaton;
-use push_down_automaton::from_cfg::PushState;
+use push_down_automaton::{PushDownAutomaton, PushState};
 use tree_stack_automaton::TreeStackAutomaton;
 use tree_stack_automaton::PosState;
 use approximation::Approximation;

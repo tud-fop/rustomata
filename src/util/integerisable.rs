@@ -1,6 +1,6 @@
 use integeriser::Integeriser;
 
-pub trait Integerisable1  // TODO move to util::integerisable
+pub trait Integerisable1
     where Self::I: Integeriser,
 {
     type AInt; /// type of the integerised self
@@ -11,7 +11,7 @@ pub trait Integerisable1  // TODO move to util::integerisable
     fn un_integerise(&Self::AInt, integeriser: &Self::I) -> Self;
 }
 
-pub trait Integerisable2  // TODO move to util::integerisable
+pub trait Integerisable2
     where Self::I1: Integeriser,
           Self::I2: Integeriser,
 {

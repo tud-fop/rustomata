@@ -27,6 +27,7 @@ pub fn ctf_level<I1, I2, T, W, ST, A>
           W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
           ST: ApproximationStrategy<I1=I1, I2=I2>,
           A: Automaton<T, W, I=I1>,
+          <A::IInt as Instruction>::Storage: Clone + Debug + Eq,
 {
     let mut outp = BinaryHeap::new();
     for e in strat.unapproximate_run(run) {

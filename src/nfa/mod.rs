@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::ops::Mul;
+use std::ops::{AddAssign, Mul};
 
-use num_traits::One;
+use num_traits::{One, Zero};
 
 use integeriser::{Integeriser, HashIntegeriser};
 
@@ -187,7 +187,7 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
                         -> Option<(NFA<usize, T, W>, Dict<PushDownInstruction<A>, T, W>)>
     where A: Clone + Debug + Hash + Ord + PartialEq,
           T: Clone + Debug + Eq + Hash + Ord,
-          W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord
+          W: AddAssign + Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord + Zero,
 {
     let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
     let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();
@@ -207,7 +207,7 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transitions().get(c.current_symbol()) {
+        if let Some(rs) = a.transition_map().get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {

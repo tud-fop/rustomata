@@ -1,4 +1,6 @@
+use num_traits::Zero;
 use std::marker::PhantomData;
+use std::ops::AddAssign;
 
 use approximation::*;
 use tree_stack_automaton::*;
@@ -18,11 +20,15 @@ impl<A> TTSElement<A> {
     }
 }
 
-impl<A> ApproximationStrategy for TTSElement<A>
+impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
     where A: Clone + Debug + Hash + Ord,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: AddAssign + Copy + Debug + One + Ord + Zero,
 {
     type I1 = TreeStackInstruction<A>;
     type I2 = PushDownInstruction<A>;
+    type A1 = TreeStackAutomaton<A, T, W>;
+    type A2 = PushDownAutomaton<A, T, W>;
 
     fn approximate_storage(&self, a: TreeStack<A>)-> PushDown<A> {
         let mut pd = Vec::new();

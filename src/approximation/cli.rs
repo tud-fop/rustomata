@@ -4,9 +4,8 @@ use pmcfg::PMCFG;
 use cfg::CFG;
 use recognisable::Recognisable;
 use tree_stack_automaton::TreeStackAutomaton;
-use push_down_automaton::PushDownAutomaton;
-use push_down_automaton::from_cfg::PushState;
-use approximation::{Approximation, PDTopKElement, RlbElement, TTSElement};
+use push_down_automaton::{PushDownAutomaton, PushState};
+use approximation::{ApproximationStrategy, PDTopKElement, RlbElement, TTSElement};
 use approximation::equivalence_classes::EquivalenceClass;
 
 use std::io::{self, Read};
@@ -128,7 +127,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
                     let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(rlb).unwrap();
+                    let (b, _) = rlb.approximate_automaton(&a);
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -158,7 +157,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
                     let rlb = RlbElement::new(&f);
 
-                    let (b, _) = a.approximation(rlb).unwrap();
+                    let (b, _) = rlb.approximate_automaton(&a);
 
                     println!("{}", b);
                 }
@@ -185,7 +184,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (b, _) = a.approximation(ptk).unwrap();
+                    let (b, _) = ptk.approximate_automaton(&a);
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -214,7 +213,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let ptk = PDTopKElement::new(size);
 
-                    let (b, _) = a.approximation(ptk).unwrap();
+                    let (b, _) = ptk.approximate_automaton(&a);
                     println!("{}", b);
                 }
                 _ => (),
@@ -234,7 +233,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let tts = TTSElement::new();
 
-                    let (b, _) = a.approximation(tts).unwrap();
+                    let (b, _) = tts.approximate_automaton(&a);
 
                     let mut corpus = String::new();
                     let _ = io::stdin().read_to_string(&mut corpus);
@@ -256,7 +255,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let a = TreeStackAutomaton::from(g);
                     let tts = TTSElement::new();
 
-                    let (b, _) = a.approximation(tts).unwrap();
+                    let (b, _) = tts.approximate_automaton(&a);
                     println!("{}", b);
                 }
                 _ => (),
