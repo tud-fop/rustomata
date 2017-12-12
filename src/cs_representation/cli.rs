@@ -38,12 +38,6 @@ pub fn get_sub_command(name: &str) -> App {
                     .index(1)
                     .help("The file that contains the CS representation of a grammar.")
                 )
-                .arg(Arg::with_name("step")
-                    .required(false)
-                    .short("s").long("step-size")
-                    .takes_value(true)
-                    .help("The number of candidates generated before they are checked.")
-                )
                 .arg(Arg::with_name("trees")
                     .required(false)
                     .short("n").long("n-best")
@@ -55,6 +49,12 @@ pub fn get_sub_command(name: &str) -> App {
                     .short("w").long("word")
                     .takes_value(true)
                     .help("The word to parse.")
+                )
+                .arg(Arg::with_name("beam")
+                    .required(false)
+                    .short("b").long("beam")
+                    .takes_value(true)
+                    .help("Beam with during search.")
                 )
             )
             .subcommand(SubCommand::with_name("show")
@@ -158,19 +158,19 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>> =
                 bincode::deserialize_from(&mut csfile, bincode::Infinite).unwrap();
 
-            let step: usize = match params.value_of("step") {
-                Some(n) => n.parse::<usize>().unwrap(),
-                None => 100usize,
-            };
             let n: usize = match params.value_of("trees") {
                 Some(n) => n.parse::<usize>().unwrap(),
                 None => 1usize,
+            };
+            let beam: usize = match params.value_of("beam") {
+                Some(b) => b.parse::<usize>().unwrap(),
+                None => 2000usize,
             };
 
             for line in word_strings.lines() {
                 let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
-                for derivation in csrep.generate(words.as_slice(), step).take(n) {
+                for derivation in csrep.generate(words.as_slice(), beam).take(n) {
                     println!("{}", derivation);
                 }
             }

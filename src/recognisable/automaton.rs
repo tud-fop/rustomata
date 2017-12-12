@@ -1,7 +1,7 @@
 extern crate num_traits;
 
 use std::cmp::Ord;
-use std::collections::{BinaryHeap, HashMap, BTreeSet};
+use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;

@@ -11,7 +11,7 @@ use util::agenda::Weighted;
 use util::push_down::Pushdown;
 
 pub use self::configuration::Configuration;
-pub use self::recogniser::{Recogniser, WeightedSearch};
+pub use self::recogniser::{Recogniser, DeterministicSearch};
 pub use self::transition::Transition;
 
 

@@ -7,9 +7,9 @@ use std::collections::{BTreeSet, BinaryHeap, HashMap};
 use std::rc::Rc;
 use std::fmt::Debug;
 
-use recognisable::{WeightedSearch, Recogniser};
+use recognisable::{DeterministicSearch, Recogniser};
 use util::push_down::Pushdown;
-use util::agenda::{Agenda, BoundedPriorityQueue, Weighted};
+use util::agenda::{Agenda, BoundedPriorityQueue};
 
 pub struct DFA<T>(
     usize,
@@ -72,7 +72,7 @@ impl<T> DFA<T>
 where
     T: Ord + Clone + 'static + Debug,
 {
-    pub fn generate(self) -> Box<Iterator<Item = Vec<T>>> {
+    pub fn generate(self, beam: usize) -> Box<Iterator<Item = Vec<T>>> {
         let DFA(q0, qfs, arcs, heuristics) = self;
 
         let mut rules = HashMap::new();
@@ -88,30 +88,27 @@ where
         }
 
         let mut initagenda = BoundedPriorityQueue::new(
-            10000, 
+            beam, 
             Box::new(move | &Item(ref w, ref q, _) | {
                 (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * *w).pow(-1.0)
             })
         );
         initagenda.enqueue(Item(LogDomain::one(), q0, vec![]));
-        let it: WeightedSearch<
-            BoundedPriorityQueue<LogDomain<f32>, Item<T>>,
-            Item<T>,
-            Trans<T>,
-            usize,
-        > = WeightedSearch {
-            agenda: initagenda,
-            item_to_key: Box::new(|&Item(_, ref from, _)| from),
-            key_to_rules: rules,
-            apply: Box::new(
-                |&Item(ref wi, _, ref word), &Trans(ref wt, ref to, ref symbol)| {
-                    let mut w: Vec<T> = word.clone();
-                    w.push(symbol.clone());
-                    Item(*wi * *wt, *to, w)
-                },
-            ),
-            accepting: Box::new(move |&Item(_, ref q, _)| qfs.contains(q))
-        };
-        Box::new(it.map(|Item(_, _, w)| w))
+        
+        Box::new(
+            DeterministicSearch {
+                agenda: initagenda,
+                item_to_key: Box::new(|&Item(_, ref from, _)| from),
+                key_to_rules: rules,
+                apply: Box::new(
+                    |&Item(ref wi, _, ref word), &Trans(ref wt, ref to, ref symbol)| {
+                        let mut w: Vec<T> = word.clone();
+                        w.push(symbol.clone());
+                        Item(*wi * *wt, *to, w)
+                    },
+                ),
+                accepting: Box::new(move |&Item(_, ref q, _)| qfs.contains(q))
+            }. map(|Item(_, _, w)| w)
+        )
     }
 }

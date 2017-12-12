@@ -47,7 +47,7 @@ impl<'a, A, C, R, K, O> Iterator for Recogniser<'a, A, C, R, K, O>
     }
 }
 
-pub struct WeightedSearch<A, C, R: Ord, K: Hash> {
+pub struct DeterministicSearch<A, C, R: Ord, K: Hash> {
     pub agenda: A,
     pub key_to_rules: HashMap<K, BinaryHeap<R>>,
     pub item_to_key: Box<Fn(&C) -> &K>,
@@ -55,7 +55,7 @@ pub struct WeightedSearch<A, C, R: Ord, K: Hash> {
     pub accepting: Box<Fn(&C) -> bool>
 }
 
-impl<A, C, R, K> Iterator for WeightedSearch<A, C, R, K>
+impl<A, C, R, K> Iterator for DeterministicSearch<A, C, R, K>
 where
     K: Hash + Eq,
     R: Ord,

@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use pmcfg::{PMCFGRule, VarT, PMCFG};
 use dyck::multiple::{Bracket, MultipleDyckLanguage};
-use openfsa::fsa::{generator, Automaton};
+use openfsa::fsa::{Automaton};
 use log_domain::LogDomain;
 use dyck;
 
@@ -222,8 +222,8 @@ where
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate(&self, word: &[T], n: usize) -> CSGenerator<T, N> {
-        let g = DFA::from_fsa(self.generator.intersect(&self.filter.fsa(word, &self.generator))).generate();
+    pub fn generate(&self, word: &[T], beam: usize) -> CSGenerator<T, N> {
+        let g = DFA::from_fsa(self.generator.intersect(&self.filter.fsa(word, &self.generator))).generate(beam);
         eprintln!("generate: intersection & dump");
         CSGenerator {
             candidates: g,
@@ -252,7 +252,7 @@ where
                     return None;
                 }
             }
-            Bracket::Open(BracketContent::Variable(rule_id, i, _)) => {
+            Bracket::Open(BracketContent::Variable(_, i, _)) => {
                 pos.push(i);
             }
             Bracket::Close(BracketContent::Variable(_, _, _)) => {
@@ -369,7 +369,7 @@ mod test {
             CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
                 NaiveGeneratorAutomaton,
                 grammar.clone()
-            ).generate(&['A'], 2usize)
+            ).generate(&['A'], 2)
                 .next(),
             Some(d1)
         );
@@ -377,7 +377,7 @@ mod test {
             CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
                 NaiveGeneratorAutomaton,
                 grammar.clone()
-            ).generate(&['A', 'A'], 2usize)
+            ).generate(&['A', 'A'], 2)
                 .next(),
             Some(d2)
         );
