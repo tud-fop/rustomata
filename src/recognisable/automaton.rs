@@ -13,7 +13,7 @@ use num_traits::One;
 use coarse_to_fine::{run_weight, run_word};
 use recognisable::{Configuration, Instruction, Item, Recogniser, Transition, VecItem};
 use util::push_down::Pushdown;
-use util::agenda::{Agenda, BoundedPriorityQueue};
+use util::agenda::{Agenda, BoundedPriorityQueue, Weighted};
 
 
 // map from key to transition
@@ -98,7 +98,7 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
             item_map: Box::new(|i| i.clone()),
-            already_found: BTreeSet::new()
+            already_found: None
         }
     )
 }
@@ -118,7 +118,14 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
         storage: a.initial(),
         weight: W::one(),
     };
-    let mut init_heap = BoundedPriorityQueue::new(beam);
+    let mut init_heap = BoundedPriorityQueue::new(
+        beam, 
+        Box::new(
+            | cp: &(Configuration<<A::I as Instruction>::Storage, T, W>, Pushdown<Transition<A::I, T, W>>) | { 
+                cp.get_weight()
+            }
+        )
+    );
     init_heap.enqueue((i, Pushdown::new()));
 
     Box::new(
@@ -129,7 +136,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal(c)),
             item_map: Box::new(|i| i.clone()),
-            already_found: BTreeSet::new()
+            already_found: None
         }
     )
 }

@@ -103,6 +103,7 @@ where
 {
     let mut initial_agenda: Vec<(Arc<ApproxState<N>, BracketFragment<T>>, Pushdown<Transition<N, T>>)> = Vec::new();
     let mut rulemap: HashMap<State<N>, BinaryHeap<Transition<N, T>>> = HashMap::new();
+    let mut initial_items: BTreeSet<Arc<ApproxState<N>, BracketFragment<T>>> = BTreeSet::new();
     
     for (q0, word, so, q1, w) in sa_transitions {
         if q0 == *start {
@@ -118,6 +119,14 @@ where
                         Pushdown::new()
                     )
                 );
+                initial_items.insert(
+                    Arc{ 
+                        from: (q0.clone(), Vec::new()),
+                        to: (q1.clone(), Vec::new()),
+                        label: word.clone(),
+                        weight: w
+                    }
+                );
             } else if let KellerOp::Add(e) = so {
                 let mut stack = vec![e];
                 stack.truncate(depth);
@@ -125,12 +134,20 @@ where
                     (
                         Arc{ 
                             from: (q0.clone(), Vec::new()),
-                            to: (q1.clone(), stack),
+                            to: (q1.clone(), stack.clone()),
                             label: word.clone(),
                             weight: w
                         },
                         Pushdown::new()
                     )
+                );
+                initial_items.insert(
+                    Arc{ 
+                        from: (q0.clone(), Vec::new()),
+                        to: (q1.clone(), stack),
+                        label: word.clone(),
+                        weight: w
+                    }
                 );
             }
         }
@@ -198,7 +215,7 @@ where
             }
         } ),
         accepting: Box::new(| _ | true),
-        already_found: BTreeSet::new(),
+        already_found: Some(initial_items),
         item_map: Box::new(| &(ref x, _) | x.clone())
     }
 }

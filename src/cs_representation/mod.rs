@@ -1,32 +1,36 @@
 pub mod cli;
 
-use serde::{Serialize};
+use serde::Serialize;
 
 use std::hash::Hash;
 use std::fmt;
-use integeriser::{Integeriser, HashIntegeriser};
-use std::collections::{HashSet, BTreeMap, BTreeSet};
+use integeriser::{HashIntegeriser, Integeriser};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-use pmcfg::{PMCFG, PMCFGRule, VarT};
+use pmcfg::{PMCFGRule, VarT, PMCFG};
 use dyck::multiple::{Bracket, MultipleDyckLanguage};
-use openfsa::fsa::{Automaton, generator};
+use openfsa::fsa::{generator, Automaton};
 use log_domain::LogDomain;
 use dyck;
 
 use util::partition::Partition;
 
+pub mod dfa;
 pub mod bracket_fragment;
 pub mod filter_automaton;
 pub mod generator_automaton;
 use cs_representation::bracket_fragment::BracketFragment;
-use cs_representation::generator_automaton::{GeneratorAutomaton, Delta};
-use cs_representation::filter_automaton::{FilterAutomaton};
+use cs_representation::generator_automaton::{Delta, GeneratorAutomaton};
+use cs_representation::filter_automaton::FilterAutomaton;
+use cs_representation::dfa::DFA;
 
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Display, Error, Formatter};
 
 /// A derivation tree of PMCFG rules.
 #[derive(PartialEq, Debug)]
-pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>);
+pub struct Derivation<'a, N: 'a, T: 'a>(
+    BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f32>>>,
+);
 
 // impl<'a, N, T> Derivation<'a, N, T>
 // where
@@ -36,14 +40,14 @@ pub struct Derivation<'a, N: 'a, T: 'a>(BTreeMap<Vec<usize>, &'a PMCFGRule<N, T,
 //     pub fn weight(&self) -> LogDomain<f32> {
 //         let mut dweight = LogDomain::one();
 //         let &Derivation(ref map) = self;
-        
+
 //         for &&PMCFGRule{ weight, .. } in map.values() {
 //             dweight = dweight * weight;
 //         }
-        
+
 //         dweight
 //     }
-// } 
+// }
 
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -72,7 +76,9 @@ pub struct MCFG<N, T, W> {
 
 impl<N, T> From<PMCFG<N, T, LogDomain<f64>>> for MCFG<N, T, LogDomain<f32>> {
     fn from(grammar: PMCFG<N, T, LogDomain<f64>>) -> Self {
-        let PMCFG { rules, mut initial, .. } = grammar;
+        let PMCFG {
+            rules, mut initial, ..
+        } = grammar;
         assert!(initial.len() == 1);
 
         MCFG {
@@ -108,13 +114,14 @@ pub enum BracketContent<T> {
 }
 
 impl<T> Display for BracketContent<T>
-where T: Display
+where
+    T: Display,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match *self {
             BracketContent::Terminal(ref t) => write!(f, "_{{{}}}", t),
             BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
-            BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{},{}}}^{}", rule_id, i, j)
+            BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{},{}}}^{}", rule_id, i, j),
         }
     }
 }
@@ -125,7 +132,7 @@ pub struct CSRepresentation<N, T, F>
 where
     N: Eq + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: FilterAutomaton<T> + Serialize
+    F: FilterAutomaton<T> + Serialize,
 {
     generator: Automaton<BracketFragment<T>>,
     dyck: Partition<BracketContent<T>>,
@@ -138,41 +145,47 @@ where
     filter: F,
 }
 
-fn get_partition<N, T, F>(rules: &HashIntegeriser<PMCFGRule<N, T, F>>) -> Vec<BTreeSet<BracketContent<T>>> 
+fn get_partition<N, T, F>(
+    rules: &HashIntegeriser<PMCFGRule<N, T, F>>,
+) -> Vec<BTreeSet<BracketContent<T>>>
 where
     T: Clone + Hash + Eq + Ord,
     N: Clone + Hash + Eq + Ord,
-    F: Clone
+    F: Clone,
 {
     let mut cells = Vec::new();
     let mut terminals = HashSet::new();
-    
+
     for rule_id in 0..(rules.size()) {
         let rule = rules.find_value(rule_id).unwrap();
         cells.push(
-            (0..(rule.composition.composition.len())).map(|j| BracketContent::Component(rule_id, j)).collect()
+            (0..(rule.composition.composition.len()))
+                .map(|j| BracketContent::Component(rule_id, j))
+                .collect(),
         );
-        cells.extend(
+        cells.extend({
+            let mut succs = vec![BTreeSet::new(); rule.tail.len()];
+            for symbol in rule.composition
+                .composition
+                .iter()
+                .flat_map(|x| (*x).iter())
             {
-                let mut succs = vec![BTreeSet::new();rule.tail.len()];
-                for symbol in rule.composition.composition.iter().flat_map(|x| (*x).iter()) {
-                    match *symbol {
-                        VarT::T(ref t) => {
-                            if !terminals.contains(t) {
-                                terminals.insert(t.clone());
-                            }
-                        },
-                        VarT::Var(i, j) => {
-                            succs[i].insert(BracketContent::Variable(rule_id, i, j));
-                        }
+                match *symbol {
+                    VarT::T(ref t) => if !terminals.contains(t) {
+                        terminals.insert(t.clone());
+                    },
+                    VarT::Var(i, j) => {
+                        succs[i].insert(BracketContent::Variable(rule_id, i, j));
                     }
                 }
-                succs.into_iter()
             }
-        )
+            succs.into_iter()
+        })
     }
     cells.extend(
-        terminals.into_iter().map(|t| vec![BracketContent::Terminal(t)].into_iter().collect())
+        terminals
+            .into_iter()
+            .map(|t| vec![BracketContent::Terminal(t)].into_iter().collect()),
     );
 
     cells
@@ -182,35 +195,38 @@ impl<N, T, F> CSRepresentation<N, T, F>
 where
     N: Eq + Hash + Clone + ::std::fmt::Debug,
     T: Ord + Eq + Hash + Clone + ::std::fmt::Debug,
-    F: Serialize + FilterAutomaton<T>
+    F: Serialize + FilterAutomaton<T>,
+    T: 'static
 {
     ///
     pub fn new<S, G: Into<MCFG<N, T, LogDomain<f32>>>>(strat: S, grammar: G) -> Self
     where
         S: GeneratorAutomaton,
         N: Ord + Clone + Eq,
-        T: Ord + Clone + Eq
+        T: Ord + Clone + Eq,
     {
-        let MCFG{ rules, initial } = grammar.into();
+        let MCFG { rules, initial } = grammar.into();
         let mut rulemap = HashIntegeriser::new();
         for rule in rules {
             rulemap.integerise(rule);
         }
         let cells = get_partition(&rulemap);
         let filter = F::new(&rulemap);
-        
-        CSRepresentation{
+
+        CSRepresentation {
             generator: strat.convert(&rulemap, initial),
             dyck: Partition::new(cells).unwrap(),
             rules: rulemap,
-            filter
+            filter,
         }
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
     pub fn generate(&self, word: &[T], n: usize) -> CSGenerator<T, N> {
+        let g = DFA::from_fsa(self.generator.intersect(&self.filter.fsa(word, &self.generator))).generate();
+        eprintln!("generate: intersection & dump");
         CSGenerator {
-            candidates: self.generator.intersect(&self.filter.fsa(word, &self.generator)).generate(n),
+            candidates: g,
             checker: MultipleDyckLanguage::new(&self.dyck),
             rules: &self.rules,
         }
@@ -223,7 +239,7 @@ fn from_brackets<N, T>(
 ) -> Option<Derivation<N, T>>
 where
     N: Hash + Eq + Clone,
-    T: Hash + Eq + Clone
+    T: Hash + Eq + Clone,
 {
     let mut tree = BTreeMap::new();
     let mut pos = Vec::new();
@@ -246,14 +262,21 @@ where
         }
     }
 
-    Some(Derivation(tree.into_iter().map(|(pos, i)| (pos, rules.find_value(i).unwrap())).collect()))
+    Some(Derivation(
+        tree.into_iter()
+            .map(|(pos, i)| (pos, rules.find_value(i).unwrap()))
+            .collect(),
+    ))
 }
 
 /// Iterates Dyck words that represent a derivation for a word according to
 /// the Chomsky-Schützenberger characterization of an MCFG.
-pub struct CSGenerator<'a, T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::Debug, N: 'a + Hash + Eq> {
-    candidates: generator::BatchGenerator<BracketFragment<T>>,
-
+pub struct CSGenerator<
+    'a,
+    T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::Debug,
+    N: 'a + Hash + Eq,
+> {
+    candidates: Box<Iterator<Item=Vec<BracketFragment<T>>>>,
     checker: MultipleDyckLanguage<BracketContent<T>>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 }
@@ -275,20 +298,21 @@ where
         let mut cans = 0;
         let mut dycks = 0;
 
-        for candidate_batch in candidates {
-            eprintln!("starting batch");
-            for (candidate_fragments, _) in candidate_batch {
-                let candidate: Vec<Delta<T>> = BracketFragment::concat_owned(candidate_fragments);
-                cans += 1;
-                if dyck::recognize(&candidate){
-                    dycks += 1;
-                    if let Some(derivation) = from_brackets(rules, candidate) {
-                        eprintln!("found after {} candidates, where {} were dyck words", cans, dycks);
-                        return Some(derivation);
-                    }
+        for fragments in candidates {
+            let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments);
+            cans += 1;
+            eprintln!("{:?}", cans);
+            if dyck::recognize(&candidate) {
+                dycks += 1;
+                if let Some(derivation) = from_brackets(rules, candidate) {
+                    eprintln!(
+                        "found after {} candidates, where {} were dyck words",
+                        cans,
+                        dycks
+                    );
+                    return Some(derivation);
                 }
             }
-            eprintln!("finshed batch");
         }
         None
     }
@@ -307,8 +331,8 @@ mod test {
         use super::LogDomain;
         use super::Derivation;
         use super::MCFG;
-        use cs_representation::generator_automaton::naive::{NaiveGeneratorAutomaton};
-        use cs_representation::filter_automaton::naive::{NaiveFilterAutomaton};
+        use cs_representation::generator_automaton::naive::NaiveGeneratorAutomaton;
+        use cs_representation::filter_automaton::naive::NaiveFilterAutomaton;
 
         let grammar = MCFG {
             initial: "S",
@@ -324,7 +348,9 @@ mod test {
                 PMCFGRule {
                     head: "S",
                     tail: vec![],
-                    composition: Composition { composition: vec![vec![VarT::T('A')]] },
+                    composition: Composition {
+                        composition: vec![vec![VarT::T('A')]],
+                    },
                     weight: LogDomain::new(0.7f32).unwrap(),
                 },
             ],
@@ -340,14 +366,18 @@ mod test {
         );
 
         assert_eq!(
-            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(NaiveGeneratorAutomaton, grammar.clone())
-                .generate(&['A'], 2usize)
+            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
+                NaiveGeneratorAutomaton,
+                grammar.clone()
+            ).generate(&['A'], 2usize)
                 .next(),
             Some(d1)
         );
         assert_eq!(
-            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(NaiveGeneratorAutomaton, grammar.clone())
-                .generate(&['A', 'A'], 2usize)
+            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>>::new(
+                NaiveGeneratorAutomaton,
+                grammar.clone()
+            ).generate(&['A', 'A'], 2usize)
                 .next(),
             Some(d2)
         );
