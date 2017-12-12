@@ -1,4 +1,6 @@
+use num_traits::Zero;
 use std::marker::PhantomData;
+use std::ops::AddAssign;
 
 use approximation::*;
 use push_down_automaton::*;
@@ -20,11 +22,15 @@ impl<A> PDTopKElement<A> {
     }
 }
 
-impl<A> ApproximationStrategy for PDTopKElement<A>
+impl<A, T, W> ApproximationStrategy<T, W> for PDTopKElement<A>
     where A: Clone + Debug + Ord + Hash,
+          T: Clone + Debug + Eq + Hash + PartialOrd,
+          W: AddAssign + Copy + Debug + One + Ord + Zero,
 {
     type I1 = PushDownInstruction<A>;
     type I2 = PushDownInstruction<A>;
+    type A1 = PushDownAutomaton<A, T, W>;
+    type A2 = PushDownAutomaton<A, T, W>;
 
     fn approximate_storage(&self, a: PushDown<A>) -> PushDown<A> {
         let new_empty = a.empty().clone();

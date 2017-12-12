@@ -143,7 +143,7 @@ mod test {
     use cs_representation::MCFG;
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
-    use cs_representation::generator_automaton::{GeneratorAutomaton, NaiveGeneratorAutomaton, Delta};
+    use cs_representation::generator_automaton::{GeneratorAutomaton, NaiveGeneratorAutomaton};
     use cs_representation::filter_automaton::{FilterAutomaton, NaiveFilterAutomaton};
     use openfsa::fsa::Automaton;
     use cs_representation::bracket_fragment::BracketFragment;

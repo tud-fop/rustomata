@@ -8,7 +8,6 @@ use integeriser::{Integeriser, HashIntegeriser};
 use std::collections::{HashSet, BTreeMap, BTreeSet};
 
 use pmcfg::{PMCFG, PMCFGRule, VarT};
-use dyck::multiple::{Bracket, MultipleDyckLanguage};
 use openfsa::fsa::{Automaton, generator};
 use log_domain::LogDomain;
 use dyck;
@@ -211,7 +210,6 @@ where
     pub fn generate(&self, word: &[T], n: usize) -> CSGenerator<T, N> {
         CSGenerator {
             candidates: self.generator.intersect(&self.filter.fsa(word, &self.generator)).generate(n),
-            checker: MultipleDyckLanguage::new(&self.dyck),
             rules: &self.rules,
         }
     }
@@ -219,7 +217,7 @@ where
 
 fn from_brackets<N, T>(
     rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
-    word: Vec<Bracket<BracketContent<T>>>,
+    word: Vec<Delta<T>>,
 ) -> Option<Derivation<N, T>>
 where
     N: Hash + Eq + Clone,
@@ -230,16 +228,16 @@ where
 
     for sigma in word {
         match sigma {
-            Bracket::Open(BracketContent::Component(rule_id, _)) => {
+            dyck::Bracket::Open(BracketContent::Component(rule_id, _)) => {
                 let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
                 if rule_at_pos != &rule_id {
                     return None;
                 }
             }
-            Bracket::Open(BracketContent::Variable(rule_id, i, _)) => {
+            dyck::Bracket::Open(BracketContent::Variable(_, i, _)) => {
                 pos.push(i);
             }
-            Bracket::Close(BracketContent::Variable(_, _, _)) => {
+            dyck::Bracket::Close(BracketContent::Variable(_, _, _)) => {
                 pos.pop();
             }
             _ => (),
@@ -253,8 +251,6 @@ where
 /// the Chomsky-Schützenberger characterization of an MCFG.
 pub struct CSGenerator<'a, T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::Debug, N: 'a + Hash + Eq> {
     candidates: generator::BatchGenerator<BracketFragment<T>>,
-
-    checker: MultipleDyckLanguage<BracketContent<T>>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
 }
 
@@ -268,7 +264,6 @@ where
     fn next(&mut self) -> Option<Derivation<'a, N, T>> {
         let &mut CSGenerator {
             ref mut candidates,
-            ref checker,
             rules,
         } = self;
 

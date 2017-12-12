@@ -13,11 +13,9 @@ use num_traits::{One, Zero};
 use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
 use recognisable::automaton::Automaton;
 
-pub mod from_cfg;
-// pub mod relabel;
+mod from_cfg;
 
 pub use self::from_cfg::*;
-// pub use self::relabel::*;
 
 type TransitionMap<A, T, W>
     = HashMap<A, BinaryHeap<Transition<PushDownInstruction<A>, T, W>>>;
@@ -48,17 +46,16 @@ pub struct PushDown<A> {
 }
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
-    where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Eq + Clone + Hash,
-          W: Ord + Eq + Clone + AddAssign + Zero,
+    where A: Clone + Debug + Hash + Ord + PartialEq,
+          T: Clone + Eq + Hash,
+          W: AddAssign + Clone + Eq + Ord + Zero,
 {
-    pub fn new(transitions: Vec<Transition<PushDownInstruction<A>, T, W>>,
-               initial: PushDown<A>)
-               -> PushDownAutomaton<A,T,W>
+    pub fn new<It>(transitions: It, initial: PushDown<A>) -> Self
+        where It: IntoIterator<Item=Transition<PushDownInstruction<A>, T, W>>
     {
         let mut transition_map = HashMap::new();
 
-        for t in transitions {
+        for t in transitions.into_iter() {
             match t.instruction {
                 PushDownInstruction::Replace { ref current_val, .. } => {
                     let a = current_val.first().unwrap().clone();
@@ -99,24 +96,15 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
     where A: Clone + Debug + Hash + Ord,
-          T: Eq,
-          W: Ord,
+          T: Clone + Eq,
+          W: Clone + Ord,
 {
-    pub fn list_transitions(&self) -> Vec<&Transition<PushDownInstruction<A>, T, W>> {
-        let mut result = Vec::new();
-        let mut keys: Vec<_> = self.transitions.keys().collect();
-
-        keys.sort();
-
-        for k in keys {
-            if *k != self.initial.empty {
-                for t in &self.transitions[k] {
-                    result.push(t);
-                }
-            }
-        }
-
-        result
+    pub fn list_transitions<'a>(&'a self)
+                                -> Box<Iterator<Item=Transition<PushDownInstruction<A>, T, W>> + 'a>
+    {
+        Box::new(
+            self.transitions.values().flat_map(|h| h.iter().cloned())
+        )
     }
 }
 
@@ -138,10 +126,12 @@ impl<A> Instruction for PushDownInstruction<A>
 impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
+          W: AddAssign + Clone + Ord + Zero,
 {
     type Key = A;
     type I = PushDownInstruction<A>;
+    type IInt = PushDownInstruction<A>;
+    type TInt = T;
 
     fn extract_key(c: &Configuration<PushDown<A>, T, W>) -> &A {
         if c.storage.is_bottom() {
@@ -151,23 +141,49 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         }
     }
 
-    fn transitions(&self) -> Rc<TransitionMap<A, T, W>> {
-        self.transitions.clone()
+    fn from_transitions<It>(transitions: It, initial: PushDown<A>) -> Self
+        where It: IntoIterator<Item=Transition<PushDownInstruction<A>, T, W>>
+    {
+        PushDownAutomaton::new(transitions, initial)
+    }
+
+    fn transitions<'a>(&'a self)
+                       -> Box<Iterator<Item=Transition<PushDownInstruction<A>, T, W>> + 'a>
+    {
+        self.list_transitions()
     }
 
     fn initial(&self) -> PushDown<A> {
         self.initial.clone()
     }
 
+    fn transition_map(&self) -> Rc<TransitionMap<A, T, W>> {
+        self.transitions.clone()
+    }
+
+    fn initial_int(&self) -> PushDown<A> {
+        self.initial.clone()
+    }
+
     fn is_terminal(c: &Configuration<PushDown<A>, T, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
+    }
+
+    fn item_map(&self, i: &Item<PushDown<A>, PushDownInstruction<A>, T, W>)
+                -> Item<PushDown<A>, PushDownInstruction<A>, T, W> {
+        i.clone()
+    }
+
+
+    fn terminal_to_int(&self, t: &T) -> T {
+        t.clone()
     }
 }
 
 impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + Ord,
-          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
+          W: AddAssign + One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord + Zero,
 {
     type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;
 
@@ -342,8 +358,8 @@ impl<A> Display for PushDownInstruction<A>
 
 impl<A, T, W> Display for PushDownAutomaton<A, T, W>
     where A: Clone + Debug + Display + Hash + Ord,
-          T: Display + Debug + Eq,
-          W: Display + Debug + Ord,
+          T: Clone + Display + Debug + Eq,
+          W: Clone + Display + Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted_transitions = String::new();

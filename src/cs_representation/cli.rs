@@ -112,7 +112,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             };
 
             if params.is_present("pretty") {
-                println!("{:?}", csrep.generator.to_arcs());
+                println!("{:?}", csrep.generator.into_arcs());
             } else {
                 bincode::serialize_into(&mut stdout(), &csrep, bincode::Infinite).unwrap();
             }
