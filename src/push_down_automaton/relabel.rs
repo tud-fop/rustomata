@@ -21,7 +21,7 @@ impl<A : Relabel<N1, N2, B> +Ord + Clone,
         }
 }
 
-impl<N1: Clone + Eq + Hash, N2: Clone + Debug + Eq + Hash, T: Clone> Relabel<N1, N2, PushState<N2, T>> for PushState<N1, T>{
+impl<N1: Clone + Eq + Hash, N2: Clone + Eq + Hash, T: Clone> Relabel<N1, N2, PushState<N2, T>> for PushState<N1, T>{
         fn relabel(&self, mapping: &EquivalenceClass<N1, N2>) -> PushState<N2, T> {
             match *self {
                 PushState::Nt(ref x) => PushState::Nt(mapping.project(x).clone()),

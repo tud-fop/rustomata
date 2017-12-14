@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
@@ -8,8 +7,8 @@ use recognisable::Transition;
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
 
 impl<A, T, W> FromStr for TreeStackAutomaton<A, T, W>
-    where A: Clone + Debug + FromStr + Hash + Ord + PartialEq,
-          T: Clone + Eq + FromStr + Hash,
+    where A: Clone + FromStr + Hash + Ord + PartialEq,
+          T: Clone + Eq + FromStr + Hash + Ord,
           W: Clone + Eq + FromStr + Ord,
 {
     type Err = String;

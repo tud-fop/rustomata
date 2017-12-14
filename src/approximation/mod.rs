@@ -1,7 +1,8 @@
 use std::collections::{BinaryHeap, BTreeMap};
 use std::hash::Hash;
-use std::fmt::Debug;
+use std::ops::MulAssign;
 use num_traits::One;
+use util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
@@ -17,14 +18,15 @@ use self::relabel::*;
 use self::ptk::*;
 use self::tts::*;
 
+
 /// Object defining the strategies used for `approximation`
 pub trait ApproximationStrategy<T, W>: Sized
-    where Self::I1: Clone + Eq + Instruction,
-          Self::I2: Clone + Eq + Instruction,
+    where Self::I1: Clone + Eq + Instruction + Ord,
+          Self::I2: Clone + Eq + Instruction + Ord,
           Self::A1: Automaton<T, W, I=Self::I1>,
           Self::A2: Automaton<T, W, I=Self::I2> + Sized,
-          T: Clone + Eq,
-          W: Clone + Ord,
+          T: Clone + Eq + Ord,
+          W: Clone + MulAssign + One + Ord,
 {
     type I1;
     type I2;
@@ -48,8 +50,8 @@ pub trait ApproximationStrategy<T, W>: Sized
 
 pub struct ApproximationInstance<Strategy, T, W>
     where Strategy: ApproximationStrategy<T, W>,
-          T: Clone + Eq,
-          W: Clone + Ord,
+          T: Clone + Eq + Ord,
+          W: Clone + MulAssign + One + Ord,
 {
     reverse_transition_map: BTreeMap<Transition<Strategy::I2, T, W>, Vec<Transition<Strategy::I1, T, W>>>,
     strategy: Strategy,
@@ -58,10 +60,10 @@ pub struct ApproximationInstance<Strategy, T, W>
 /// An instance of an ApproximationStrategy that remembers the approximated transitions.
 impl<Strategy, T, W> ApproximationInstance<Strategy, T, W>
     where Strategy: ApproximationStrategy<T, W>,
-          Strategy::I2: Clone + Eq,
-          Strategy::I1: Clone + Eq,
-          T: Clone + Eq,
-          W: Clone + Ord,
+          Strategy::I2: Clone + Eq + Ord,
+          Strategy::I1: Clone + Eq + Ord,
+          T: Clone + Eq + Ord,
+          W: Clone + MulAssign + One + Ord,
 {
     pub fn new(strategy: Strategy) -> Self {
         ApproximationInstance {
@@ -99,25 +101,23 @@ impl<Strategy, T, W> ApproximationInstance<Strategy, T, W>
         }
     }
 
-    pub fn unapproximate_run(&self, run2: Vec<Transition<Strategy::I2, T, W>>)
-                             -> BinaryHeap<Vec<Transition<Strategy::I1, T, W>>>
+    pub fn unapproximate_run(&self, run2: Pushdown<Transition<Strategy::I2, T, W>>)
+                             -> BinaryHeap<Pushdown<Transition<Strategy::I1, T, W>>>
     {
-        let f = |h: BinaryHeap<Vec<_>>, ts1: Vec<_>| {
-            let new_runs: Vec<Vec<_>> =
+        let f = |h: BinaryHeap<Pushdown<_>>, ts1: Vec<_>| {
+            let new_runs: Vec<Pushdown<_>> =
                 h.into_iter()
-                .flat_map( |run: Vec<_>| -> Vec<Vec<_>>{
+                .flat_map( |run: Pushdown<_>| -> Vec<Pushdown<_>>{
                     let push_transition = |t1: &Transition<_, _, _>| {
-                        let mut new_run = run.clone();
-                        new_run.push(t1.clone());
-                        new_run
+                        run.clone().push(t1.clone())
                     };
                     ts1.iter().map(push_transition).collect()
                 } ).collect();
             BinaryHeap::from(new_runs)
         };
 
-        let initial_heap = BinaryHeap::from(vec![Vec::new()]);
-        run2.iter().map(|t2| self.unapproximate_transition(t2)).fold(initial_heap, f)
+        let initial_heap = BinaryHeap::from(vec![Pushdown::Empty]);
+        run2.iter().map(|t2| self.unapproximate_transition(&t2)).fold(initial_heap, f)
     }
 
 }

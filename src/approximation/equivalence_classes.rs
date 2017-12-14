@@ -20,14 +20,14 @@ pub struct EquivalenceClass<A, B>{
     pub default: B,
 }
 
-impl<A: Clone + Eq + Hash, B: Clone + Debug + Eq + Hash> EquivalenceClass<A, B> {
+impl<A: Clone + Eq + Hash, B: Clone + Eq + Hash> EquivalenceClass<A, B> {
     pub fn new(map: HashMap<B, Vec<A>>, default: B) -> EquivalenceClass<A, B> {
         let mut rmap = HashMap::new();
         for (class_name, members) in map {
             for value in members {
                 match rmap.entry(value) {
                     Entry::Vacant(e) => { e.insert(class_name.clone()); },
-                    Entry::Occupied(e) => panic!("The value {:?} occurs more than once", e.get()),
+                    Entry::Occupied(_) => panic!("The value occurs more than once in the equivalence class"),
                 }
             }
         }
@@ -46,8 +46,11 @@ impl<A: Clone + Eq + Hash, B: Clone + Debug + Eq + Hash> EquivalenceClass<A, B> 
     }
 }
 
-impl <A: Clone + Eq + Hash + FromStr, B: Clone + Debug + Eq + Hash + FromStr> FromStr for EquivalenceClass<A, B>
-    where <A as FromStr>::Err: Debug, <B as FromStr>::Err: Debug
+impl <A: Clone + Eq + Hash + FromStr, B: Clone + Eq + Hash + FromStr> FromStr for EquivalenceClass<A, B>
+    where A: Clone + Eq + Hash + FromStr,
+          A::Err: Debug,
+          B: Clone + Eq + Hash + FromStr,
+          B::Err: Debug,
 {
     type Err = String;
 
@@ -73,8 +76,11 @@ impl <A: Clone + Eq + Hash + FromStr, B: Clone + Debug + Eq + Hash + FromStr> Fr
     }
 }
 
-impl <A: FromStr, B: FromStr> FromStr for EquivalenceSet<A, B>
-    where <A as FromStr>::Err: Debug, <B as FromStr>::Err: Debug
+impl <A, B> FromStr for EquivalenceSet<A, B>
+    where A: FromStr,
+          A::Err: Debug,
+          B: FromStr,
+          B::Err: Debug,
 {
     type Err = String;
 
@@ -86,8 +92,11 @@ impl <A: FromStr, B: FromStr> FromStr for EquivalenceSet<A, B>
     }
 }
 
-fn parse_set<A: FromStr, B: FromStr>(input: &[u8]) -> IResult<&[u8], EquivalenceSet<A, B>>
-    where <A as FromStr>::Err: Debug, <B as FromStr>::Err: Debug
+fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceSet<A, B>>
+    where A: FromStr,
+          A::Err: Debug,
+          B: FromStr,
+          B::Err: Debug,
 {
     do_parse!(
         input,
@@ -101,8 +110,9 @@ fn parse_set<A: FromStr, B: FromStr>(input: &[u8]) -> IResult<&[u8], Equivalence
     )
 }
 
-fn parse_heap<A:FromStr>(input: &[u8]) -> IResult<&[u8], Vec<A>>
-    where <A as FromStr>::Err: Debug
+fn parse_heap<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
+    where A: FromStr,
+          A::Err: Debug,
 {
     parse_vec(input, parse_token, "[", "]", ",")
 }

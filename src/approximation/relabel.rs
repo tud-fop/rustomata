@@ -1,5 +1,4 @@
 use approximation::*;
-pub use approximation::equivalence_classes::EquivalenceClass;
 use num_traits::Zero;
 use push_down_automaton::*;
 use std::ops::AddAssign;
@@ -21,10 +20,10 @@ impl<'a, A1, A2> RlbElement<'a, A1, A2> {
 }
 
 impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
-    where A1: Clone + Debug + Hash + Ord,
-          A2: Clone + Debug + Hash + Ord,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: AddAssign + Copy + Debug + One + Ord + Zero,
+    where A1: Clone + Hash + Ord,
+          A2: Clone + Hash + Ord,
+          T: Clone + Eq + Hash + Ord,
+          W: AddAssign + Copy + MulAssign + One + Ord + Zero,
 {
     type I1 = PushDownInstruction<A1>;
     type I2 = PushDownInstruction<A2>;

@@ -23,9 +23,9 @@ impl<A> PDTopKElement<A> {
 }
 
 impl<A, T, W> ApproximationStrategy<T, W> for PDTopKElement<A>
-    where A: Clone + Debug + Ord + Hash,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: AddAssign + Copy + Debug + One + Ord + Zero,
+    where A: Clone + Ord + Hash,
+          T: Clone + Eq + Hash + Ord,
+          W: AddAssign + Copy + MulAssign + One + Ord + Zero,
 {
     type I1 = PushDownInstruction<A>;
     type I2 = PushDownInstruction<A>;

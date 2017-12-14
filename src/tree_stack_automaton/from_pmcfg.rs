@@ -2,7 +2,7 @@ extern crate num_traits;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::fmt::{self, Debug, Display, Formatter};
+use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
@@ -48,9 +48,9 @@ impl<X: Display> Display for PosState<X> {
 }
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components
-impl<N: Clone + Debug + Ord + PartialEq + Hash,
-     T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One
+impl<N: Clone + Ord + PartialEq + Hash,
+     T: Clone + Ord + PartialEq + Hash,
+     W: Clone + Ord + PartialEq + One
      > From<PMCFG<N, T, W>> for TreeStackAutomaton<PosState<PMCFGRule<N, T, W>>, T, W> {
     fn from(g: PMCFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
