@@ -1,6 +1,12 @@
 use std::collections::{BTreeMap, BinaryHeap};
 use std::vec::Vec;
 
+#[derive(PartialEq, PartialOrd, Eq, Ord, Copy, Clone)]
+pub enum Capacity {
+    Limit(usize),
+    Infinite
+}
+
 pub trait Agenda {
     type Item;
 
@@ -17,34 +23,34 @@ pub trait Weighted {
 }
 
 // #[derive(Debug, PartialEq, Eq)]
-pub struct BoundedPriorityQueue<P, I> {
+pub struct PriorityQueue<'a, P, I> {
     data: BTreeMap<P, Vec<I>>, // The values should always be non-empty.
-    capacity: usize,
+    capacity: Capacity,
     size: usize,
     last_key: Option<P>, // largest key w.r.t. Ord
-    priority: Box<Fn(&I) -> P>,
+    pub priority: Box<Fn(&I) -> P + 'a>,
 }
 
-impl<P, I> BoundedPriorityQueue<P, I> {
+impl<'a, P, I> PriorityQueue<'a, P, I> {
     pub fn size(&self) -> usize {
         self.size
     }
 
-    pub fn capacity(&self) -> usize {
+    pub fn capacity(&self) -> Capacity {
         self.capacity
     }
 
     pub fn is_at_capacity(&self) -> bool {
-        self.size == self.capacity
+        Capacity::Limit(self.size) == self.capacity
     }
 }
 
-impl<I, P: Ord + Clone> Agenda for BoundedPriorityQueue<P, I> {
+impl<'a, I, P: Ord + Clone> Agenda for PriorityQueue<'a, P, I> {
     type Item = I;
 
     fn enqueue(&mut self, item: I) -> Option<I> {
         let priority = (self.priority)(&item);
-        if self.size < self.capacity {
+        if Capacity::Limit(self.size) < self.capacity {
             self.enqueue_unchecked(priority, item);
             None
         } else if &priority
@@ -91,12 +97,12 @@ impl<I, P: Ord + Clone> Agenda for BoundedPriorityQueue<P, I> {
     }
 }
 
-impl<P: Ord, I> BoundedPriorityQueue<P, I> {
-    pub fn new(capacity: usize, priority: Box<Fn(&I) -> P>) -> BoundedPriorityQueue<P, I> {
-        assert!(capacity > 0);
-        BoundedPriorityQueue {
+impl<'a, P: Ord, I> PriorityQueue<'a, P, I> {
+    pub fn new(capacity: Capacity, priority: Box<Fn(&I) -> P + 'a>) -> PriorityQueue<P, I> {
+        assert!(capacity > Capacity::Limit(0));
+        PriorityQueue {
             data: BTreeMap::new(),
-            capacity: capacity,
+            capacity,
             size: 0,
             last_key: None,
             priority
@@ -104,11 +110,11 @@ impl<P: Ord, I> BoundedPriorityQueue<P, I> {
     }
 }
 
-impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
+impl<'a, P: Ord + Clone, I> PriorityQueue<'a, P, I> {
     pub fn set_capacity(&mut self, capacity: usize) -> Vec<I> {
-        self.capacity = capacity;
+        self.capacity = Capacity::Limit(capacity);
         let mut res = Vec::new();
-        while self.size > self.capacity {
+        while Capacity::Limit(self.size) > self.capacity {
             // TODO optimise to remove entire key-value-pairs at a time
             res.push(
                 self.drop_last()
@@ -199,7 +205,7 @@ impl<I> Agenda for Vec<I> {
 
 #[test]
 fn test_bounded_priority_queue() {
-    let mut q = BoundedPriorityQueue::new(5, Box::new(|c| *c as u8));
+    let mut q = PriorityQueue::new(Capacity::Limit(5), Box::new(|c| *c as u8));
 
     assert_eq!(q.size(), 0);
     assert!(q.is_empty());
