@@ -7,8 +7,13 @@ use nom::{IResult, is_space};
 use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 use util::parsing::*;
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFG<N, T, W>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+impl<N, T, W> FromStr for CFG<N, T, W>
+    where N: FromStr,
+          N::Err: Debug,
+          T: Clone + FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     type Err = String;
 
@@ -44,8 +49,13 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFG<N, T, W>
     }
 }
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFGRule<N, T, W>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+impl<N, T, W> FromStr for CFGRule<N, T, W>
+    where N: FromStr,
+          N::Err: Debug,
+          T: Clone + FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     type Err = String;
 
@@ -57,8 +67,13 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for CFGRule<N, T, W>
     }
 }
 
-fn parse_cfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult<&[u8], CFGRule<N, T, W>>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+fn parse_cfg_rule<N, T, W>(input: &[u8]) -> IResult<&[u8], CFGRule<N, T, W>>
+    where N: FromStr,
+          N::Err: Debug,
+          T: FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     do_parse!(
         input,
@@ -79,8 +94,11 @@ fn parse_cfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult<&
     )
 }
 
-fn parse_letter_t<N:FromStr, T: FromStr>(input: &[u8]) -> IResult<&[u8], LetterT<N,T>>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug
+fn parse_letter_t<N, T>(input: &[u8]) -> IResult<&[u8], LetterT<N,T>>
+    where N: FromStr,
+          N::Err: Debug,
+          T: FromStr,
+          T::Err: Debug,
 {
     do_parse!(
         input,
@@ -102,8 +120,11 @@ fn parse_letter_t<N:FromStr, T: FromStr>(input: &[u8]) -> IResult<&[u8], LetterT
     )
 }
 
-fn parse_composition<N:FromStr, T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<LetterT<N,T>>>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug
+fn parse_composition<N, T>(input: &[u8]) -> IResult<&[u8], Vec<LetterT<N,T>>>
+    where N: FromStr,
+          N::Err: Debug,
+          T: FromStr,
+          T::Err: Debug,
 {
     parse_vec(input, parse_letter_t, "[", "]", ",")
 }

@@ -4,7 +4,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::ops::{AddAssign, Mul};
+use std::ops::{AddAssign, Mul, MulAssign};
 use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
@@ -23,8 +23,8 @@ type TransitionMap<A, T, W>
 /// Automaton with storage type `PushDown<A>`, terminals of type `T` and weights of type `W`.
 #[derive(Debug, Clone)]
 pub struct PushDownAutomaton<A, T, W>
-    where A: Clone + Debug + Hash + Ord,
-          T: Eq,
+    where A: Clone + Hash + Ord,
+          T: Eq + Ord,
           W: Ord,
 {
     transitions: Rc<TransitionMap<A, T, W>>,
@@ -46,8 +46,8 @@ pub struct PushDown<A> {
 }
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
-    where A: Clone + Debug + Hash + Ord + PartialEq,
-          T: Clone + Eq + Hash,
+    where A: Clone + Hash + Ord + PartialEq,
+          T: Clone + Eq + Hash + Ord,
           W: AddAssign + Clone + Eq + Ord + Zero,
 {
     pub fn new<It>(transitions: It, initial: PushDown<A>) -> Self
@@ -95,8 +95,8 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
 }
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
-    where A: Clone + Debug + Hash + Ord,
-          T: Clone + Eq,
+    where A: Clone + Hash + Ord,
+          T: Clone + Eq + Ord,
           W: Clone + Ord,
 {
     pub fn list_transitions<'a>(&'a self)
@@ -109,7 +109,7 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
 }
 
 impl<A> Instruction for PushDownInstruction<A>
-    where A: Ord + PartialEq + Debug + Clone + Hash
+    where A: Ord + PartialEq + Clone + Hash
 {
     type Storage = PushDown<A>;
 
@@ -124,9 +124,9 @@ impl<A> Instruction for PushDownInstruction<A>
 }
 
 impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
-    where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: AddAssign + Clone + Ord + Zero,
+    where A: Ord + PartialEq + Clone + Hash,
+          T: Clone + Eq + Hash + Ord,
+          W: AddAssign + Clone + MulAssign + One + Ord + Zero,
 {
     type Key = A;
     type I = PushDownInstruction<A>;
@@ -183,7 +183,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
 impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
     where A: Ord + PartialEq + Debug + Clone + Hash,
           T: Clone + Debug + Eq + Hash + Ord,
-          W: AddAssign + One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord + Zero,
+          W: AddAssign + One + Mul<Output=W> + MulAssign + Clone + Copy + Debug + Eq + Ord + Zero,
 {
     type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;
 
@@ -357,9 +357,9 @@ impl<A> Display for PushDownInstruction<A>
 }
 
 impl<A, T, W> Display for PushDownAutomaton<A, T, W>
-    where A: Clone + Debug + Display + Hash + Ord,
-          T: Clone + Display + Debug + Eq,
-          W: Clone + Display + Debug + Ord,
+    where A: Clone + Display + Hash + Ord,
+          T: Clone + Debug + Display + Eq + Ord,
+          W: Clone + Display + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted_transitions = String::new();

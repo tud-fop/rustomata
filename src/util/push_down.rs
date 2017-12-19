@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use std::rc::Rc;
+use std::vec::IntoIter;
 
 #[derive(Debug, Clone, PartialOrd, Ord)]
 pub enum Pushdown<A> {
@@ -67,6 +68,26 @@ impl<A: Clone> Pushdown<A> {
             Pushdown::Empty => None,
             Pushdown::Cons { ref value, .. } => Some(value.clone()),
         }
+    }
+
+    pub fn to_vec(&self) -> Vec<A> {
+        let mut current = self;
+        let mut res = Vec::new();
+        loop {
+            match *current {
+                Pushdown::Empty => break,
+                Pushdown::Cons { ref value, ref below } => {
+                    res.push(value.clone());
+                    current = below;
+                },
+            }
+        }
+        res.reverse();
+        res
+    }
+
+    pub fn iter(&self) -> IntoIter<A> {
+        self.to_vec().into_iter()
     }
 }
 

@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use std::ops::{AddAssign, Mul};
+use std::ops::{AddAssign, Mul, MulAssign};
 
 use num_traits::{One, Zero};
 
@@ -35,7 +34,7 @@ pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
     final_states: HashSet<S>,
 }
 
-impl<S: Eq + Hash + Ord + Clone + Debug, T: Eq + Hash + Clone + Debug + Ord, W: Eq + Ord + One + Clone + Debug> NFA<S, T, W>{
+impl<S: Eq + Hash + Ord + Clone, T: Eq + Hash + Clone + Ord, W: Eq + Ord + One + Clone> NFA<S, T, W>{
     pub fn new(/*states: HashSet<S>,*/ transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
         NFA{
             //states: states,
@@ -118,7 +117,7 @@ impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Hash for NFATransition<S, T, W> {
 
 impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W> {}
 
-impl<I: Instruction + Clone + Debug, T: Eq + Hash + Clone + Debug, W: Eq + Clone + Ord + Debug> Dict<I, T, W> {
+impl<I: Instruction + Clone, T: Eq + Hash + Clone, W: Eq + Clone + Ord> Dict<I, T, W> {
     pub fn new(map: HashMap<NFATransition<usize, T, W>, Transition<I, T, W>>)->Self {
         Dict{
             map: map,
@@ -155,7 +154,7 @@ impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash, W: Eq + Ord> NFARecogniser<S, T, 
     }
 }
 
-impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug + Ord, W: One + Mul<Output = W> + Clone + Eq + Ord + Debug> Iterator for NFARecogniser<S, T, W> {
+impl<S: Clone + Ord + Hash + Eq, T: Eq + Hash + Clone + Ord, W: One + Mul<Output = W> + Clone + Eq + Ord> Iterator for NFARecogniser<S, T, W> {
     type Item = (Configuration<S, T, W>, Vec<NFATransition<S, T, W>>);
 
     fn next(&mut self) -> Option<(Configuration<S, T, W>, Vec<NFATransition<S, T, W>>)> {
@@ -185,9 +184,9 @@ impl<S: Clone + Ord + Hash + Eq + Debug, T: Eq + Hash + Clone + Debug + Ord, W: 
 /// Creates a `NFA` from a `PushDownAutomaton` including `Dict` to translate it back. Returns `None` when a `Replace` instruction is found
 pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
                         -> Option<(NFA<usize, T, W>, Dict<PushDownInstruction<A>, T, W>)>
-    where A: Clone + Debug + Hash + Ord + PartialEq,
-          T: Clone + Debug + Eq + Hash + Ord,
-          W: AddAssign + Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord + Zero,
+    where A: Clone + Hash + Ord + PartialEq,
+          T: Clone + Eq + Hash + Ord,
+          W: AddAssign + Clone + Copy + Eq + Mul<Output=W> + MulAssign + One + Ord + Zero,
 {
     let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
     let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();

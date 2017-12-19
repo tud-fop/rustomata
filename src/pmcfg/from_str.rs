@@ -7,8 +7,13 @@ use nom::{IResult, is_space, digit};
 use pmcfg::{VarT, Composition, PMCFGRule, PMCFG};
 use util::parsing::*;
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+impl<N, T, W> FromStr for PMCFG<N, T, W>
+    where N: FromStr,
+          N::Err: Debug,
+          T: Clone + FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     type Err = String;
 
@@ -44,8 +49,13 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFG<N, T, W>
 }
 
 
-impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFGRule<N, T, W>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+impl<N, T, W> FromStr for PMCFGRule<N, T, W>
+    where N: FromStr,
+          N::Err: Debug,
+          T: Clone + FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     type Err = String;
 
@@ -58,15 +68,21 @@ impl<N: FromStr, T: FromStr + Clone, W: FromStr> FromStr for PMCFGRule<N, T, W>
 }
 
 
-fn parse_successors<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
-    where <N as FromStr>::Err: Debug
+fn parse_successors<N>(input: &[u8]) -> IResult<&[u8], Vec<N>>
+    where N: FromStr,
+          N::Err: Debug,
 {
     parse_vec(input, parse_token, "(", ")", ",")
 }
 
 
-fn parse_pmcfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult<&[u8], PMCFGRule<N, T, W>>
-    where <N as FromStr>::Err: Debug, <T as FromStr>::Err: Debug, <W as FromStr>::Err: Debug
+fn parse_pmcfg_rule<N, T, W>(input: &[u8]) -> IResult<&[u8], PMCFGRule<N, T, W>>
+    where N: FromStr,
+          N::Err: Debug,
+          T: FromStr,
+          T::Err: Debug,
+          W: FromStr,
+          W::Err: Debug,
 {
     do_parse!(
         input,
@@ -91,8 +107,9 @@ fn parse_pmcfg_rule<N: FromStr, T: FromStr, W: FromStr>(input: &[u8]) -> IResult
 }
 
 
-fn parse_var_t<T: FromStr>(input: &[u8]) -> IResult<&[u8], VarT<T>>
-    where <T as FromStr>::Err: Debug
+fn parse_var_t<T>(input: &[u8]) -> IResult<&[u8], VarT<T>>
+    where T: FromStr,
+          T::Err: Debug,
 {
     do_parse!(
         input,
@@ -105,7 +122,7 @@ fn parse_var_t<T: FromStr>(input: &[u8]) -> IResult<&[u8], VarT<T>>
                     j: digit >>
                     (VarT::Var(
                         from_utf8(i).unwrap().parse().unwrap(),
-                        from_utf8(j).unwrap().parse().unwrap()
+                        from_utf8(j).unwrap().parse().unwrap(),
                     ))
             ) |
             do_parse!(
@@ -120,14 +137,16 @@ fn parse_var_t<T: FromStr>(input: &[u8]) -> IResult<&[u8], VarT<T>>
 }
 
 
-fn parse_projection<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<VarT<T>>>
-    where <T as FromStr>::Err: Debug
+fn parse_projection<T>(input: &[u8]) -> IResult<&[u8], Vec<VarT<T>>>
+    where T: FromStr,
+          T::Err: Debug,
 {
     parse_vec(input, parse_var_t, "[", "]", ",")
 }
 
-fn parse_composition<T: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<Vec<VarT<T>>>>
-    where <T as FromStr>::Err: Debug
+fn parse_composition<T>(input: &[u8]) -> IResult<&[u8], Vec<Vec<VarT<T>>>>
+    where T: FromStr,
+          T::Err: Debug,
 {
     parse_vec(input, parse_projection, "[", "]", ",")
 }
