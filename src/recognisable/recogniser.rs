@@ -134,17 +134,18 @@ where
             ref mut found,
         } = self;
 
-        while let Some(item) = Agenda::dequeue(agenda) {
+        if let Some(item) = Agenda::dequeue(agenda) {
             for succ in (successors)(&item)
                 .into_iter()
                 .filter(| i | found.insert(i.clone()))
             {
                 agenda.enqueue(succ);
             }
-            return Some(item);
+            
+            Some(item)
+        } else {
+            None
         }
-
-        None
     }
 }
 
@@ -159,13 +160,14 @@ where
             ref successors,
         } = self;
 
-        while let Some(item) = Agenda::dequeue(agenda) {
+        if let Some(item) = Agenda::dequeue(agenda) {
             for succ in (successors)(&item) {
                 agenda.enqueue(succ);
             }
-            return Some(item);
+            
+            Some(item)
+        } else {
+            None
         }
-
-        None
     }
 }

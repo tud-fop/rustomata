@@ -1,7 +1,7 @@
 pub mod cli;
 
 use serde::Serialize;
-
+use util::agenda::Capacity;
 use std::hash::Hash;
 use std::fmt;
 use integeriser::{HashIntegeriser, Integeriser};
@@ -150,8 +150,12 @@ where
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate(&self, word: &[T], beam: usize) -> CSGenerator<T, N> {
-        let g = self.generator.generate(self.filter.fsa(word, &self.generator), beam);
+    pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N> {
+        eprintln!("create filter");
+        let f = self.filter.fsa(word, &self.generator);
+        eprintln!("create iterator");
+        let g = self.generator.generate(f, beam);
+        eprintln!("done");
         CSGenerator {
             candidates: g,
             rules: &self.rules,
@@ -218,9 +222,12 @@ where
             ref mut candidates,
             rules,
         } = self;
-
-        for fragments in candidates {
+        
+        for (i, fragments) in candidates.enumerate() {
             let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments);
+            
+            eprintln!("{}-th candidate", i);
+            
             if dyck::recognize(&candidate) {
                 if let Some(derivation) = from_brackets(rules, candidate) {
                     return Some(derivation);
@@ -241,6 +248,7 @@ mod test {
         use VarT;
         use PMCFGRule;
         use Composition;
+        use super::Capacity;
         use super::CSRepresentation;
         use super::LogDomain;
         use super::Derivation;
@@ -283,11 +291,11 @@ mod test {
             grammar.clone()
         );
         assert_eq!(
-            cs.generate(&['A'], 10).next(),
+            cs.generate(&['A'], Capacity::Infinite).next(),
             Some(d1)
         );
         assert_eq!(
-            cs.generate(&['A', 'A'], 10).next(),
+            cs.generate(&['A', 'A'], Capacity::Infinite).next(),
             Some(d2)
         );
     }

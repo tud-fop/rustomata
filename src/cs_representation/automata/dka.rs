@@ -44,35 +44,37 @@ where
     S: Clone + PartialEq,
 {
     pub fn apply(&self, mut keller: Vec<S>) -> Option<Vec<S>> {
-        match self {
-            &KellerOp::Nothing => Some(keller),
-            &KellerOp::Add(ref s) => {
+        match *self {
+            KellerOp::Nothing => Some(keller),
+            KellerOp::Add(ref s) => {
                 keller.push(s.clone());
                 Some(keller)
             }
-            &KellerOp::Remove(ref s) => if Some(s) == keller.pop().as_ref() {
-                Some(keller)
-            } else {
-                None
-            },
-            &KellerOp::Replace(ref s, ref s_) => if Some(s) == keller.pop().as_ref() {
-                keller.push(s_.clone());
-                Some(keller)
-            } else {
-                None
-            },
+            KellerOp::Remove(ref s) => 
+                if Some(s) == keller.pop().as_ref() {
+                    Some(keller)
+                } else {
+                    None
+                },
+            KellerOp::Replace(ref s, ref s_) => 
+                if Some(s) == keller.pop().as_ref() {
+                    keller.push(s_.clone());
+                    Some(keller)
+                } else {
+                    None
+                },
         }
     }
 
     fn apply_with_capacity(&self, keller: &Vec<S>, cap: usize) -> Option<Vec<S>> {
-        let mut succ = match self {
-            &KellerOp::Nothing => Some(keller.clone()),
-            &KellerOp::Add(ref s) => {
+        let mut succ = match *self {
+            KellerOp::Nothing => Some(keller.clone()),
+            KellerOp::Add(ref s) => {
                 let mut keller_ = keller.clone();
                 keller_.insert(0, s.clone());
                 Some(keller_)
             }
-            &KellerOp::Remove(ref s) => {
+            KellerOp::Remove(ref s) => {
                 let mut keller_ = keller.clone();
                 if keller_.is_empty() || &keller_.remove(0) == s {
                     Some(keller_)
@@ -80,7 +82,7 @@ where
                     None
                 }
             },
-            &KellerOp::Replace(ref s, ref s_) => {
+            KellerOp::Replace(ref s, ref s_) => {
                 let mut keller_ = keller.clone();
                 if keller_.is_empty() || &keller_.remove(0) == s {
                     keller_.insert(0, s_.clone());
@@ -184,12 +186,12 @@ where
                     KellerOp::Replace(keller_symbols.integerise(s), keller_symbols.integerise(s_))
                 }
             };
-            let arcs_from = arcs.entry(states.integerise(from))
-                .or_insert(HashMap::new());
-            arcs_from.insert(
-                labels.integerise(label),
-                (states.integerise(to), weight, iop),
-            );
+            arcs.entry(states.integerise(from))
+                .or_insert_with(HashMap::new)
+                .insert(
+                    labels.integerise(label),
+                    (states.integerise(to), weight, iop)
+                );
         }
 
         KellerAutomaton {
@@ -318,15 +320,14 @@ where
                 heap
             }),
         ) {
-            let arcs_from = new_arcs
-                .entry(states.integerise(from))
-                .or_insert(HashMap::new());
-            arcs_from.insert(label, (states.integerise(to), weight, op));
+            new_arcs.entry(states.integerise(from))
+                    .or_insert_with(HashMap::new)
+                    .insert(label, (states.integerise(to), weight, op));
         }
 
         let mut new_finals: Vec<usize> = Vec::new();
         for kq in finals {
-            for fq in f_finals.iter() {
+            for fq in &f_finals {
                 if let Some(q) = states.find_key(&(kq, *fq)) {
                     new_finals.push(q);
                 }
@@ -341,7 +342,7 @@ where
         }
     }
 
-    pub fn generate<'a>(self, beam: usize) -> Box<Iterator<Item = Vec<T>> + 'a>
+    pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
@@ -355,17 +356,16 @@ where
         let heuristics: HashMap<usize, LogDomain<f32>> = {
             let mut backwards_transitions = HashMap::new();
             for (from, arcs_from) in &arcs {
-                for (_, &(to, weight, _)) in arcs_from {
-                    let bw_to = backwards_transitions.entry(to).or_insert(BinaryHeap::new());
-                    bw_to.push((weight, *from));
+                for &(to, weight, _) in arcs_from.values() {
+                    backwards_transitions.entry(to).or_insert_with(BinaryHeap::new).push((weight, *from));
                 }
             }
             heuristics(backwards_transitions, finals.as_slice())
         };
-
+        
         Box::new(
             UniqueSearch::weighted(
-                vec![(LogDomain::one(), initial.clone(), vec![], vec![])],
+                vec![(LogDomain::one(), initial, vec![], vec![])],
                 Box::new(move |&(weight_, ref q, ref word, ref keller)| {
                     let mut results = Vec::new();
                     if let Some(arcs_from) = arcs.get(q) {
@@ -382,16 +382,15 @@ where
                 Box::new(move |&(weight, ref q, _, _)| {
                     (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * weight).pow(-1.0)
                 }),
-                Capacity::Limit(beam)
+                beam
             ).filter(move |&(_, ref q, _, ref keller)| {
                 finals.contains(q) && keller.is_empty()
-            })
-                .map(move |(_, _, word, _)| {
-                    word.into_iter()
-                        .map(|i| labels.find_value(i).unwrap())
-                        .cloned()
-                        .collect()
-                }),
+            }).map(move |(_, _, word, _)| {
+                word.into_iter()
+                    .map(|i| labels.find_value(i).unwrap())
+                    .cloned()
+                    .collect()
+            }),
         )
     }
 }
@@ -405,7 +404,7 @@ where
         Rc::clone(&self.labels)
     }
 
-    fn generate<'a>(&self, fsa: FiniteAutomaton<T>, beam: usize) -> Box<Iterator<Item = Vec<T>> + 'a>
+    fn generate<'a>(&self, fsa: FiniteAutomaton<T>, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
@@ -456,5 +455,29 @@ where
             arcs,
             labels: Rc::new(labels),
         })
+    }
+}
+
+use std::fmt::{Display, Formatter, Error};
+
+impl<T> Display for KellerAutomaton<T>
+where
+    T: Display + Hash + Eq + Clone,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let &KellerAutomaton {
+            ref arcs,
+            ref initial,
+            ref finals,
+            ref labels
+        } = self;
+
+        let mut buffer = String::new();
+        for (from, arcs_from) in arcs {
+            for (label, &(ref to, ref weight, ref op)) in arcs_from {
+                buffer.push_str(&format!("{} → [{}] {} / {:?} # {}\n", from, labels.find_value(*label).unwrap(), to, op, weight));
+            }
+        }
+        write!(f, "initial: {}, finals: {:?}\n{}", initial, finals, &buffer)
     }
 }

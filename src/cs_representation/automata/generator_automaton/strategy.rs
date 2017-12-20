@@ -5,14 +5,15 @@ use log_domain::LogDomain;
 use cs_representation::automata::{FiniteArc, FiniteAutomaton, KellerArc, KellerAutomaton, KellerOp, GeneratorAutomaton};
 use pmcfg::{PMCFGRule, VarT};
 
-use serde::{Serialize, Deserialize};
 
+use serde::{Serialize, Deserialize};
+use std::fmt::Debug;
 ///
 pub trait GeneratorStrategy<T>
 where
     T: Clone + Hash + Eq
 {
-    type Generator: GeneratorAutomaton<BracketFragment<T>> + Serialize + for<'de> Deserialize<'de>;
+    type Generator: GeneratorAutomaton<BracketFragment<T>> + Serialize + for<'de> Deserialize<'de> + Debug;
     
     fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Self::Generator
     where
@@ -22,7 +23,7 @@ where
 pub struct KellerGenerator;
 impl<T> GeneratorStrategy<T> for KellerGenerator
 where
-    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de>
+    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
 {
     type Generator = KellerAutomaton<BracketFragment<T>>;
     
@@ -38,7 +39,7 @@ where
 pub struct ApproxGenerator(pub usize);
 impl<T> GeneratorStrategy<T> for ApproxGenerator
 where
-    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de>
+    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
 {
     type Generator = FiniteAutomaton<BracketFragment<T>>;
     fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> FiniteAutomaton<BracketFragment<T>>
@@ -54,7 +55,7 @@ where
 pub struct NaiveGenerator;
 impl<T> GeneratorStrategy<T> for NaiveGenerator
 where
-    T: Hash + Eq + Clone + Serialize + for<'de> Deserialize<'de>
+    T: Hash + Eq + Clone + Serialize + for<'de> Deserialize<'de> + Debug
 {
     type Generator = FiniteAutomaton<BracketFragment<T>>;
     
@@ -100,12 +101,12 @@ where
             let mut q = Bracket::Open((rule.head.clone(), component_id));
 
             for (symbol_id, symbol) in component.into_iter().enumerate() {
-                match symbol {
-                    &VarT::T(ref t) => {
+                match *symbol {
+                    VarT::T(ref t) => {
                         terminals.push(Bracket::Open(BracketContent::Terminal(t.clone())));
                         terminals.push(Bracket::Close(BracketContent::Terminal(t.clone())));
                     }
-                    &VarT::Var(i, j) => {
+                    VarT::Var(i, j) => {
                         terminals.push(Bracket::Open(BracketContent::Variable(rule_id, i, j)));
                         transitions.push(KellerArc {
                             from: q,

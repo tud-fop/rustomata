@@ -5,7 +5,7 @@ use std::hash::Hash;
 use dyck::Bracket;
 use log_domain::LogDomain;
 use num_traits::One;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeSet};
 use std::rc::Rc;
 
 use cs_representation::bracket_fragment::BracketFragment;
@@ -13,15 +13,25 @@ use super::{FilterAutomaton, get_brackets_with, vec_split};
 use cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NaiveFilterAutomaton<T>
+pub struct InsideFilterAutomaton<T>
 where
     T: Eq + Hash,
 {
-    brackets_with: HashMap<T, Vec<(Vec<T>, usize)>>,
-    epsilon_brackets: Vec<usize>,
+    // rule depends on list of nonterms, has some bracketfragements and implies a nonterm,
+    // key is some nonterm it depends on
+    epsilon_brackets: HashMap<usize, Vec<(Vec<usize>, Vec<usize>, usize)>>,
+
+    // as usal
+    term_brackets: HashMap<T, Vec<(Vec<T>, usize)>>,
+
+    // each terminal implies the lhs nonterminal of each rule it occurs in
+    term_implies: HashMap<T, Vec<usize>>,
+
+    // free nonterminals (ε rules in grammar)
+    free: Vec<usize>,
 }
 
-impl<T> FilterAutomaton<T> for NaiveFilterAutomaton<T>
+impl<T> FilterAutomaton<T> for InsideFilterAutomaton<T>
 where
     T: Hash + Eq + Clone,
 {
@@ -30,19 +40,34 @@ where
         reference: &GeneratorAutomaton<BracketFragment<T>>,
     ) -> Self
     where
-        N: Hash + Eq + Clone,
         W: Eq + Clone,
+        N: Hash + Clone + Eq
     {
+        let mut dependencies = HashIntegeriser::new();
         let integerizer = reference.get_integeriser();
-        let mut brackets_with = HashMap::new();
-        let mut epsilon_brackets = Vec::new();
+
+        let mut term_brackets = HashMap::new();
+        let mut term_implies = HashMap::new();
+        let mut epsilon_brackets = HashMap::new();
+        let mut free = Vec::new();
 
         for rule_id in 0..(grammar.size()) {
             let rule = grammar.find_value(rule_id).unwrap();
+
+            if rule.composition
+                .composition
+                .iter()
+                .all(|component| component.is_empty()) && rule.tail.is_empty()
+            {
+                free.push(dependencies.integerise(rule.head.clone()));
+            }
+
             for (j, component) in rule.composition.composition.iter().enumerate() {
                 let mut bracket_terminals =
                     vec![Bracket::Open(BracketContent::Component(rule_id, j))];
                 let mut terminals = Vec::new();
+                let mut epsilon_brackets_per_rule = Vec::new();
+
                 for symbol in component {
                     match *symbol {
                         VarT::T(ref t) => {
@@ -56,19 +81,24 @@ where
                             bracket_terminals
                                 .push(Bracket::Open(BracketContent::Variable(rule_id, i, j_)));
 
+                            for terminal in terminals.clone() {
+                                term_implies
+                                    .entry(terminal)
+                                    .or_insert_with(Vec::new)
+                                    .push(dependencies.integerise(rule.head.clone()));
+                            }
+
                             match vec_split(terminals) {
                                 (Some(first), tail) => {
-                                    brackets_with.entry(first).or_insert_with(Vec::new).push(
-                                        (
-                                            tail,
-                                            integerizer
-                                                .find_key(&BracketFragment(bracket_terminals))
-                                                .unwrap(),
-                                        )
-                                    )
+                                    term_brackets.entry(first).or_insert_with(Vec::new).push((
+                                        tail,
+                                        integerizer
+                                            .find_key(&BracketFragment(bracket_terminals))
+                                            .unwrap(),
+                                    ));
                                 }
                                 (None, _) => {
-                                    epsilon_brackets.push(
+                                    epsilon_brackets_per_rule.push(
                                         integerizer
                                             .find_key(&BracketFragment(bracket_terminals))
                                             .unwrap(),
@@ -82,28 +112,45 @@ where
                         }
                     }
                 }
+                for terminal in terminals.clone() {
+                    term_implies
+                        .entry(terminal)
+                        .or_insert_with(Vec::new)
+                        .push(dependencies.integerise(rule.head.clone()));
+                }
+
                 bracket_terminals.push(Bracket::Close(BracketContent::Component(rule_id, j)));
                 match vec_split(terminals) {
-                    (Some(first), tail) => brackets_with.entry(first).or_insert_with(Vec::new).push(
-                        (
-                            tail,
-                            integerizer
-                                .find_key(&BracketFragment(bracket_terminals))
-                                .unwrap(),
-                        )
-                    ),
-                    (None, _) => epsilon_brackets.push(
+                    (Some(first), tail) => term_brackets.entry(first).or_insert_with(Vec::new).push((
+                        tail,
+                        integerizer
+                            .find_key(&BracketFragment(bracket_terminals))
+                            .unwrap(),
+                    )),
+                    (None, _) => epsilon_brackets_per_rule.push(
                         integerizer
                             .find_key(&BracketFragment(bracket_terminals))
                             .unwrap(),
                     ),
                 }
+
+                for nonterminal in rule.tail.iter().cloned() {
+                    epsilon_brackets.entry(dependencies.integerise(nonterminal.clone())).or_insert_with(Vec::new).push(
+                        (
+                            rule.tail.iter().cloned().map(|n| dependencies.integerise(n)).collect(),
+                            epsilon_brackets_per_rule.clone(),
+                            dependencies.integerise(rule.head.clone())
+                        )
+                    )
+                }
             }
         }
 
-        NaiveFilterAutomaton {
-            brackets_with,
+        InsideFilterAutomaton {
+            term_brackets,
             epsilon_brackets,
+            term_implies,
+            free
         }
     }
 
@@ -115,14 +162,14 @@ where
     ) -> FiniteAutomaton<BracketFragment<T>> {
         let mut arcs: Vec<FiniteArc<usize, usize>> = Vec::new();
         let mut exec_stack: Vec<(usize, &[T], usize, usize)> =
-            get_brackets_with(word, &self.brackets_with)
+            get_brackets_with(word, &self.term_brackets)
                 .into_iter()
                 .map(|(w, bs, n)| (0, w, bs, n))
                 .collect();
         while !exec_stack.is_empty() {
             let (q0, remaining_word, brackets, q1) = exec_stack.remove(0);
             exec_stack.extend(
-                get_brackets_with(remaining_word, &self.brackets_with)
+                get_brackets_with(remaining_word, &self.term_brackets)
                     .into_iter()
                     .map(|(w, bs, n)| (q1, w, bs, q1 + n)),
             );
@@ -133,8 +180,29 @@ where
                 weight: LogDomain::one(),
             });
         }
+
+        let mut used_eps_brackets = Vec::new();
+        let mut ntset = BTreeSet::new();
+        let mut ntstack = self.free.clone();
+        for symbol in word {
+            if let Some(ns) = self.term_implies.get(symbol) {
+                ntstack.extend(ns.iter().cloned());
+            }
+        }
+        while let Some(nt) = ntstack.pop() {
+            ntset.insert(nt);
+            for &(ref depends, ref brackets, ref implies) in self.epsilon_brackets.get(&nt).unwrap_or(&Vec::new()) {
+                if depends.iter().all(|n| ntset.contains(n)) {
+                    used_eps_brackets.extend(brackets.iter().cloned());
+                    if !ntset.contains(implies){
+                        ntstack.push(implies.clone());
+                    }
+                }
+            }
+        }
+
         for q in 0..(word.len() + 1) {
-            for brackets in &self.epsilon_brackets {
+            for brackets in &used_eps_brackets {
                 arcs.push(FiniteArc {
                     from: q,
                     to: q,
@@ -153,6 +221,7 @@ where
     }
 }
 
+
 #[cfg(test)]
 mod test {
 
@@ -163,7 +232,7 @@ mod test {
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
     use cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
-                                      KellerAutomaton, KellerGenerator, NaiveFilterAutomaton};
+                                      KellerAutomaton, KellerGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
     use cs_representation::bracket_fragment::BracketFragment;
     use util::agenda::Capacity;
 
@@ -186,15 +255,18 @@ mod test {
 
         let generator: KellerAutomaton<BracketFragment<String>> =
             KellerGenerator.create_generator_automaton(&rules, initial);
-        let filter = NaiveFilterAutomaton::new(&rules, &generator);
-
-        eprintln!("{:?}", filter);
+        let filter = InsideFilterAutomaton::new(&rules, &generator);
+        let naivefilter = NaiveFilterAutomaton::new(&rules, &generator);
+        // eprintln!("{:?}", filter);
 
         let filter_automaton = filter.fsa(word.as_slice(), &generator);
         let words: Option<Vec<BracketFragment<String>>> =
             GeneratorAutomaton::generate(&generator, filter_automaton.clone(), Capacity::Infinite).next();
 
-        eprintln!("{}", generator.intersect(filter_automaton));
+        eprintln!("{}", generator.clone().intersect(filter_automaton).arcs.values().flat_map(|aw| aw.values()).count());
+
+        let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
+        eprintln!("{}", generator.intersect(naive_automaton).arcs.values().flat_map(|aw| aw.values()).count());
         eprintln!("{:?}", words);
     }
 
