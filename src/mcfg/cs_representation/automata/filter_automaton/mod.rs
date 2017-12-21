@@ -1,7 +1,7 @@
 use integeriser::HashIntegeriser;
 use pmcfg::PMCFGRule;
 use std::hash::Hash;
-use cs_representation::bracket_fragment::BracketFragment;
+use mcfg::cs_representation::bracket_fragment::BracketFragment;
 
 pub mod naive;
 pub mod inside;
@@ -10,6 +10,12 @@ use super::{FiniteAutomaton, GeneratorAutomaton};
 pub use self::naive::NaiveFilterAutomaton;
 pub use self::inside::InsideFilterAutomaton;
 
+/// A `FilterAutomaton` is a structure that produces a `FiniteAutomaton`
+/// with respect to a grammar w ∈ Σ and a word s.t.
+/// it recognizes all bracket words δ ∈ Δ* that represent a 
+/// derivation of the word in the grammar h(δ) = w.
+/// The generation of this `FiniteAutomaton` is divided into
+/// two steps; an initialization and the generation itself.
 pub trait FilterAutomaton<T>
 where
     T: Hash + Eq + Clone,
@@ -26,9 +32,10 @@ where
         &self,
         word: &[T],
         reference_automaton: &GeneratorAutomaton<BracketFragment<T>>,
-    ) -> FiniteAutomaton<BracketFragment<T>>;
+    ) -> FiniteAutomaton<BracketFragment<T>, ()>;
 }
 
+/// Splits a vector into head, tail.
 fn vec_split<T>(mut xs: Vec<T>) -> (Option<T>, Vec<T>) {
     if xs.is_empty() {
         (None, xs)
@@ -39,6 +46,9 @@ fn vec_split<T>(mut xs: Vec<T>) -> (Option<T>, Vec<T>) {
 }
 
 use std::collections::HashMap;
+
+/// For a given word and set of rules that may contain some prefix of this word,
+/// this function finds all pairs of a rule (usize), the remaining word &[T], and the length of the prefix (usize). 
 fn get_brackets_with<'a, 'b, T>(
     current_word: &'a [T],
     brackets_with: &'b HashMap<T, Vec<(Vec<T>, usize)>>,

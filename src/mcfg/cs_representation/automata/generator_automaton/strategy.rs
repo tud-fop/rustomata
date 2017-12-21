@@ -1,33 +1,37 @@
 use std::hash::Hash;
-use cs_representation::bracket_fragment::BracketFragment;
+use mcfg::cs_representation::bracket_fragment::BracketFragment;
 use integeriser::{HashIntegeriser, Integeriser};
 use log_domain::LogDomain;
-use cs_representation::automata::{FiniteArc, FiniteAutomaton, KellerArc, KellerAutomaton, KellerOp, GeneratorAutomaton};
+use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, KellerArc, KellerAutomaton, KellerOp, GeneratorAutomaton};
 use pmcfg::{PMCFGRule, VarT};
 
 
 use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
-///
+
+/// A `GeneratorStrategy` is a method to create a `GeneratorAutomaton` with respect to an MCFG.
 pub trait GeneratorStrategy<T>
 where
     T: Clone + Hash + Eq
 {
     type Generator: GeneratorAutomaton<BracketFragment<T>> + Serialize + for<'de> Deserialize<'de> + Debug;
     
-    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> Self::Generator
+    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
         N: Hash + Ord + Clone;
 }
 
+/// A `KellerGenerator` is a `GeneratorStrtegy` that creates a `KellerAutomaton`
+/// from an MCFG. In this implementation, it is the most specialized
+/// strategy. I.e. it produces the least amount of canidates.
 pub struct KellerGenerator;
 impl<T> GeneratorStrategy<T> for KellerGenerator
 where
     T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
 {
-    type Generator = KellerAutomaton<BracketFragment<T>>;
+    type Generator = KellerAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
-    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> KellerAutomaton<BracketFragment<T>>
+    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
         N: Hash + Ord + Clone
     {
@@ -36,13 +40,18 @@ where
     }
 }
 
+/// An `ApproxGenerator` is a hybrid between the `KellerGenerator` and `NaiveGenerator`.
+/// It produces a deterministic finite approximation of the `KellerAutomaton` 
+/// produced by the `KellerGenerator` with respect to a certain depth.
+/// The `FiniteAutomaton` produced by `ApproxGenerator(0)` equals the one by `NaiveGenerator`.
 pub struct ApproxGenerator(pub usize);
 impl<T> GeneratorStrategy<T> for ApproxGenerator
 where
     T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
 {
-    type Generator = FiniteAutomaton<BracketFragment<T>>;
-    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> FiniteAutomaton<BracketFragment<T>>
+    type Generator = FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>;
+    
+    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
         N: Hash + Ord + Clone
     {
@@ -52,14 +61,17 @@ where
     }
 }
 
+/// The `NaiveGenerator` is the least specialied strategy.
+/// The `FiniteAutomaton` produced with respect to an MCFG will
+/// recognize the most bracket word candidates from the three implemented strategies.
 pub struct NaiveGenerator;
 impl<T> GeneratorStrategy<T> for NaiveGenerator
 where
     T: Hash + Eq + Clone + Serialize + for<'de> Deserialize<'de> + Debug
 {
-    type Generator = FiniteAutomaton<BracketFragment<T>>;
+    type Generator = FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
-    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>, initial: N) -> FiniteAutomaton<BracketFragment<T>>
+    fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
         N: Hash + Ord + Clone
     {
@@ -69,16 +81,17 @@ where
     }
 }
 
-use cs_representation::BracketContent;
+use mcfg::cs_representation::BracketContent;
 use dyck::Bracket;
 type State<N> = Bracket<(N, usize)>;
 type KellerElem = (usize, usize, usize);
 
+/// Reads off `KellerArcs´ from an MCFG.
 fn mcfg_to_stack_transitions<N, T>(
-    rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f32>>>,
+    rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
     initial: N,
 ) -> (
-    Vec<KellerArc<BracketFragment<T>, State<N>, KellerElem>>,
+    Vec<KellerArc<BracketFragment<T>, State<N>, KellerElem, LogDomain<f64>>>,
     State<N>,
     State<N>,
 )
@@ -90,10 +103,10 @@ where
     for rule_id in 0..rules.size() {
         let rule = rules.find_value(rule_id).unwrap();
         let weight_per_comp = rule.weight
-            .pow(1f32 / (rule.composition.composition.len() as f32));
+            .pow(1f64 / (rule.composition.composition.len() as f64));
         for (component_id, component) in rule.composition.composition.iter().enumerate() {
             let weight_per_transition = weight_per_comp
-                .pow(1f32 / (component.iter().filter(|s| s.is_var()).count() + 1) as f32);
+                .pow(1f64 / (component.iter().filter(|s| s.is_var()).count() + 1) as f64);
             let mut terminals = vec![
                 Bracket::Open(BracketContent::Component(rule_id, component_id)),
             ];

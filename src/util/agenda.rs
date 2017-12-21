@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BinaryHeap};
 use std::vec::Vec;
 
+/// A limit specification.
 #[derive(PartialEq, PartialOrd, Eq, Ord, Copy, Clone)]
 pub enum Capacity {
     Limit(usize),

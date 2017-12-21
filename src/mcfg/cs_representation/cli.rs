@@ -1,4 +1,3 @@
-extern crate serde_json;
 extern crate bincode;
 
 use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
@@ -7,8 +6,8 @@ use std::fs::File;
 
 use PMCFG;
 use log_domain::LogDomain;
-use cs_representation::CSRepresentation;
-use cs_representation::automata::{KellerGenerator, NaiveGenerator, InsideFilterAutomaton, ApproxGenerator};
+use mcfg::cs_representation::CSRepresentation;
+use mcfg::cs_representation::automata::{KellerGenerator, NaiveGenerator, InsideFilterAutomaton, ApproxGenerator};
 use util::agenda::Capacity;
 
 pub fn get_sub_command(name: &str) -> App {

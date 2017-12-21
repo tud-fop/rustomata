@@ -1,17 +1,21 @@
-use cs_representation::BracketContent;
+use mcfg::cs_representation::BracketContent;
 use integeriser::{HashIntegeriser, Integeriser};
 use pmcfg::{PMCFGRule, VarT};
 use std::hash::Hash;
 use dyck::Bracket;
-use log_domain::LogDomain;
-use num_traits::One;
 use std::collections::{HashMap, BTreeSet};
 use std::rc::Rc;
 
-use cs_representation::bracket_fragment::BracketFragment;
+use mcfg::cs_representation::bracket_fragment::BracketFragment;
 use super::{FilterAutomaton, get_brackets_with, vec_split};
-use cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
+use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
 
+/// In contrast to the `NaiveFilterAutomaton`, the `FiniteAutomaton`
+/// that is produced using the `InsideFilterAutomaton` will not loop
+/// all bracket fragemnts in each state.
+/// It analyses the gramar rules and only uses those bracket fragments that
+/// correspond to a grammar rule that is reachable with respect to the set of symbols
+/// we want to parse.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InsideFilterAutomaton<T>
 where
@@ -159,13 +163,15 @@ where
         &self,
         word: &[T],
         reference: &GeneratorAutomaton<BracketFragment<T>>,
-    ) -> FiniteAutomaton<BracketFragment<T>> {
-        let mut arcs: Vec<FiniteArc<usize, usize>> = Vec::new();
+    ) -> FiniteAutomaton<BracketFragment<T>, ()> {
+        let mut arcs: Vec<FiniteArc<usize, usize, ()>> = Vec::new();
+        
         let mut exec_stack: Vec<(usize, &[T], usize, usize)> =
             get_brackets_with(word, &self.term_brackets)
                 .into_iter()
                 .map(|(w, bs, n)| (0, w, bs, n))
                 .collect();
+        
         while !exec_stack.is_empty() {
             let (q0, remaining_word, brackets, q1) = exec_stack.remove(0);
             exec_stack.extend(
@@ -177,7 +183,7 @@ where
                 from: q0,
                 to: q1,
                 label: brackets,
-                weight: LogDomain::one(),
+                weight: (),
             });
         }
 
@@ -207,7 +213,7 @@ where
                     from: q,
                     to: q,
                     label: *brackets,
-                    weight: LogDomain::one(),
+                    weight: (),
                 });
             }
         }
@@ -228,12 +234,12 @@ mod test {
     use std::fs::File;
     use std::io::Read;
     use pmcfg::PMCFG;
-    use cs_representation::MCFG;
+    use mcfg::MCFG;
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
-    use cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
+    use mcfg::cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
                                       KellerAutomaton, KellerGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
-    use cs_representation::bracket_fragment::BracketFragment;
+    use mcfg::cs_representation::bracket_fragment::BracketFragment;
     use util::agenda::Capacity;
 
     #[test]
@@ -245,7 +251,7 @@ mod test {
             .expect("failed to read file");
 
         let pmcfg: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
-        let grammar: MCFG<String, String, LogDomain<f32>> = pmcfg.into();
+        let grammar: MCFG<String, String, LogDomain<f64>> = pmcfg.into();
         let initial = grammar.initial;
         let mut rules = HashIntegeriser::new();
         for rule in grammar.rules {
@@ -253,7 +259,7 @@ mod test {
         }
         let word: Vec<String> = "a e c".split_whitespace().map(|s| s.to_string()).collect();
 
-        let generator: KellerAutomaton<BracketFragment<String>> =
+        let generator: KellerAutomaton<BracketFragment<String>, LogDomain<f64>> =
             KellerGenerator.create_generator_automaton(&rules, initial);
         let filter = InsideFilterAutomaton::new(&rules, &generator);
         let naivefilter = NaiveFilterAutomaton::new(&rules, &generator);
@@ -263,10 +269,10 @@ mod test {
         let words: Option<Vec<BracketFragment<String>>> =
             GeneratorAutomaton::generate(&generator, filter_automaton.clone(), Capacity::Infinite).next();
 
-        eprintln!("{}", generator.clone().intersect(filter_automaton).arcs.values().flat_map(|aw| aw.values()).count());
+        eprintln!("{}", generator.clone().intersect(filter_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
 
         let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
-        eprintln!("{}", generator.intersect(naive_automaton).arcs.values().flat_map(|aw| aw.values()).count());
+        eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
         eprintln!("{:?}", words);
     }
 
