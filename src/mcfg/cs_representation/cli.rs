@@ -10,6 +10,8 @@ use mcfg::cs_representation::CSRepresentation;
 use mcfg::cs_representation::automata::{KellerGenerator, NaiveGenerator, InsideFilterAutomaton, ApproxGenerator};
 use util::agenda::Capacity;
 
+use flate2::{read, write, Compression};
+
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
                 .about("Chomsky-Schützenberger representation of MCFGs")
@@ -96,19 +98,19 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             match strategy {
                 Strat::Keller => {
                     bincode::serialize_into(
-                        &mut stdout(),
+                        &mut write::GzEncoder::new(stdout(), Compression::best()),
                         &CSRepresentation::<String, String, InsideFilterAutomaton<String>, KellerGenerator>::new(KellerGenerator, grammar),
                         bincode::Infinite
                     ).unwrap()
                 }, Strat::Naive => {
                     bincode::serialize_into(
-                        &mut stdout(),
+                        &mut write::GzEncoder::new(stdout(), Compression::best()),
                         &CSRepresentation::<String, String, InsideFilterAutomaton<String>, NaiveGenerator>::new(NaiveGenerator, grammar),
                         bincode::Infinite
                     ).unwrap()
                 }, Strat::Approx(d) => {
                     bincode::serialize_into(
-                        &mut stdout(),
+                        &mut write::GzEncoder::new(stdout(), Compression::best()),
                         &CSRepresentation::<String, String, InsideFilterAutomaton<String>, ApproxGenerator>::new(ApproxGenerator(d), grammar),
                         bincode::Infinite
                     ).unwrap()
@@ -155,11 +157,11 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 Some(b) => Capacity::Limit(b.parse().unwrap()),
                 None => Capacity::Infinite,
             };
-            let mut csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
+            let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
             
             match strategy {
                 Strat::Keller => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, KellerGenerator> = bincode::deserialize_from(&mut csfile, bincode::Infinite).unwrap();
+                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, KellerGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -168,7 +170,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                         }
                     }
                 }, Strat::Naive => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, NaiveGenerator> = bincode::deserialize_from(&mut csfile, bincode::Infinite).unwrap();
+                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, NaiveGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -177,7 +179,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                         }
                     }
                 }, Strat::Approx(_) => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, ApproxGenerator> = bincode::deserialize_from(&mut csfile, bincode::Infinite).unwrap();
+                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, ApproxGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 

@@ -49,22 +49,41 @@ where
     }
 }
 
-pub struct Search<'a, I, W> {
-    agenda: PriorityQueue<'a, W, I>,
-    successors: Box<Fn(&I) -> Vec<I> + 'a>,
-    found: BTreeSet<I>,
+pub enum Search<'a, A, I>
+where
+    A: Agenda<Item = I> + 'a,
+{
+    All(A, Box<Fn(&I) -> Vec<I> + 'a>),
+    Uniques(A, Box<Fn(&I) -> Vec<I> + 'a>, BTreeSet<I>),
 }
 
-pub struct UniqueSearch<'a, I, W> {
-    agenda: PriorityQueue<'a, W, I>,
-    successors: Box<Fn(&I) -> Vec<I> + 'a>,
+impl<'a, A, I> Search<'a, A, I>
+where
+    A: Agenda<Item = I> + 'a,
+    I: Ord
+{
+    pub fn uniques(self) -> Self {
+        match self {
+            Search::All(agenda, succ) | Search::Uniques(agenda, succ, _) => {
+                Search::Uniques(agenda, succ, BTreeSet::new())
+            }
+        }
+    }
+
+    pub fn all(self) -> Self {
+        match self {
+            Search::All(agenda, succ) | Search::Uniques(agenda, succ, _) => {
+                Search::All(agenda, succ)
+            }
+        }
+    }
 }
 
-impl<'a, I, W> Search<'a, I, W>
+impl<'a, I, W> Search<'a, PriorityQueue<'a, W, I>, I>
 where
     I: Clone + Ord,
     W: Ord + Clone,
-{   
+{
     pub fn weighted<C>(
         init: C,
         successors: Box<Fn(&I) -> Vec<I> + 'a>,
@@ -74,42 +93,25 @@ where
         C: IntoIterator<Item = I>,
     {
         let mut agenda = PriorityQueue::new(Capacity::Infinite, weight);
-        let mut found = BTreeSet::new();
-        for item in init {
-            found.insert(item.clone());
-            agenda.enqueue(item);
-        }
-        Search {
-            agenda,
-            found,
-            successors,
-        }
-    }
-}
 
-impl<'a, I, W> UniqueSearch<'a, I, W>
-where
-    W: Clone + Ord
-{
-    pub fn weighted<C>(
-        init: C,
-        successors: Box<Fn(&I) -> Vec<I> + 'a>,
-        weight: Box<Fn(&I) -> W + 'a>,
-        cap: Capacity
-    ) -> Self
-    where C: IntoIterator<Item=I> {
-        let mut agenda = PriorityQueue::new(cap, weight);
         for item in init {
             agenda.enqueue(item);
         }
-        UniqueSearch {
-            agenda,
-            successors,
+
+        Search::All(agenda, successors)
+    }
+
+    pub fn beam(mut self, b: usize) -> Self {
+        match *(&mut self) {
+            Search::All(ref mut a, _) | Search::Uniques(ref mut a, _, _) => {
+                a.set_capacity(b);
+            }
         }
+        self
     }
 }
 
-impl<'a, I> Search<'a, I, usize>
+impl<'a, I> Search<'a, PriorityQueue<'a, usize, I>, I>
 where
     I: Clone + Ord,
 {
@@ -117,57 +119,39 @@ where
     where
         C: IntoIterator<Item = I>,
     {
-        Search::weighted(init, successors, Box::new(|_| 0))
+        Search::weighted(init, successors, Box::new(|_| 1))
     }
 }
 
-impl<'a, I, W> Iterator for Search<'a, I, W>
+impl<'a, A, I> Iterator for Search<'a, A, I>
 where
-    W: Ord + Clone,
-    I: Clone + Ord,
+    I: Clone + Ord + ::std::fmt::Debug,
+    A: Agenda<Item = I> + 'a
 {
     type Item = I;
     fn next(&mut self) -> Option<Self::Item> {
-        let &mut Search {
-            ref mut agenda,
-            ref successors,
-            ref mut found,
-        } = self;
-
-        if let Some(item) = Agenda::dequeue(agenda) {
-            for succ in (successors)(&item)
-                .into_iter()
-                .filter(| i | found.insert(i.clone()))
-            {
-                agenda.enqueue(succ);
+        match *self {
+            Search::All(ref mut agenda, ref succ) => {
+                while let Some(item) = Agenda::dequeue(agenda) {
+                    for succ_item in (succ)(&item) {
+                        agenda.enqueue(succ_item);
+                    }
+                    return Some(item)
+                }
+                return None
             }
             
-            Some(item)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, I, W> Iterator for UniqueSearch<'a, I, W>
-where
-    W: Ord + Clone,
-{
-    type Item = I;
-    fn next(&mut self) -> Option<Self::Item> {
-        let &mut UniqueSearch {
-            ref mut agenda,
-            ref successors,
-        } = self;
-
-        if let Some(item) = Agenda::dequeue(agenda) {
-            for succ in (successors)(&item) {
-                agenda.enqueue(succ);
+            Search::Uniques(ref mut agenda, ref succ, ref mut found) => {
+                while let Some(item) = Agenda::dequeue(agenda) {
+                    if found.insert(item.clone()) {
+                        for succ_item in (succ)(&item) {
+                            agenda.enqueue(succ_item);
+                        }
+                        return Some(item)
+                    }
+                }
+                return None
             }
-            
-            Some(item)
-        } else {
-            None
         }
     }
 }

@@ -25,6 +25,9 @@ where
     // key is some nonterm it depends on
     epsilon_brackets: HashMap<usize, Vec<(Vec<usize>, Vec<usize>, usize)>>,
 
+    // ε-rules without any dependencies
+    free_brackets: Vec<usize>,
+
     // as usal
     term_brackets: HashMap<T, Vec<(Vec<T>, usize)>>,
 
@@ -54,6 +57,7 @@ where
         let mut term_implies = HashMap::new();
         let mut epsilon_brackets = HashMap::new();
         let mut free = Vec::new();
+        let mut free_brackets = Vec::new();
 
         for rule_id in 0..(grammar.size()) {
             let rule = grammar.find_value(rule_id).unwrap();
@@ -138,20 +142,25 @@ where
                     ),
                 }
 
-                for nonterminal in rule.tail.iter().cloned() {
-                    epsilon_brackets.entry(dependencies.integerise(nonterminal.clone())).or_insert_with(Vec::new).push(
-                        (
-                            rule.tail.iter().cloned().map(|n| dependencies.integerise(n)).collect(),
-                            epsilon_brackets_per_rule.clone(),
-                            dependencies.integerise(rule.head.clone())
+                if rule.tail.is_empty() {
+                    free_brackets.extend(epsilon_brackets_per_rule);
+                } else {
+                    for nonterminal in rule.tail.iter().cloned() {
+                        epsilon_brackets.entry(dependencies.integerise(nonterminal.clone())).or_insert_with(Vec::new).push(
+                            (
+                                rule.tail.iter().cloned().map(|n| dependencies.integerise(n)).collect(),
+                                epsilon_brackets_per_rule.clone(),
+                                dependencies.integerise(rule.head.clone())
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
 
         InsideFilterAutomaton {
             term_brackets,
+            free_brackets,
             epsilon_brackets,
             term_implies,
             free
@@ -208,7 +217,7 @@ where
         }
 
         for q in 0..(word.len() + 1) {
-            for brackets in &used_eps_brackets {
+            for brackets in used_eps_brackets.iter().chain(self.free_brackets.iter()) {
                 arcs.push(FiniteArc {
                     from: q,
                     to: q,
@@ -269,11 +278,15 @@ mod test {
         let words: Option<Vec<BracketFragment<String>>> =
             GeneratorAutomaton::generate(&generator, filter_automaton.clone(), Capacity::Infinite).next();
 
-        eprintln!("{}", generator.clone().intersect(filter_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
+        eprintln!("{}", generator);
+        eprintln!("{:?}", filter);
+        eprintln!("{:?}", filter_automaton);
+        eprintln!("{:?}", generator.clone().intersect(filter_automaton).arcs);
 
-        let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
-        eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
-        eprintln!("{:?}", words);
+
+        // let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
+        // eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
+        // eprintln!("{:?}", words);
     }
 
 }

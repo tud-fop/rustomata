@@ -9,7 +9,7 @@ use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 
 /// A transition of a deterministic finite automaton.
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub struct FiniteArc<Q, T, W> {
     pub from: Q,
     pub to: Q,
@@ -99,10 +99,10 @@ where
     }
 }
 
-use recognisable::{Search, UniqueSearch};
+use recognisable::{Search};
 impl<T> FiniteAutomaton<T, LogDomain<f64>>
 where
-    T: Eq + Hash + Clone,
+    T: Eq + Hash + Clone + ::std::fmt::Debug,
 {
     /// Computes the Hadamard product of two deterministic `FiniteAutomata`.
     fn intersect<W>(&self, filter: FiniteAutomaton<T, W>) -> Self {
@@ -149,13 +149,14 @@ where
                 }
                 successors
             }),
-        ).map(
-            |FiniteArc {
+        ).uniques()
+         .map(
+            | FiniteArc {
                  from,
                  to,
                  label,
                  weight,
-             }| {
+             } | {
                 FiniteArc {
                     from: new_states.integerise(from),
                     to: new_states.integerise(to),
@@ -163,10 +164,7 @@ where
                     weight,
                 }
             },
-        )
-            .collect();
-
-
+        ).collect();
 
         let mut intersect_finals = Vec::new();
         for qf in finals {
@@ -211,28 +209,38 @@ where
         };
 
         Box::new(
-            UniqueSearch::weighted(
-                vec![(initial, vec![], LogDomain::one())],
-                Box::new(move |&(q, ref word, weight)| {
-                    let mut successors = Vec::new();
-                    for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
-                        let mut word_ = word.clone();
-                        word_.push(label.clone());
-                        successors.push((to, word_, weight * w))
-                    }
-                    successors
-                }),
-                Box::new(move |&(ref q, _, w)| {
-                    (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
-                }),
-                beam,
-            ).filter(move |&(ref q, _, _)| finals.contains(q))
-                .map(move |(_, wi, _)| {
+            {
+                let it = Search::weighted(
+                    vec![(initial, Vec::new(), LogDomain::one())],
+                    Box::new(
+                        move |&(q, ref word, weight)| {
+                            let mut successors = Vec::new();
+                            for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
+                                let mut word_: Vec<usize> = word.clone();
+                                word_.push(label.clone());
+                                successors.push((to, word_, weight * w))
+                            }
+                            successors
+                        }
+                    ),
+                    Box::new(
+                        move |&(ref q, _, w)| {
+                            (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
+                        }
+                    ),
+                );
+                if let Capacity::Limit(i) = beam {
+                    it.beam(i)
+                } else { it }
+            }.filter(move |&(ref q, _, _)| finals.contains(q))
+             .map(
+                move |(_, wi, _)| {
                     wi.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
                         .collect()
-                }),
+                }
+            ),
         )
     }
 }
@@ -241,7 +249,7 @@ use super::GeneratorAutomaton;
 
 impl<T> GeneratorAutomaton<T> for FiniteAutomaton<T, LogDomain<f64>>
 where
-    T: Eq + Hash + Clone,
+    T: Eq + Hash + Clone + ::std::fmt::Debug,
 {
     fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)

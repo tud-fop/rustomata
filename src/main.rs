@@ -10,6 +10,7 @@ extern crate rand;
 extern crate serde_derive;
 extern crate serde;
 extern crate fnv;
+extern crate flate2;
 
 
 mod approximation;

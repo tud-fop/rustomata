@@ -5,7 +5,7 @@ use log_domain::LogDomain;
 use num_traits::{One, Zero};
 use integeriser::{HashIntegeriser, Integeriser};
 
-use recognisable::{Search, UniqueSearch};
+use recognisable::{Search};
 use super::{FiniteArc, FiniteAutomaton};
 use std::cmp::Ordering;
 use std::rc::Rc;
@@ -121,10 +121,10 @@ where
 /// any target node using `Mul`tiplicative weight monoid.
 pub fn heuristics<Q, W>(rules: HashMap<Q, BinaryHeap<(W, Q)>>, qfs: &[Q]) -> HashMap<Q, W>
 where
-    Q: Ord + Clone + Hash,
-    W: Ord + Copy + One,
+    Q: Ord + Clone + Hash + ::std::fmt::Debug,
+    W: Ord + Copy + One + ::std::fmt::Debug,
 {
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     struct SearchItem<Q, W>(Q, W);
     impl<Q, W> PartialEq for SearchItem<Q, W>
     where
@@ -169,14 +169,15 @@ where
             }
         }),
         Box::new(|&SearchItem(_, ref w)| *w),
-    ).map(|SearchItem(q, w)| (q, w))
-        .collect()
+    ).uniques()
+     .map(|SearchItem(q, w)| (q, w))
+     .collect()
 }
 
 impl<T, W> KellerAutomaton<T, W>
 where
-    T: Hash + Eq + Clone,
-    W: Copy + Ord
+    T: Hash + Eq + Clone + ::std::fmt::Debug,
+    W: Copy + Ord + ::std::fmt::Debug
 {
     /// Creates a deterministic `KellerAutomaton` using a sequence of transisitons.
     /// If there are multiple transitions from the same state with the same label,
@@ -317,7 +318,7 @@ where
 {
     /// Computes the Hadamard product of a deterministic `KellerAutomaton` and
     /// a deterministic `FiniteAutomaton`.
-    pub fn intersect<W>(self, dfa: FiniteAutomaton<T, W>) -> Self {
+    pub fn intersect<W: ::std::fmt::Debug>(self, dfa: FiniteAutomaton<T, W>) -> Self {
         let KellerAutomaton {
             initial,
             finals,
@@ -354,23 +355,25 @@ where
             op,
         } in Search::unweighted(
             agenda,
-            Box::new(move |arc| {
-                let mut heap = Vec::new();
-                let &KellerArc { to: (kq, fq), .. } = arc;
-                for (label, &(to, weight, ref op)) in arcs.get(kq).unwrap_or(&IntMap::default()) {
-                    if let Some(&(fto, _)) = f_arcs.get(fq).and_then(|m| m.get(label)) {
-                        heap.push(KellerArc {
-                            from: (kq, fq),
-                            to: (to, fto),
-                            label: *label,
-                            op: op.clone(),
-                            weight,
-                        });
+            Box::new(
+                move |arc| {
+                    let mut heap = Vec::new();
+                    let &KellerArc { to: (kq, fq), .. } = arc;
+                    for (label, &(to, weight, ref op)) in arcs.get(kq).unwrap_or(&IntMap::default()) {
+                        if let Some(&(fto, _)) = f_arcs.get(fq).and_then(|m| m.get(label)) {
+                            heap.push(KellerArc {
+                                from: (kq, fq),
+                                to: (to, fto),
+                                label: *label,
+                                op: op.clone(),
+                                weight,
+                            });
+                        }
                     }
+                    heap
                 }
-                heap
-            }),
-        ) {
+            ),
+        ).uniques() {
             vec_entry::<IntMap<(usize, LogDomain<f64>, KellerOp<usize>)>>(
                 &mut new_arcs,
                 states.integerise(from),
@@ -420,34 +423,41 @@ where
         };
 
         Box::new(
-            UniqueSearch::weighted(
-                vec![(LogDomain::one(), initial, vec![], vec![])],
-                Box::new(move |&(weight_, q, ref word, ref keller)| {
-                    let mut results = Vec::new();
-                    if let Some(arcs_from) = arcs.get(q) {
-                        for (label, &(to, weight, ref op)) in arcs_from {
-                            if let Some(keller_) = op.apply(keller) {
-                                let mut word_ = word.clone();
-                                word_.push(*label);
-                                results.push((weight * weight_, to, word_, keller_));
+            {
+                let it = Search::weighted(
+                    vec![(LogDomain::one(), initial, vec![], vec![])],
+                    Box::new(move |&(weight_, q, ref word, ref keller)| {
+                        let mut results = Vec::new();
+                        if let Some(arcs_from) = arcs.get(q) {
+                            for (label, &(to, weight, ref op)) in arcs_from {
+                                if let Some(keller_) = op.apply(keller) {
+                                    let mut word_ = word.clone();
+                                    word_.push(*label);
+                                    results.push((weight * weight_, to, word_, keller_));
+                                }
                             }
                         }
-                    }
-                    results
-                }),
-                Box::new(move |&(weight, ref q, _, _)| {
-                    (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * weight).pow(-1.0)
-                }),
-                beam,
-            ).filter(move |&(_, ref q, _, ref keller)| {
-                finals.contains(q) && keller.is_empty()
-            })
-                .map(move |(_, _, word, _)| {
+                        results
+                    }),
+                    Box::new(move |&(weight, ref q, _, _)| {
+                        (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * weight).pow(-1.0)
+                    })
+                );
+                if let Capacity::Limit(i) = beam {
+                    it.beam(i)
+                } else { it }
+            }.filter(
+                move |&(_, ref q, _, ref keller)| {
+                    finals.contains(q) && keller.is_empty()
+                }
+            ).map(
+                move |(_, _, word, _)| {
                     word.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
                         .collect()
-                }),
+                }
+            ),
         )
     }
 }
