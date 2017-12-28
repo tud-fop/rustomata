@@ -21,9 +21,9 @@ impl<A> TTSElement<A> {
 }
 
 impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
-    where A: Clone + Debug + Hash + Ord,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: AddAssign + Copy + Debug + One + Ord + Zero,
+    where A: Clone + Hash + Ord,
+          T: Clone + Eq + Hash + Ord,
+          W: AddAssign + Copy + MulAssign + One + Ord + Zero,
 {
     type I1 = TreeStackInstruction<A>;
     type I2 = PushDownInstruction<A>;

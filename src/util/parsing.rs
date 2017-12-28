@@ -7,8 +7,9 @@ use nom::{IResult, anychar, is_space};
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
 /// * It is delimited by the symbol `'"` on both sides and each occurrence of `'\\'` or `'"` inside the delimiters is escaped.
-pub fn parse_token<A: FromStr>(input: &[u8]) -> IResult<&[u8], A>
-    where <A as FromStr>::Err: Debug
+pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
+    where A: FromStr,
+          A::Err: Debug,
 {
     named!(
         parse_token_s<&str>,
@@ -51,8 +52,9 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
     )
 }
 /// parses initials of the form `initials: [...]` into a vector of type `N`
-pub fn parse_initials<N: FromStr>(input: &[u8]) -> IResult<&[u8], Vec<N>>
-    where <N as FromStr>::Err: Debug
+pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
+    where A: FromStr,
+          A::Err: Debug,
 {
     do_parse!(
         input,

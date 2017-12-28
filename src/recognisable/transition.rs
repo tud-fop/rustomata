@@ -95,26 +95,38 @@ impl<I, T, W> Transition<I, T, W>
 }
 
 impl<I, T, W> PartialOrd for Transition<I, T, W>
-    where I: PartialEq,
-          T: PartialEq,
+    where I: Eq + PartialOrd,
+          T: Eq + PartialOrd,
           W: Eq + PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.weight == other.weight {
-            self.word.len().partial_cmp(&other.word.len())
-        } else {
-            self.weight.partial_cmp(&other.weight)
+        match self.weight.partial_cmp(&other.weight) {
+            None | Some(Ordering::Equal) =>
+                match self.word.partial_cmp(&other.word) {
+                    None | Some(Ordering::Equal) =>
+                        self.instruction.partial_cmp(&other.instruction),
+                    x => x,
+                },
+            x => x,
         }
     }
 }
 
 impl<I, T, W> Ord for Transition<I, T, W>
-    where I: Eq,
-          T: Eq,
-          W: Eq + Ord
+    where I: Eq + Ord,
+          T: Eq + Ord,
+          W: Eq + Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        match self.weight.cmp(&other.weight) {
+            Ordering::Equal =>
+                match self.word.cmp(&other.word) {
+                    Ordering::Equal =>
+                        self.instruction.cmp(&other.instruction),
+                    x => x,
+                },
+            x => x,
+        }
     }
 }
 

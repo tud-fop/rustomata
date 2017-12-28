@@ -1,6 +1,7 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::ops::MulAssign;
 use std::rc::Rc;
 
 use num_traits::One;
@@ -23,8 +24,10 @@ pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>
 /// * The outer representation should be used for pretty-printing etc.
 pub trait Automaton<T, W>
     where Self::Key: Eq + Hash,
-          Self::I: Instruction,
-          Self::IInt: Clone + Debug + Eq + Instruction,
+          Self::I: Clone + Instruction,
+          Self::IInt: Clone + Eq + Instruction,
+          T: Clone,
+          W: Clone + MulAssign + One,
 {
     /// A key to match `Configuration`s to probably applicable `Transitions`.
     type Key;
@@ -77,7 +80,28 @@ pub trait Automaton<T, W>
 
     /// Returns the initial storage configuration (in its internal representation).
     fn initial_int(&self)
-               -> <Self::IInt as Instruction>::Storage;
+                   -> <Self::IInt as Instruction>::Storage;
+
+    // TODO documentation, implement function check_run_int(… Self::IInt …)
+    fn check_run(&self, run: Pushdown<Transition<Self::I, T, W>>)
+                 -> Vec<Item<<Self::I as Instruction>::Storage, Self::I, T, W>>
+    {
+        let mut result = Vec::new();
+        let mut weight = W::one();
+        result.push(self.initial());
+        for t in run.iter() {
+            weight *= t.weight.clone();
+            let mut new_storages = Vec::new();
+            for s in result {
+                new_storages.append(&mut t.instruction.apply(s))
+            }
+            result = new_storages;
+        }
+        result
+            .into_iter()
+            .map(|s| (Configuration { word: Vec::new(), storage: s, weight: weight.clone() }, run.clone()))
+            .collect()
+    }
 
     /*
     // TODO: remove
@@ -121,14 +145,14 @@ pub trait Automaton<T, W>
 pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
                               -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
-          A::I: Clone + Debug + Eq + Instruction,
-          <A::I as Instruction>::Storage: Clone + Debug + Eq,
-          A::IInt: 'a,
+          A::I: Clone + Eq + Instruction,
+          <A::I as Instruction>::Storage: Clone + Eq,
+          A::IInt: 'a + Ord,
           A::Key: 'a,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord + 'a,
-          A::TInt: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord + 'a,
+          <A::IInt as Instruction>::Storage: Clone + Eq + Ord,
+          T: Clone + Eq + Ord + 'a,
+          A::TInt: Clone + Eq + Ord,
+          W: Copy + MulAssign + One + Ord + 'a,
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
@@ -156,14 +180,14 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
 pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
                                -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
     where A: Automaton<T, W>,
-          A::I: Clone + Debug + Eq + Instruction,
-          <A::I as Instruction>::Storage: Clone + Debug + Eq,
-          A::IInt: 'a,
+          A::I: Clone + Eq + Instruction,
+          <A::I as Instruction>::Storage: Clone + Eq,
+          A::IInt: 'a + Ord,
           A::Key: 'a,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq + Ord,
-          T: Clone + Debug + Eq + Ord + 'a,
-          A::TInt: Clone + Debug + Eq + Ord,
-          W: Copy + Debug + One + Ord + 'a,
+          <A::IInt as Instruction>::Storage: Clone + Eq + Ord,
+          T: Clone + Eq + Ord + 'a,
+          A::TInt: Clone + Eq + Ord,
+          W: Copy + MulAssign + One + Ord + 'a,
 {
     let i = Configuration {
         word: word.iter().map(|t| a.terminal_to_int(t)).collect(),

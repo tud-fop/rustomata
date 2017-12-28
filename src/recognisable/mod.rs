@@ -4,6 +4,8 @@ mod transition;
 
 pub mod automaton;
 pub mod from_str;
+#[macro_use]
+pub mod coarse_to_fine;
 
 use std::vec::Vec;
 use util::agenda::Weighted;

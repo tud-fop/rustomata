@@ -4,7 +4,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::convert::From;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 use std::rc::Rc;
 use std::vec::Vec;
 
@@ -46,7 +46,7 @@ pub struct TreeStackAutomaton<A, T, W>
 
 impl<A, T, W> TreeStackAutomaton<A, T, W>
     where A: Clone + Eq + Hash + Ord,
-          T: Clone + Eq + Hash,
+          T: Clone + Eq + Hash + Ord,
           W: Clone + Ord,
 {
     pub fn new<It>(transitions: It, initial: TreeStack<A>)
@@ -117,9 +117,9 @@ impl<A, T, W> TreeStackAutomaton<A, T, W>
 
 
 impl<A, T, W> Recognisable<T, W> for TreeStackAutomaton<A, T, W>
-    where A: Ord + PartialEq + Debug + Clone + Hash,
-          T: Clone + Debug + Eq + Hash + Ord,
-          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord
+    where A: Ord + PartialEq + Clone + Hash,
+          T: Clone + Eq + Hash + Ord,
+          W: One + Mul<Output=W> + MulAssign + Clone + Copy + Eq + Ord
 {
     type Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>;
 
@@ -134,9 +134,9 @@ impl<A, T, W> Recognisable<T, W> for TreeStackAutomaton<A, T, W>
 
 
 impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
-    where A: Clone + Debug + Eq + Hash + Ord,
-          T: Clone + Debug + Eq + Hash + PartialOrd,
-          W: Clone + Copy + Debug + Eq + Mul<Output=W> + One + Ord,
+    where A: Clone + Eq + Hash + Ord,
+          T: Clone + Eq + Hash + Ord,
+          W: Clone + Copy + Eq + Mul<Output=W> + MulAssign + One + Ord,
 {
     type I = TreeStackInstruction<A>;
     type IInt = TreeStackInstruction<usize>;
@@ -209,9 +209,9 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
 
 
 impl<A, T, W> Display for TreeStackAutomaton<A, T, W>
-    where A: Ord + PartialEq + Debug + Clone + Hash + Display,
-          T: Clone + Debug + Eq + Hash,
-          W: One + Mul<Output=W> + Clone + Copy + Debug + Eq + Ord + Display
+    where A: Ord + PartialEq + Clone + Hash + Display,
+          T: Clone + Eq + Debug + Hash + Ord,
+          W: One + Mul<Output=W> + Clone + Copy + Eq + Ord + Display
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted_transitions = String::new();

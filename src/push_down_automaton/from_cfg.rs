@@ -2,7 +2,6 @@ extern crate num_traits;
 
 use std::collections::HashSet;
 use std::fmt;
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::ops::{AddAssign, Mul, Div};
@@ -52,11 +51,11 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
     }
 }
 
-impl<N: Clone + Debug + Ord + PartialEq + Hash,
-     T: Clone + Debug + Ord + PartialEq + Hash,
-     W: Clone + Debug + Ord + PartialEq + One + FromStr + AddAssign + Mul<Output = W> + Div<Output = W> + Zero
+impl<N: Clone + Ord + PartialEq + Hash,
+     T: Clone + Ord + PartialEq + Hash,
+     W: Clone + Ord + PartialEq + One + FromStr + AddAssign + Mul<Output = W> + Div<Output = W> + Zero
      > From<CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
-    where <W as FromStr>::Err: Debug{
+{
      fn from(g: CFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
 
