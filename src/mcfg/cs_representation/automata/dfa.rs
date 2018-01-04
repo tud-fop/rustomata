@@ -102,7 +102,7 @@ where
 use recognisable::{Search};
 impl<T> FiniteAutomaton<T, LogDomain<f64>>
 where
-    T: Eq + Hash + Clone + ::std::fmt::Debug,
+    T: Eq + Hash + Clone,
 {
     /// Computes the Hadamard product of two deterministic `FiniteAutomata`.
     fn intersect<W>(&self, filter: FiniteAutomaton<T, W>) -> Self {
@@ -249,7 +249,7 @@ use super::GeneratorAutomaton;
 
 impl<T> GeneratorAutomaton<T> for FiniteAutomaton<T, LogDomain<f64>>
 where
-    T: Eq + Hash + Clone + ::std::fmt::Debug,
+    T: Eq + Hash + Clone,
 {
     fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)

@@ -121,8 +121,8 @@ where
 /// any target node using `Mul`tiplicative weight monoid.
 pub fn heuristics<Q, W>(rules: HashMap<Q, BinaryHeap<(W, Q)>>, qfs: &[Q]) -> HashMap<Q, W>
 where
-    Q: Ord + Clone + Hash + ::std::fmt::Debug,
-    W: Ord + Copy + One + ::std::fmt::Debug,
+    Q: Ord + Clone + Hash,
+    W: Ord + Copy + One,
 {
     #[derive(Clone, Debug)]
     struct SearchItem<Q, W>(Q, W);
@@ -176,8 +176,8 @@ where
 
 impl<T, W> KellerAutomaton<T, W>
 where
-    T: Hash + Eq + Clone + ::std::fmt::Debug,
-    W: Copy + Ord + ::std::fmt::Debug
+    T: Hash + Eq + Clone,
+    W: Copy + Ord
 {
     /// Creates a deterministic `KellerAutomaton` using a sequence of transisitons.
     /// If there are multiple transitions from the same state with the same label,
@@ -318,7 +318,7 @@ where
 {
     /// Computes the Hadamard product of a deterministic `KellerAutomaton` and
     /// a deterministic `FiniteAutomaton`.
-    pub fn intersect<W: ::std::fmt::Debug>(self, dfa: FiniteAutomaton<T, W>) -> Self {
+    pub fn intersect<W>(self, dfa: FiniteAutomaton<T, W>) -> Self {
         let KellerAutomaton {
             initial,
             finals,

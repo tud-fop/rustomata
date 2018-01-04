@@ -91,7 +91,7 @@ use self::automata::GeneratorStrategy;
 impl<N, T, F, S> CSRepresentation<N, T, F, S>
 where
     N: Ord + Hash + Clone,
-    T: Ord + Hash + Clone + ::std::fmt::Debug,
+    T: Ord + Hash + Clone,
     F: FilterAutomaton<T> + Serialize,
     S: GeneratorStrategy<T>,
 {
@@ -117,11 +117,8 @@ where
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
     pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N> {
-        eprintln!("create filter");
         let f = self.filter.fsa(word, &self.generator);
-        eprintln!("create iterator");
         let g = self.generator.generate(f, beam);
-        eprintln!("done");
         CSGenerator {
             candidates: g,
             rules: &self.rules,
@@ -170,7 +167,7 @@ where
 /// the Chomsky-Schützenberger characterization of an MCFG.
 pub struct CSGenerator<'a, T, N>
 where
-    T: 'a + PartialEq + Hash + Clone + Eq + Ord + fmt::Debug,
+    T: 'a + PartialEq + Hash + Clone + Eq + Ord,
     N: 'a + Hash + Eq,
 {
     candidates: Box<Iterator<Item = Vec<BracketFragment<T>>> + 'a>,
@@ -179,8 +176,8 @@ where
 
 impl<'a, N, T> Iterator for CSGenerator<'a, T, N>
 where
-    T: PartialEq + Hash + Clone + Eq + Ord + fmt::Debug,
-    N: Hash + Eq + Clone + fmt::Debug,
+    T: PartialEq + Hash + Clone + Eq + Ord,
+    N: Hash + Eq + Clone,
 {
     type Item = Derivation<'a, N, T>;
 

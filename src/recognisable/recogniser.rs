@@ -125,7 +125,7 @@ where
 
 impl<'a, A, I> Iterator for Search<'a, A, I>
 where
-    I: Clone + Ord + ::std::fmt::Debug,
+    I: Clone + Ord,
     A: Agenda<Item = I> + 'a
 {
     type Item = I;

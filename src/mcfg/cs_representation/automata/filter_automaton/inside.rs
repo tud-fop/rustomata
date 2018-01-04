@@ -284,9 +284,9 @@ mod test {
         eprintln!("{:?}", generator.clone().intersect(filter_automaton).arcs);
 
 
-        // let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
-        // eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
-        // eprintln!("{:?}", words);
+        let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
+        eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
+        eprintln!("{:?}", words);
     }
 
 }

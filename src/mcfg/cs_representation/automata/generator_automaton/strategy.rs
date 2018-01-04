@@ -7,14 +7,13 @@ use pmcfg::{PMCFGRule, VarT};
 
 
 use serde::{Serialize, Deserialize};
-use std::fmt::Debug;
 
 /// A `GeneratorStrategy` is a method to create a `GeneratorAutomaton` with respect to an MCFG.
 pub trait GeneratorStrategy<T>
 where
     T: Clone + Hash + Eq
 {
-    type Generator: GeneratorAutomaton<BracketFragment<T>> + Serialize + for<'de> Deserialize<'de> + Debug;
+    type Generator: GeneratorAutomaton<BracketFragment<T>> + Serialize + for<'de> Deserialize<'de>;
     
     fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
@@ -27,7 +26,7 @@ where
 pub struct KellerGenerator;
 impl<T> GeneratorStrategy<T> for KellerGenerator
 where
-    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
+    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de>
 {
     type Generator = KellerAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
@@ -47,7 +46,7 @@ where
 pub struct ApproxGenerator(pub usize);
 impl<T> GeneratorStrategy<T> for ApproxGenerator
 where
-    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de> + Debug
+    T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de>
 {
     type Generator = FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
@@ -67,7 +66,7 @@ where
 pub struct NaiveGenerator;
 impl<T> GeneratorStrategy<T> for NaiveGenerator
 where
-    T: Hash + Eq + Clone + Serialize + for<'de> Deserialize<'de> + Debug
+    T: Hash + Eq + Clone + Serialize + for<'de> Deserialize<'de>
 {
     type Generator = FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
