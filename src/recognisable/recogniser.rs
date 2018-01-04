@@ -132,19 +132,20 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         match *self {
             Search::All(ref mut agenda, ref succ) => {
-                while let Some(item) = Agenda::dequeue(agenda) {
+                if let Some(item) = Agenda::dequeue(agenda) {
                     for succ_item in (succ)(&item) {
                         agenda.enqueue(succ_item);
                     }
                     return Some(item)
+                } else {
+                    return None
                 }
-                return None
             }
             
             Search::Uniques(ref mut agenda, ref succ, ref mut found) => {
                 while let Some(item) = Agenda::dequeue(agenda) {
                     if found.insert(item.clone()) {
-                        for succ_item in (succ)(&item) {
+                        for succ_item in (succ)(&item).into_iter().filter( |i| !found.contains(i) ) {
                             agenda.enqueue(succ_item);
                         }
                         return Some(item)

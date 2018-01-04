@@ -119,14 +119,13 @@ where
 
 /// Computes the least weight of each node in a graph to
 /// any target node using `Mul`tiplicative weight monoid.
-pub fn heuristics<Q, W>(rules: HashMap<Q, BinaryHeap<(W, Q)>>, qfs: &[Q]) -> HashMap<Q, W>
+pub fn heuristics<Q>(rules: HashMap<Q, BinaryHeap<(LogDomain<f64>, Q)>>, qfs: &[Q]) -> HashMap<Q, LogDomain<f64>>
 where
     Q: Ord + Clone + Hash,
-    W: Ord + Copy + One,
 {
     #[derive(Clone, Debug)]
-    struct SearchItem<Q, W>(Q, W);
-    impl<Q, W> PartialEq for SearchItem<Q, W>
+    struct SearchItem<Q>(Q, LogDomain<f64>);
+    impl<Q> PartialEq for SearchItem<Q>
     where
         Q: PartialEq,
     {
@@ -134,12 +133,12 @@ where
             self.0 == other.0
         }
     }
-    impl<Q, W> Eq for SearchItem<Q, W>
+    impl<Q> Eq for SearchItem<Q>
     where
         Q: Eq,
     {
     }
-    impl<Q, W> PartialOrd for SearchItem<Q, W>
+    impl<Q> PartialOrd for SearchItem<Q>
     where
         Q: PartialOrd,
     {
@@ -147,7 +146,7 @@ where
             self.0.partial_cmp(&other.0)
         }
     }
-    impl<Q, W> Ord for SearchItem<Q, W>
+    impl<Q> Ord for SearchItem<Q>
     where
         Q: Ord,
     {
@@ -157,7 +156,7 @@ where
     }
 
     Search::weighted(
-        qfs.iter().map(|q| SearchItem(q.clone(), W::one())),
+        qfs.iter().map(|q| SearchItem(q.clone(), LogDomain::one())),
         Box::new(move |&SearchItem(ref to, ref w)| {
             if let Some(arcs_to) = rules.get(to) {
                 arcs_to
@@ -168,7 +167,7 @@ where
                 Vec::new()
             }
         }),
-        Box::new(|&SearchItem(_, ref w)| *w),
+        Box::new(|&SearchItem(_, ref w)| (*w).pow(-1.0)),
     ).uniques()
      .map(|SearchItem(q, w)| (q, w))
      .collect()
