@@ -1,11 +1,13 @@
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::fmt;
 use std::rc::Rc;
 use std::hash::Hash;
 use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TreeStack<A> {
     parent: Option<(usize, Rc<TreeStack<A>>)>,
     value: A,
@@ -63,6 +65,38 @@ impl<A> TreeStack<A> {
         } else {
             Err(self)
         }
+    }
+}
+
+impl<A: Clone + fmt::Display + fmt::Debug> fmt::Debug for TreeStack<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (tree, pointer) = self.to_tree();
+
+        for (path, value) in tree.iter() {
+            let mut line1 = String::from(" ");
+            let mut line2 = String::from(if path.eq(&pointer) {
+                "*"
+            } else {
+                " "
+            });
+
+            match path.last() {
+                Some(child_num) => {
+                    for _ in 0..path.len() - 1 {
+                        line1.push_str("| ");
+                        line2.push_str("| ");
+                    }
+
+                    line1.push_str("|");
+                    line2.push_str(&format!("+-{}: {}", child_num, value));
+                },
+                None => line2.push_str(&value.to_string()),
+            }
+
+            write!(f, "{}\n{}\n", line1, line2)?
+        }
+
+        Ok(())
     }
 }
 
