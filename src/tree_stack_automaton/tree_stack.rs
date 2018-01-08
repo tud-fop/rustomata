@@ -99,8 +99,39 @@ impl<A: Clone> TreeStack<A> {
             None => Err(self),
         }
     }
-}
 
+    fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
+        let mut tree_map = BTreeMap::new();
+        let mut curr_path = Vec::new();
+
+        if let Some((num, ref parent)) = self.parent {
+            let (parent_map, parent_path) = parent.to_tree();
+            curr_path = parent_path;
+            curr_path.push(num);
+
+            for (path, value) in parent_map.iter() {
+                tree_map.insert(path.clone(), value.clone());
+            }
+        }
+
+        tree_map.insert(curr_path.clone(), self.value.clone());
+
+        for (num, maybe_child) in self.children.iter().enumerate() {
+            if let &Some(ref child) = maybe_child {
+                let (mut child_map, _) = child.to_tree();
+
+                for (path, value) in child_map {
+                    let mut new_path = curr_path.clone();
+                    new_path.append(&mut path.clone());
+                    new_path.push(num);
+                    tree_map.insert(new_path, value.clone());
+                }
+            }
+        }
+
+        (tree_map, curr_path)
+    }
+}
 
 impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
     type AInt = TreeStack<usize>;
