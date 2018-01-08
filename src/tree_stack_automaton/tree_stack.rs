@@ -1,11 +1,13 @@
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::fmt;
 use std::rc::Rc;
 use std::hash::Hash;
 use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TreeStack<A> {
     parent: Option<(usize, Rc<TreeStack<A>>)>,
     value: A,
@@ -66,6 +68,38 @@ impl<A> TreeStack<A> {
     }
 }
 
+impl<A: Clone + fmt::Display + fmt::Debug> fmt::Debug for TreeStack<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (tree, pointer) = self.to_tree();
+
+        for (path, value) in tree.iter() {
+            let mut line1 = String::from(" ");
+            let mut line2 = String::from(if path.eq(&pointer) {
+                "*"
+            } else {
+                " "
+            });
+
+            match path.last() {
+                Some(child_num) => {
+                    for _ in 0..path.len() - 1 {
+                        line1.push_str("| ");
+                        line2.push_str("| ");
+                    }
+
+                    line1.push_str("|");
+                    line2.push_str(&format!("+-{}: {}", child_num, value));
+                },
+                None => line2.push_str(&value.to_string()),
+            }
+
+            write!(f, "{}\n{}\n", line1, line2)?
+        }
+
+        Ok(())
+    }
+}
+
 impl<A: Clone> TreeStack<A> {
     /// Goes up to a specific child position (if this position is occupied) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
@@ -99,8 +133,39 @@ impl<A: Clone> TreeStack<A> {
             None => Err(self),
         }
     }
-}
 
+    fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
+        let mut tree_map = BTreeMap::new();
+        let mut curr_path = Vec::new();
+
+        if let Some((num, ref parent)) = self.parent {
+            let (parent_map, parent_path) = parent.to_tree();
+            curr_path = parent_path;
+            curr_path.push(num);
+
+            for (path, value) in parent_map.iter() {
+                tree_map.insert(path.clone(), value.clone());
+            }
+        }
+
+        tree_map.insert(curr_path.clone(), self.value.clone());
+
+        for (num, maybe_child) in self.children.iter().enumerate() {
+            if let &Some(ref child) = maybe_child {
+                let (mut child_map, _) = child.to_tree();
+
+                for (path, value) in child_map {
+                    let mut new_path = curr_path.clone();
+                    new_path.append(&mut path.clone());
+                    new_path.push(num);
+                    tree_map.insert(new_path, value.clone());
+                }
+            }
+        }
+
+        (tree_map, curr_path)
+    }
+}
 
 impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
     type AInt = TreeStack<usize>;
