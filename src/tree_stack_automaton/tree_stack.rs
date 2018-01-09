@@ -156,8 +156,8 @@ impl<A: Clone> TreeStack<A> {
 
                 for (path, value) in child_map {
                     let mut new_path = curr_path.clone();
-                    new_path.append(&mut path.clone());
                     new_path.push(num);
+                    new_path.append(&mut path.clone());
                     tree_map.insert(new_path, value.clone());
                 }
             }
