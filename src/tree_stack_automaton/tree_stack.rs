@@ -7,7 +7,7 @@ use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TreeStack<A> {
     parent: Option<(usize, Rc<TreeStack<A>>)>,
     value: A,
@@ -68,7 +68,7 @@ impl<A> TreeStack<A> {
     }
 }
 
-impl<A: Clone + fmt::Display + fmt::Debug> fmt::Debug for TreeStack<A> {
+impl<A: Clone + fmt::Display> fmt::Display for TreeStack<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (tree, pointer) = self.to_tree();
 
@@ -134,7 +134,7 @@ impl<A: Clone> TreeStack<A> {
         }
     }
 
-    fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
+    pub fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
         let mut tree_map = BTreeMap::new();
         let mut curr_path = Vec::new();
 
@@ -227,20 +227,31 @@ fn test_tree_stack() {
     let mut ts: TreeStack<u8> = TreeStack::new(0);
     assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.push(1, 1).unwrap().clone();
+    ts = ts.push(1, 1).unwrap();
     assert_eq!(&1, ts.current_symbol());
 
-    ts = ts.down().unwrap().clone();
+    ts = ts.down().unwrap();
     assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.push(2, 2).unwrap().clone();
+    ts = ts.push(2, 2).unwrap();
     assert_eq!(&2, ts.current_symbol());
 
-    ts = ts.down().unwrap().clone();
-    ts = ts.up(1).unwrap().clone();
+    ts = ts.down().unwrap();
+    ts = ts.up(1).unwrap();
     assert_eq!(&1, ts.current_symbol());
 
-    let ts1 = ts.clone().push(1, 11);
-    let ts2 = ts.push(1, 11);
-    assert_eq!(ts1, ts2);
+    ts = ts.push(1, 11).unwrap();
+    assert_eq!(&11, ts.current_symbol());
+
+    ts = ts.down().unwrap();
+    ts = ts.down().unwrap();
+    ts = ts.up(2).unwrap();
+    ts = ts.push(1, 21).unwrap();
+    assert_eq!(&21, ts.current_symbol());
+
+    ts = ts.down().unwrap();
+    ts = ts.down().unwrap();
+
+    println!("Display: {}", &ts);
+    println!("Debug: {:?}", &ts);
 }
