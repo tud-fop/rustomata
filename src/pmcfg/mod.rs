@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -159,4 +160,50 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
 
         write!(f, "{}", buffer)
     }
+}
+
+pub fn evaluate<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>) -> Composition<T> {
+    evaluate_pos(term_map, vec![])
+}
+
+pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address: Vec<usize>) -> Composition<T> {
+    let unexpanded_composition = &term_map.get(&address).unwrap().composition;
+    let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
+    let mut expanded_composition = Vec::new();
+
+    for component in unexpanded_composition {
+        let mut expanded_component = Vec::new();
+
+        for variable in component {
+            match variable {
+                &VarT::Var(num_nonter, num_compon) => {
+                    if !expanded_nonterminals.contains_key(&num_nonter) {
+                        let mut child_address = address.clone();
+                        child_address.push(num_nonter);
+                        let nonter_compos = evaluate_pos(term_map, child_address).composition;
+                        expanded_nonterminals.insert(num_nonter, nonter_compos);
+                    }
+
+                    let nonter_compos = expanded_nonterminals.get(&num_nonter).unwrap();
+
+                    if let Some(compon) = nonter_compos.get(num_compon) {
+                        for terminal in compon {
+                            expanded_component.push(terminal.clone());
+                        }
+                    } else {
+                        panic!("{:?}: use of {}-th component of nonterminal {} that has only {} components!",
+                               unexpanded_composition, num_compon, num_nonter, nonter_compos.len());
+                    }
+
+                },
+                &VarT::T(ref terminal) => {
+                    expanded_component.push(VarT::T(terminal.clone()));
+                },
+            }
+        }
+
+        expanded_composition.push(expanded_component);
+    }
+
+    Composition::from(expanded_composition)
 }
