@@ -22,6 +22,12 @@ pub struct Composition<T> {
     pub composition: Vec<Vec<VarT<T>>>,
 }
 
+impl<T> From<Vec<Vec<VarT<T>>>> for Composition<T> {
+    fn from(encapsulated_value: Vec<Vec<VarT<T>>>) -> Self {
+        Composition { composition: encapsulated_value }
+    }
+}
+
 /// Rule of a weighted MCFG.
 #[derive(Debug, PartialOrd, Ord, Clone)]
 pub struct PMCFGRule<N, T, W> {
