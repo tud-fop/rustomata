@@ -207,3 +207,77 @@ pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Compo
 
     Composition::from(expanded_composition)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use VarT::{Var, T};
+
+    #[test]
+    fn test_evaluate() {
+        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+        term_map.insert(vec![], Composition::from(vec![
+                vec![Var(0,0), Var(1,0), Var(0,1), Var(1,1)]
+        ]));
+        term_map.insert(vec![0], Composition::from(vec![
+                vec![Var(1,0), Var(0,0)],
+                vec![Var(2,0), Var(0,1)]
+        ]));
+        term_map.insert(vec![0,0], Composition::from(vec![
+                vec![Var(1,0), Var(0,0)],
+                vec![Var(2,0), Var(0,1)]
+        ]));
+        term_map.insert(vec![0,0,0], Composition::from(vec![
+                vec![],
+                vec![]
+        ]));
+        term_map.insert(vec![0,0,1], Composition::from(vec![
+                vec![T('a')]
+        ]));
+        term_map.insert(vec![0,0,2], Composition::from(vec![
+                vec![T('c')]
+        ]));
+        term_map.insert(vec![0,1], Composition::from(vec![
+                vec![T('a')]
+        ]));
+        term_map.insert(vec![0,2], Composition::from(vec![
+                vec![T('c')]
+        ]));
+        term_map.insert(vec![1], Composition::from(vec![
+                vec![Var(1,0), Var(0,0)],
+                vec![Var(2,0), Var(0,1)]
+        ]));
+        term_map.insert(vec![1,0], Composition::from(vec![
+                vec![],
+                vec![]
+        ]));
+        term_map.insert(vec![1,1], Composition::from(vec![
+                vec![T('b')]
+        ]));
+        term_map.insert(vec![1,2], Composition::from(vec![
+                vec![T('d')]
+        ]));
+
+        let expanded_compos = Composition::from(vec![
+            vec![T('a'), T('a'), T('b'), T('c'), T('c'), T('d')]
+        ]);
+
+        assert_eq!(expanded_compos, evaluate(&term_map));
+    }
+
+    #[test]
+    #[should_panic(expected =
+        "[[Var(0, 0), Var(0, 1)]]: use of 1-th component of nonterminal 0 that has only 1 components!"
+    )]
+    fn test_evaluate_invalid_composition() {
+        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+        term_map.insert(vec![], Composition::from(vec![
+                vec![Var(0,0), Var(0,1)]
+        ]));
+        term_map.insert(vec![0], Composition::from(vec![
+                vec![T('a')]
+        ]));
+
+        evaluate(&term_map);
+    }
+}
