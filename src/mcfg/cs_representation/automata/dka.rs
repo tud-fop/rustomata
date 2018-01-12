@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, BTreeSet};
 use std::hash::Hash;
 
 use log_domain::LogDomain;
@@ -157,7 +157,7 @@ where
 
     Search::weighted(
         qfs.iter().map(|q| SearchItem(q.clone(), LogDomain::one())),
-        Box::new(move |&SearchItem(ref to, ref w)| {
+        move |&SearchItem(ref to, ref w)| {
             if let Some(arcs_to) = rules.get(to) {
                 arcs_to
                     .iter()
@@ -166,7 +166,7 @@ where
             } else {
                 Vec::new()
             }
-        }),
+        },
         Box::new(|&SearchItem(_, ref w)| (*w).pow(-1.0)),
     ).uniques()
      .map(|SearchItem(q, w)| (q, w))
@@ -259,7 +259,6 @@ where
 
         let transitions = Search::unweighted(
             agenda,
-            Box::new(
                 |&FiniteArc {
                      to: (from, ref keller),
                      ..
@@ -279,7 +278,6 @@ where
                     }
                     succ
                 },
-            ),
         ).map(
             |FiniteArc {
                  from,
@@ -354,24 +352,22 @@ where
             op,
         } in Search::unweighted(
             agenda,
-            Box::new(
-                move |arc| {
-                    let mut heap = Vec::new();
-                    let &KellerArc { to: (kq, fq), .. } = arc;
-                    for (label, &(to, weight, ref op)) in arcs.get(kq).unwrap_or(&IntMap::default()) {
-                        if let Some(&(fto, _)) = f_arcs.get(fq).and_then(|m| m.get(label)) {
-                            heap.push(KellerArc {
-                                from: (kq, fq),
-                                to: (to, fto),
-                                label: *label,
-                                op: op.clone(),
-                                weight,
-                            });
-                        }
+            move |arc| {
+                let mut heap = Vec::new();
+                let &KellerArc { to: (kq, fq), .. } = arc;
+                for (label, &(to, weight, ref op)) in arcs.get(kq).unwrap_or(&IntMap::default()) {
+                    if let Some(&(fto, _)) = f_arcs.get(fq).and_then(|m| m.get(label)) {
+                        heap.push(KellerArc {
+                            from: (kq, fq),
+                            to: (to, fto),
+                            label: *label,
+                            op: op.clone(),
+                            weight,
+                        });
                     }
-                    heap
                 }
-            ),
+                heap
+            },
         ).uniques() {
             vec_entry::<IntMap<(usize, LogDomain<f64>, KellerOp<usize>)>>(
                 &mut new_arcs,
@@ -401,6 +397,9 @@ where
     where
         T: 'a,
     {
+        let heuristics = self.heuristics();
+        eprintln!("{:?}", heuristics);
+
         let KellerAutomaton {
             arcs,
             initial,
@@ -408,24 +407,12 @@ where
             labels,
         } = self;
 
-        let heuristics: HashMap<usize, LogDomain<f64>> = {
-            let mut backwards_transitions = HashMap::new();
-            for (from, arcs_from) in arcs.iter().enumerate() {
-                for &(to, weight, _) in arcs_from.values() {
-                    backwards_transitions
-                        .entry(to)
-                        .or_insert_with(BinaryHeap::new)
-                        .push((weight, from));
-                }
-            }
-            heuristics(backwards_transitions, finals.as_slice())
-        };
 
         Box::new(
             {
                 let it = Search::weighted(
                     vec![(LogDomain::one(), initial, vec![], vec![])],
-                    Box::new(move |&(weight_, q, ref word, ref keller)| {
+                    move |&(weight_, q, ref word, ref keller)| {
                         let mut results = Vec::new();
                         if let Some(arcs_from) = arcs.get(q) {
                             for (label, &(to, weight, ref op)) in arcs_from {
@@ -437,10 +424,18 @@ where
                             }
                         }
                         results
-                    }),
-                    Box::new(move |&(weight, ref q, _, _)| {
-                        (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * weight).pow(-1.0)
-                    })
+                    },
+                    Box::new(
+                        move |&(weight, ref q, ref w, ref pd)| {
+                            let h = pd.iter()
+                                .map(|pds| heuristics.get(q).and_then(|&(ref m, _)| m.get(pds).map(|w| *w)).unwrap_or(LogDomain::zero()))
+                                .min()
+                                .unwrap_or(heuristics.get(q).map(|&(_, w)| w).unwrap_or(LogDomain::zero()));
+                            let hs: Vec<LogDomain<f64>> = pd.iter().map(|pds| heuristics.get(q).and_then(|&(ref m, _)| m.get(pds).map(|w| *w)).unwrap_or(LogDomain::zero())).collect();
+                            eprintln!("{}, {:?}, {:?} → {:?}", q, w, pd, hs);
+                            (h * weight).pow(-1.0)
+                        }
+                    )
                 );
                 if let Capacity::Limit(i) = beam {
                     it.beam(i)
@@ -459,6 +454,73 @@ where
             ),
         )
     }
+    
+    fn heuristics(&self) -> IntMap<(IntMap<LogDomain<f64>>, LogDomain<f64>)> {
+        #[derive(Clone, Debug)]
+        struct SearchItem(usize, BTreeSet<usize>, LogDomain<f64>);
+        impl PartialEq for SearchItem {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0 && self.1 == other.1
+            }
+        }
+        impl Eq for SearchItem{}
+        impl PartialOrd for SearchItem {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                match self.0.partial_cmp(&other.0) {
+                    Some(Ordering::Equal) => self.1.partial_cmp(&other.1),
+                    o => o
+                }
+            }
+        }
+        impl Ord for SearchItem {
+            fn cmp(&self, other: &Self) -> Ordering {
+                match self.0.cmp(&other.0) {
+                    Ordering::Equal => self.1.cmp(&other.1),
+                    o => o
+                }
+            }
+        }
+
+        let starts = self.finals.iter().map(|q| SearchItem(*q, BTreeSet::new(), LogDomain::one()));
+        
+        let mut bwtransitions: Vec<IntMap<(LogDomain<f64>, KellerOp<usize>)>> = Vec::new();
+        for (from, farcs) in self.arcs.iter().enumerate() {
+            for (_, &(to, weight, ref op)) in farcs {
+                vec_entry(&mut bwtransitions, to).insert(from, (weight, op.clone()));
+            }
+        }
+        
+        let mut heuristics = IntMap::default();
+        let mut removeables_per_state = IntMap::default();
+        for SearchItem(q, removeables, w) in Search::weighted(
+            starts, 
+            |&SearchItem(q, ref removeables, w)| {
+                let olds = removeables_per_state.entry(q).or_insert(BTreeSet::new());
+                let news: BTreeSet<usize> = removeables.difference(olds).cloned().collect();
+                olds.extend(news.iter().cloned());
+
+                let mut succ = Vec::new();
+                for (from, &(weight, ref op)) in bwtransitions.get(q).unwrap_or(&IntMap::default()) {
+                    let mut removeables_ = news.clone();
+                    match *op {
+                        KellerOp::Remove(i) | KellerOp::Replace(i, _) => {
+                            removeables_.insert(i);
+                        },
+                        _ => ()
+                    }
+                    succ.push(SearchItem(*from, removeables_, w * weight));
+                }
+                succ
+            },
+            Box::new(|&SearchItem(_, _, w)| w.pow(-1.0))
+        ).uniques() {
+            let map = heuristics.entry(q).or_insert((IntMap::default(), w));
+            for rem in removeables {
+                map.0.entry(rem).or_insert(w);
+            }
+        }
+        heuristics
+    }
 }
 
 use super::GeneratorAutomaton;
@@ -466,19 +528,27 @@ impl<T> GeneratorAutomaton<T> for KellerAutomaton<T, LogDomain<f64>>
 where
     T: Eq + Clone + Hash,
 {
+
+    fn size(&self) -> usize {
+        self.arcs.iter().flat_map(|map| map.values()).count()
+    }
+
     fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)
     }
+    
+    fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self {
+        self.clone().intersect(other)
+    }
 
     fn generate<'a>(
-        &self,
-        fsa: FiniteAutomaton<T, ()>,
+        self,
         beam: Capacity,
     ) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
-        self.clone().intersect(fsa).generate(beam)
+        self.generate(beam)
     }
 }
 
@@ -568,4 +638,22 @@ where
         }
         write!(f, "initial: {}, finals: {:?}\n{}", initial, finals, &buffer)
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn pda() {
+        let arcs = vec![
+            KellerArc{ from: 0, to: 0, label: "A", op: KellerOp::Add(0), weight: LogDomain::new(1.0).unwrap()},
+            KellerArc{ from: 0, to: 1, label: "B", op: KellerOp::Remove(0), weight: LogDomain::new(0.5).unwrap()},
+            KellerArc{ from: 1, to: 1, label: "B", op: KellerOp::Remove(0), weight: LogDomain::new(1.0).unwrap()},
+            KellerArc{ from: 0, to: 0, label: "C", op: KellerOp::Add(1), weight: LogDomain::new(1.0).unwrap()}
+        ];
+        
+        eprintln!("{:?}", KellerAutomaton::new(arcs, 0, vec![1]).heuristics());
+    }
+
 }

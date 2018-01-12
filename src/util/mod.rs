@@ -4,12 +4,16 @@ pub mod partition;
 pub mod push_down;
 pub mod integerisable;
 
-use fnv::FnvHashMap;
+use fnv::{FnvHashMap, FnvHashSet};
 
 /// A `HashMap` with `usize` `Key`s.
 /// It uses the `Fnv` hasher to provide fast access and insert
 /// functionality with these keys.
 pub type IntMap<T> = FnvHashMap<usize, T>;
+// A `HashSet` with `usize` `Key`s.
+/// It uses the `Fnv` hasher to provide fast access and insert
+/// functionality with these keys.
+pub type IntSet    = FnvHashSet<usize>;
 
 
 /// Fills a `Vec` with default entries until it can access it at

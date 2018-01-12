@@ -19,6 +19,7 @@ use self::bracket_fragment::BracketFragment;
 use super::MCFG;
 
 use std::fmt::{Display, Error, Formatter};
+use time::PreciseTime;
 
 /// A derivation tree of PMCFG rules.
 #[derive(PartialEq, Debug)]
@@ -118,11 +119,57 @@ where
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
     pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N> {
         let f = self.filter.fsa(word, &self.generator);
-        let g = self.generator.generate(f, beam);
+        let g = self.generator.intersect(f).generate(beam);
+        
         CSGenerator {
             candidates: g,
             rules: &self.rules,
         }
+    }
+
+    pub fn debug(&self, word: &[T], beam: Capacity) {
+        let time = PreciseTime::now();
+        let f = self.filter.fsa(word, &self.generator);
+        let filter_const = time.to(PreciseTime::now()).num_milliseconds();
+        
+        let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
+
+        let time = PreciseTime::now();
+        let g_ = self.generator.intersect(f);
+        let intersection_time = time.to(PreciseTime::now()).num_milliseconds();
+
+        let intersection_size = g_.size();
+        
+        eprint!(
+            "{} {} {} {} {} {} {}", 
+            self.rules.size(),
+            word.len(),
+            filter_const,
+            filter_size,
+            self.generator.size(),
+            intersection_time,
+            intersection_size
+        );
+
+        // time for generation
+        let time = PreciseTime::now();
+        let (cans, ptime) = match g_.generate(beam)
+                .enumerate()
+                .map(|(i, frag)| (i, BracketFragment::concat(frag)))
+                .filter(| &(_, ref candidate) | dyck::recognize(candidate))
+                .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(| _ | (i + 1)))
+                .next() {
+            
+            Some(i) => (i, time.to(PreciseTime::now()).num_milliseconds()),
+            None => (0, time.to(PreciseTime::now()).num_milliseconds())
+
+        };
+
+        eprintln!(
+            " {} {}",
+            cans,
+            ptime
+        );
     }
 }
 
@@ -186,12 +233,8 @@ where
             ref mut candidates,
             rules,
         } = self;
-
-        for (i, fragments) in candidates.enumerate() {
+        for fragments in candidates {
             let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments);
-
-            eprintln!("{}-th candidate", i);
-
             if dyck::recognize(&candidate) {
                 if let Some(derivation) = from_brackets(rules, candidate) {
                     return Some(derivation);

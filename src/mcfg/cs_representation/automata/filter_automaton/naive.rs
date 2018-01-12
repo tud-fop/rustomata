@@ -199,7 +199,10 @@ mod test {
 
         let filter_automaton = filter.fsa(word.as_slice(), &generator);
         let words: Option<Vec<BracketFragment<String>>> =
-            GeneratorAutomaton::generate(&generator, filter_automaton.clone(), Capacity::Infinite).next();
+            GeneratorAutomaton::generate(
+                GeneratorAutomaton::intersect(&generator, filter_automaton.clone()),
+                Capacity::Infinite
+            ).next();
 
         eprintln!("{}", generator.intersect(filter_automaton));
         eprintln!("{:?}", words);

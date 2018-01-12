@@ -135,7 +135,7 @@ where
 
         let intersect_arcs = Search::unweighted(
             initial_arcs,
-            Box::new(move |&FiniteArc { to: (sto, oto), .. }| {
+            move |&FiniteArc { to: (sto, oto), .. }| {
                 let mut successors = Vec::new();
                 for (label, &(to, weight)) in arcs.get(sto).unwrap_or(&IntMap::default()) {
                     if let Some(&(to_, _)) = farcs.get(oto).and_then(|m| m.get(label)) {
@@ -148,7 +148,7 @@ where
                     }
                 }
                 successors
-            }),
+            },
         ).uniques()
          .map(
             | FiniteArc {
@@ -212,17 +212,15 @@ where
             {
                 let it = Search::weighted(
                     vec![(initial, Vec::new(), LogDomain::one())],
-                    Box::new(
-                        move |&(q, ref word, weight)| {
-                            let mut successors = Vec::new();
-                            for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
-                                let mut word_: Vec<usize> = word.clone();
-                                word_.push(label.clone());
-                                successors.push((to, word_, weight * w))
-                            }
-                            successors
+                    move |&(q, ref word, weight)| {
+                        let mut successors = Vec::new();
+                        for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
+                            let mut word_: Vec<usize> = word.clone();
+                            word_.push(label.clone());
+                            successors.push((to, word_, weight * w))
                         }
-                    ),
+                        successors
+                    },
                     Box::new(
                         move |&(ref q, _, w)| {
                             (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
@@ -251,20 +249,26 @@ impl<T> GeneratorAutomaton<T> for FiniteAutomaton<T, LogDomain<f64>>
 where
     T: Eq + Hash + Clone,
 {
+    fn size(&self) -> usize {
+        self.arcs.iter().flat_map(|map| map.values()).count()
+    }
+
     fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)
     }
 
+    fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self {
+        self.intersect(other)
+    }
+
     fn generate<'a>(
-        &self,
-        filter: FiniteAutomaton<T, ()>,
+        self,
         beam: Capacity,
     ) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
-        let intersection = self.intersect(filter);
-        intersection.generate(beam)
+        self.generate(beam)
     }
 }
 
