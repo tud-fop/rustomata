@@ -1,11 +1,13 @@
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::fmt;
 use std::rc::Rc;
 use std::hash::Hash;
 use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct TreeStack<A> {
     parent: Option<(usize, Rc<TreeStack<A>>)>,
     value: A,
@@ -81,6 +83,38 @@ impl<A> TreeStack<A> {
     }
 }
 
+impl<A: Clone + fmt::Display> fmt::Display for TreeStack<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (tree, pointer) = self.to_tree();
+
+        for (path, value) in tree.iter() {
+            let mut line1 = String::from(" ");
+            let mut line2 = String::from(if path.eq(&pointer) {
+                "*"
+            } else {
+                " "
+            });
+
+            match path.last() {
+                Some(child_num) => {
+                    for _ in 0..path.len() - 1 {
+                        line1.push_str("| ");
+                        line2.push_str("| ");
+                    }
+
+                    line1.push_str("|");
+                    line2.push_str(&format!("+-{}: {}", child_num, value));
+                },
+                None => line2.push_str(&value.to_string()),
+            }
+
+            write!(f, "{}\n{}\n", line1, line2)?
+        }
+
+        Ok(())
+    }
+}
+
 impl<A: Clone> TreeStack<A> {
     /// Goes up to a specific child position (if this position is occupied) and returns the resulting `TreeStack` in an `Ok`.
     /// Returns the unmodified `TreeStack` in an `Err` otherwise.
@@ -123,24 +157,38 @@ impl<A: Clone> TreeStack<A> {
         }
     }
 
-    /// Removes the current node if the list of children is empty.
-    pub fn pop(self) -> Result<Self, Self> {
-        if self.children.len() == 0 || self.children.iter().all(| pc | pc.is_none()) {
-            match self.clone().down() {
-                Err(t) => Err(t),
-                Ok(t) => {
-                    let (n, _) = self.parent.unwrap();
-                    let mut cs = t.children;
-                    cs.remove(n);
-                    Ok(TreeStack{ value: t.value.clone(), children: cs, parent: t.parent.clone() })
+    pub fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
+        let mut tree_map = BTreeMap::new();
+        let mut curr_path = Vec::new();
+
+        if let Some((num, ref parent)) = self.parent {
+            let (parent_map, parent_path) = parent.to_tree();
+            curr_path = parent_path;
+            curr_path.push(num);
+
+            for (path, value) in parent_map.iter() {
+                tree_map.insert(path.clone(), value.clone());
+            }
+        }
+
+        tree_map.insert(curr_path.clone(), self.value.clone());
+
+        for (num, maybe_child) in self.children.iter().enumerate() {
+            if let &Some(ref child) = maybe_child {
+                let (mut child_map, _) = child.to_tree();
+
+                for (path, value) in child_map {
+                    let mut new_path = curr_path.clone();
+                    new_path.push(num);
+                    new_path.append(&mut path.clone());
+                    tree_map.insert(new_path, value.clone());
                 }
             }
-        } else {
-            Err(self)
         }
+
+        (tree_map, curr_path)
     }
 }
-
 
 impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
     type AInt = TreeStack<usize>;
@@ -202,20 +250,31 @@ fn test_tree_stack() {
     let mut ts: TreeStack<u8> = TreeStack::new(0);
     assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.push(1, 1).unwrap().clone();
+    ts = ts.push(1, 1).unwrap();
     assert_eq!(&1, ts.current_symbol());
 
-    ts = ts.down().unwrap().clone();
+    ts = ts.down().unwrap();
     assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.push(2, 2).unwrap().clone();
+    ts = ts.push(2, 2).unwrap();
     assert_eq!(&2, ts.current_symbol());
 
-    ts = ts.down().unwrap().clone();
-    ts = ts.up(1).unwrap().clone();
+    ts = ts.down().unwrap();
+    ts = ts.up(1).unwrap();
     assert_eq!(&1, ts.current_symbol());
 
-    let ts1 = ts.clone().push(1, 11);
-    let ts2 = ts.push(1, 11);
-    assert_eq!(ts1, ts2);
+    ts = ts.push(1, 11).unwrap();
+    assert_eq!(&11, ts.current_symbol());
+
+    ts = ts.down().unwrap();
+    ts = ts.down().unwrap();
+    ts = ts.up(2).unwrap();
+    ts = ts.push(1, 21).unwrap();
+    assert_eq!(&21, ts.current_symbol());
+
+    ts = ts.down().unwrap();
+    ts = ts.down().unwrap();
+
+    println!("Display: {}", &ts);
+    println!("Debug: {:?}", &ts);
 }
