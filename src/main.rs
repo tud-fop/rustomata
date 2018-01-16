@@ -6,10 +6,11 @@ extern crate nom;
 extern crate num_traits;
 extern crate time;
 extern crate rand;
-extern crate openfsa;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+extern crate fnv;
+extern crate flate2;
 
 
 mod approximation;
@@ -18,7 +19,7 @@ mod recognisable;
 mod cfg;
 mod nfa;
 mod dyck;
-mod cs_representation;
+mod mcfg;
 mod pmcfg;
 mod push_down_automaton;
 mod tree_stack_automaton;
@@ -37,6 +38,7 @@ pub use nfa::*;
 pub use pmcfg::*;
 pub use push_down_automaton::*;
 pub use tree_stack_automaton::*;
+pub use mcfg::*;
 
 fn main() {
     let matches
@@ -48,7 +50,7 @@ fn main() {
         .subcommand(cfg::cli::get_sub_command())
         .subcommand(tree_stack_automaton::cli::get_sub_command())
         .subcommand(approximation::cli::get_sub_command())
-        .subcommand(cs_representation::cli::get_sub_command("cs"))
+        .subcommand(mcfg::cs_representation::cli::get_sub_command("cs"))
         .get_matches();
 
     match matches.subcommand() {
@@ -61,7 +63,7 @@ fn main() {
         ("approximation", Some(r_matches)) =>
             approximation::cli::handle_sub_matches(r_matches),
         ("cs", Some(cs_matches)) =>
-            cs_representation::cli::handle_sub_matches(cs_matches),
+            mcfg::cs_representation::cli::handle_sub_matches(cs_matches),
         _ => (),
     }
 

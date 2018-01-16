@@ -13,11 +13,11 @@ pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
     let mut stack: Vec<&A> = Vec::new();
 
     for bracket in word {
-        match bracket {
-            &Bracket::Open(ref symbol) => {
+        match *bracket {
+            Bracket::Open(ref symbol) => {
                 stack.push(symbol);
             }
-            &Bracket::Close(ref symbol) => match stack.pop() {
+            Bracket::Close(ref symbol) => match stack.pop() {
                 None => return false,
                 Some(symbol_) => if symbol != symbol_ {
                     return false;
@@ -35,11 +35,11 @@ impl<T> Display for Bracket<T>
 where T: Display + PartialEq
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            &Bracket::Open(ref t) => {
+        match *self {
+            Bracket::Open(ref t) => {
                 write!(f, "⟨{}", t)
             },
-            &Bracket::Close(ref t) => {
+            Bracket::Close(ref t) => {
                 write!(f, "⟩{}", t)
             }
         }
@@ -62,10 +62,10 @@ mod tests {
         }
 
         assert!(super::recognize(&vec![
-            Open("eins"),
-            Close("eins"),
-            Open("zwei"),
-            Close("zwei"),
+            Open("one"),
+            Close("one"),
+            Open("two"),
+            Close("two"),
         ]));
     }
 }

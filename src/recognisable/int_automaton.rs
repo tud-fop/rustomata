@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, BTreeSet};
+use std::collections::BinaryHeap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Mul;
@@ -6,9 +6,9 @@ use std::rc::Rc;
 
 use num_traits::One;
 
-use recognisable::{Configuration, Instruction, Item, Recogniser};
+use recognisable::{Configuration, Instruction, Item, Recogniser, Transition};
 use recognisable::automaton::{Automaton, TransitionMap};
-use util::agenda::{Agenda, BoundedPriorityQueue};
+use util::agenda::{Agenda, BoundedPriorityQueue, Weighted};
 use util::push_down::Pushdown;
 
 
@@ -65,7 +65,7 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            already_found: BTreeSet::new(),
+            already_found: None,
             item_map: Box::new(move |i| a.item_map(&i))
         }
     )
@@ -89,7 +89,14 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
         weight: W::one(),
     };
 
-    let mut init_heap = BoundedPriorityQueue::new(beam);
+    let mut init_heap = BoundedPriorityQueue::new(
+        beam, 
+        Box::new(
+            | cp: &(Configuration<<A::IInt as Instruction>::Storage, usize, W>, Pushdown<Transition<A::IInt, usize, W>>) | {
+                cp.get_weight()
+            }
+        )
+    );
     init_heap.enqueue((i, Pushdown::new()));
 
     Box::new(
@@ -99,7 +106,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             filtered_rules: a.transitions_int(),
             apply: Box::new(|c, r| r.apply(c)),
             accepting: Box::new(|c| A::is_terminal_int(c)),
-            already_found: BTreeSet::new(),
+            already_found: None,
             item_map: Box::new(move |i| a.item_map(&i))
         }
     )
