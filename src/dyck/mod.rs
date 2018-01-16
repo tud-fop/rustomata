@@ -62,10 +62,10 @@ mod tests {
         }
 
         assert!(super::recognize(&vec![
-            Open("eins"),
-            Close("eins"),
-            Open("zwei"),
-            Close("zwei"),
+            Open("one"),
+            Close("one"),
+            Open("two"),
+            Close("two"),
         ]));
     }
 }

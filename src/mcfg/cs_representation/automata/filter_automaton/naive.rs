@@ -169,7 +169,7 @@ mod test {
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
     use mcfg::cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
-                                      KellerAutomaton, KellerGenerator, NaiveFilterAutomaton};
+                                      PushDownAutomaton, PushDownGenerator, NaiveFilterAutomaton};
     use mcfg::cs_representation::bracket_fragment::BracketFragment;
     use util::agenda::Capacity;
 
@@ -190,8 +190,8 @@ mod test {
         }
         let word: Vec<String> = "a e c".split_whitespace().map(|s| s.to_string()).collect();
 
-        let generator: KellerAutomaton<BracketFragment<String>, LogDomain<f64>> =
-            KellerGenerator.create_generator_automaton(&rules, initial);
+        let generator: PushDownAutomaton<BracketFragment<String>, LogDomain<f64>> =
+            PushDownGenerator.create_generator_automaton(&rules, initial);
         
         let filter = NaiveFilterAutomaton::new(&rules, &generator);
 
@@ -204,7 +204,7 @@ mod test {
                 Capacity::Infinite
             ).next();
 
-        eprintln!("{}", generator.intersect(filter_automaton));
+        eprintln!("{}", generator.intersect(&filter_automaton));
         eprintln!("{:?}", words);
     }
 

@@ -7,7 +7,7 @@ use std::rc::Rc;
 use util::agenda::Capacity;
 
 pub mod strategy;
-pub use self::strategy::{GeneratorStrategy, KellerGenerator, NaiveGenerator, ApproxGenerator};
+pub use self::strategy::{GeneratorStrategy, PushDownGenerator, NaiveGenerator, ApproxGenerator};
 
 /// A `GeneratorAutomaton` with respect to a weighted MCFG is an automaton
 /// that recognizes bracket words δ ∈ Δ(G).

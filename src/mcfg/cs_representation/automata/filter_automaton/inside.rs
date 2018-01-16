@@ -247,7 +247,7 @@ mod test {
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
     use mcfg::cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
-                                      KellerAutomaton, KellerGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
+                                      PushDownAutomaton, PushDownGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
     use mcfg::cs_representation::bracket_fragment::BracketFragment;
     use util::agenda::Capacity;
 
@@ -268,8 +268,8 @@ mod test {
         }
         let word: Vec<String> = "a e c".split_whitespace().map(|s| s.to_string()).collect();
 
-        let generator: KellerAutomaton<BracketFragment<String>, LogDomain<f64>> =
-            KellerGenerator.create_generator_automaton(&rules, initial);
+        let generator: PushDownAutomaton<BracketFragment<String>, LogDomain<f64>> =
+            PushDownGenerator.create_generator_automaton(&rules, initial);
         let filter = InsideFilterAutomaton::new(&rules, &generator);
         let naivefilter = NaiveFilterAutomaton::new(&rules, &generator);
         // eprintln!("{:?}", filter);
@@ -284,11 +284,11 @@ mod test {
         eprintln!("{}", generator);
         eprintln!("{:?}", filter);
         eprintln!("{:?}", filter_automaton);
-        eprintln!("{:?}", generator.clone().intersect(filter_automaton).arcs);
+        eprintln!("{:?}", generator.clone().intersect(&filter_automaton).arcs);
 
 
         let naive_automaton = naivefilter.fsa(word.as_slice(), &generator);
-        eprintln!("{}", generator.intersect(naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
+        eprintln!("{}", generator.intersect(&naive_automaton).arcs.iter().flat_map(|aw| aw.values()).count());
         eprintln!("{:?}", words);
     }
 

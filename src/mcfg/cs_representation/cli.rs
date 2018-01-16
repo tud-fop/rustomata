@@ -7,7 +7,7 @@ use std::fs::File;
 use PMCFG;
 use log_domain::LogDomain;
 use mcfg::cs_representation::CSRepresentation;
-use mcfg::cs_representation::automata::{KellerGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
+use mcfg::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
 use util::agenda::Capacity;
 
 use flate2::{read, write, Compression};
@@ -114,7 +114,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 (Strat::Keller, Filter::Inside) => {
                     bincode::serialize_into(
                         &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, InsideFilterAutomaton<String>, KellerGenerator>::new(KellerGenerator, grammar),
+                        &CSRepresentation::<String, String, InsideFilterAutomaton<String>, PushDownGenerator>::new(PushDownGenerator, grammar),
                         bincode::Infinite
                     ).unwrap()
                 }, (Strat::Naive, Filter::Inside) => {
@@ -132,7 +132,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 },(Strat::Keller, Filter::Naive) => {
                     bincode::serialize_into(
                         &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, NaiveFilterAutomaton<String>, KellerGenerator>::new(KellerGenerator, grammar),
+                        &CSRepresentation::<String, String, NaiveFilterAutomaton<String>, PushDownGenerator>::new(PushDownGenerator, grammar),
                         bincode::Infinite
                     ).unwrap()
                 }, (Strat::Naive, Filter::Naive) => {
@@ -168,7 +168,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             
             match (strategy, filter) {
                 (Strat::Keller, Filter::Inside) => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, KellerGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -207,7 +207,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                         }
                     }
                 }, (Strat::Keller, Filter::Naive) => {
-                    let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>, KellerGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+                    let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 

@@ -2,7 +2,7 @@ use std::hash::Hash;
 use mcfg::cs_representation::bracket_fragment::BracketFragment;
 use integeriser::{HashIntegeriser, Integeriser};
 use log_domain::LogDomain;
-use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, KellerArc, KellerAutomaton, KellerOp, GeneratorAutomaton};
+use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, PushDownArc, PushDownAutomaton, Operation, GeneratorAutomaton};
 use pmcfg::{PMCFGRule, VarT};
 
 
@@ -20,28 +20,28 @@ where
         N: Hash + Ord + Clone;
 }
 
-/// A `KellerGenerator` is a `GeneratorStrtegy` that creates a `KellerAutomaton`
+/// A `PushDownGenerator` is a `GeneratorStrtegy` that creates a `PushDownAutomaton`
 /// from an MCFG. In this implementation, it is the most specialized
 /// strategy. I.e. it produces the least amount of canidates.
-pub struct KellerGenerator;
-impl<T> GeneratorStrategy<T> for KellerGenerator
+pub struct PushDownGenerator;
+impl<T> GeneratorStrategy<T> for PushDownGenerator
 where
     T: Clone + Hash + Eq + Serialize + for<'de> Deserialize<'de>
 {
-    type Generator = KellerAutomaton<BracketFragment<T>, LogDomain<f64>>;
+    type Generator = PushDownAutomaton<BracketFragment<T>, LogDomain<f64>>;
     
     fn create_generator_automaton<N>(&self, grammar: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>, initial: N) -> Self::Generator
     where
         N: Hash + Ord + Clone
     {
         let (stack_transitions, start, stop) = mcfg_to_stack_transitions(grammar, initial);
-        KellerAutomaton::new(stack_transitions, start, vec![stop])
+        PushDownAutomaton::new(stack_transitions, start, vec![stop])
     }
 }
 
-/// An `ApproxGenerator` is a hybrid between the `KellerGenerator` and `NaiveGenerator`.
-/// It produces a deterministic finite approximation of the `KellerAutomaton` 
-/// produced by the `KellerGenerator` with respect to a certain depth.
+/// An `ApproxGenerator` is a hybrid between the `PushDownGenerator` and `NaiveGenerator`.
+/// It produces a deterministic finite approximation of the `PushDownAutomaton` 
+/// produced by the `PushDownGenerator` with respect to a certain depth.
 /// The `FiniteAutomaton` produced by `ApproxGenerator(0)` equals the one by `NaiveGenerator`.
 pub struct ApproxGenerator(pub usize);
 impl<T> GeneratorStrategy<T> for ApproxGenerator
@@ -56,7 +56,7 @@ where
     {
         let &ApproxGenerator(depth) = self;
         let (stack_transitions, start, stop) = mcfg_to_stack_transitions(grammar, initial);
-        KellerAutomaton::new(stack_transitions, start, vec![stop]).approximate(depth)
+        PushDownAutomaton::new(stack_transitions, start, vec![stop]).approximate(depth)
     }
 }
 
@@ -75,7 +75,7 @@ where
         N: Hash + Ord + Clone
     {
         let (stack_transitions, start, stop) = mcfg_to_stack_transitions(grammar, initial);
-        let finite_transitions: Vec<_> = stack_transitions.into_iter().map(| KellerArc{ from, to, weight, label, ..} | FiniteArc{ from, to, weight, label }).collect();
+        let finite_transitions: Vec<_> = stack_transitions.into_iter().map(| PushDownArc{ from, to, weight, label, ..} | FiniteArc{ from, to, weight, label }).collect();
         FiniteAutomaton::new(finite_transitions, start, vec![stop])
     }
 }
@@ -83,14 +83,14 @@ where
 use mcfg::cs_representation::BracketContent;
 use dyck::Bracket;
 type State<N> = Bracket<(N, usize)>;
-type KellerElem = (usize, usize, usize);
+type PushDownElem = (usize, usize, usize);
 
-/// Reads off `KellerArcs´ from an MCFG.
+/// Reads off `PushDownArcs` from an MCFG.
 fn mcfg_to_stack_transitions<N, T>(
     rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
     initial: N,
 ) -> (
-    Vec<KellerArc<BracketFragment<T>, State<N>, KellerElem, LogDomain<f64>>>,
+    Vec<PushDownArc<BracketFragment<T>, State<N>, PushDownElem, LogDomain<f64>>>,
     State<N>,
     State<N>,
 )
@@ -109,7 +109,7 @@ where
             let mut terminals = vec![
                 Bracket::Open(BracketContent::Component(rule_id, component_id)),
             ];
-            let mut stackop: Option<KellerElem> = None;
+            let mut stackop: Option<PushDownElem> = None;
             let mut q = Bracket::Open((rule.head.clone(), component_id));
 
             for (symbol_id, symbol) in component.into_iter().enumerate() {
@@ -120,14 +120,14 @@ where
                     }
                     VarT::Var(i, j) => {
                         terminals.push(Bracket::Open(BracketContent::Variable(rule_id, i, j)));
-                        transitions.push(KellerArc {
+                        transitions.push(PushDownArc {
                             from: q,
                             to: Bracket::Open((rule.tail[i].clone(), j)),
                             label: BracketFragment(terminals),
                             op: if let Some(e) = stackop {
-                                KellerOp::Replace(e, (rule_id, component_id, symbol_id))
+                                Operation::Replace(e, (rule_id, component_id, symbol_id))
                             } else {
-                                KellerOp::Add((rule_id, component_id, symbol_id))
+                                Operation::Add((rule_id, component_id, symbol_id))
                             },
                             weight: weight_per_transition,
                         });
@@ -140,14 +140,14 @@ where
             terminals.push(Bracket::Close(
                 BracketContent::Component(rule_id, component_id),
             ));
-            transitions.push(KellerArc {
+            transitions.push(PushDownArc {
                 from: q,
                 to: Bracket::Close((rule.head.clone(), component_id)),
                 label: BracketFragment(terminals),
                 op: if let Some(e) = stackop {
-                    KellerOp::Remove(e)
+                    Operation::Remove(e)
                 } else {
-                    KellerOp::Nothing
+                    Operation::Nothing
                 },
                 weight: weight_per_transition,
             });

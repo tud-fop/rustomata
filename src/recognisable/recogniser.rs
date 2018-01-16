@@ -104,12 +104,15 @@ where
         Search::All(agenda, successors)
     }
 
-    pub fn beam(mut self, b: usize) -> Self {
-        match *(&mut self) {
-            Search::All(ref mut a, _) | Search::Uniques(ref mut a, _, _) => {
-                a.set_capacity(b);
+    pub fn beam(mut self, width: Capacity) -> Self {
+        if let Capacity::Limit(b) = width {
+            match &mut self {
+                &mut Search::All(ref mut a, _) | &mut Search::Uniques(ref mut a, _, _) => {
+                    a.set_capacity(b);
+                }
             }
         }
+        
         self
     }
 }
@@ -142,9 +145,8 @@ where
                         agenda.enqueue(succ_item);
                     }
                     return Some(item)
-                } else {
-                    return None
-                }
+                } 
+                None
             }
             
             Search::Uniques(ref mut agenda, ref mut succ, ref mut found) => {
@@ -156,8 +158,31 @@ where
                         return Some(item)
                     }
                 }
-                return None
+                None
             }
         }
+    }
+}
+
+use std::cmp::Ordering;
+
+/// A tuple consisting of an item of type `I` and a weight of type `W`.
+/// `Eq` and `Ord` impls only consider the item.
+#[derive(Debug, Clone, Copy)]
+pub struct WeightedSearchItem<I, W>(pub I, pub W);
+impl<I, W> PartialEq for WeightedSearchItem<I, W> where I: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+impl<I, W> Eq for WeightedSearchItem<I, W> where I: Ord {}
+impl<I, W> PartialOrd for WeightedSearchItem<I, W> where I: PartialOrd {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+impl<I, W> Ord for WeightedSearchItem<I, W> where I: Ord {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
     }
 }

@@ -260,7 +260,7 @@ mod test {
         use super::LogDomain;
         use super::Derivation;
         use super::MCFG;
-        use super::automata::{KellerGenerator, NaiveFilterAutomaton};
+        use super::automata::{PushDownGenerator, NaiveFilterAutomaton};
 
         let grammar = MCFG {
             initial: "S",
@@ -293,8 +293,8 @@ mod test {
                 .collect(),
         );
 
-        let cs = CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, KellerGenerator>::new(
-            KellerGenerator,
+        let cs = CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, PushDownGenerator>::new(
+            PushDownGenerator,
             grammar.clone(),
         );
         assert_eq!(cs.generate(&['A'], Capacity::Infinite).next(), Some(d1));

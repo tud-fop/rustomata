@@ -1,12 +1,12 @@
-use std::collections::{BinaryHeap, HashMap};
 use integeriser::{HashIntegeriser, Integeriser};
 use log_domain::LogDomain;
 use std::rc::Rc;
 use std::hash::Hash;
 use num_traits::{One, Zero};
-use super::dka::heuristics;
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
+use recognisable::{Search, WeightedSearchItem};
+
 
 /// A transition of a deterministic finite automaton.
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
@@ -36,7 +36,7 @@ where
 {
     /// Creates a new deterministic finite automaton from a list
     /// of transitions.
-    /// If there are multiple transitions from the same state and with the same 
+    /// If there are multiple transitions from the same state and with the same
     /// label, the last dominates.
     pub fn new<Q>(arcs: Vec<FiniteArc<Q, T, W>>, qinitial: Q, qfinals: Vec<Q>) -> Self
     where
@@ -99,33 +99,19 @@ where
     }
 }
 
-use recognisable::{Search};
 impl<T> FiniteAutomaton<T, LogDomain<f64>>
 where
     T: Eq + Hash + Clone,
 {
     /// Computes the Hadamard product of two deterministic `FiniteAutomata`.
-    fn intersect<W>(&self, filter: FiniteAutomaton<T, W>) -> Self {
-        let &FiniteAutomaton {
-            initial,
-            ref finals,
-            ref arcs,
-            ref labels,
-        } = self;
-        let FiniteAutomaton {
-            initial: finitial,
-            finals: ffinals,
-            arcs: farcs,
-            ..
-        } = filter;
-
+    fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
         let mut new_states = HashIntegeriser::new();
 
         let mut initial_arcs: Vec<FiniteArc<(usize, usize), usize, LogDomain<f64>>> = Vec::new();
-        for (label, &(to, weight)) in arcs.get(initial).unwrap_or(&IntMap::default()) {
-            if let Some(&(to_, _)) = farcs.get(finitial).and_then(|m| m.get(label)) {
+        for (label, &(to, weight)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
+            if let Some(&(to_, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
                 initial_arcs.push(FiniteArc {
-                    from: (initial, filter.initial),
+                    from: (self.initial, other.initial),
                     to: (to, to_),
                     label: *label,
                     weight,
@@ -133,12 +119,11 @@ where
             }
         }
 
-        let intersect_arcs = Search::unweighted(
-            initial_arcs,
-            move |&FiniteArc { to: (sto, oto), .. }| {
+        let intersect_arcs =
+            Search::unweighted(initial_arcs, |&FiniteArc { to: (sto, oto), .. }| {
                 let mut successors = Vec::new();
-                for (label, &(to, weight)) in arcs.get(sto).unwrap_or(&IntMap::default()) {
-                    if let Some(&(to_, _)) = farcs.get(oto).and_then(|m| m.get(label)) {
+                for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
+                    if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
                         successors.push(FiniteArc {
                             from: (sto, oto),
                             to: (to, to_),
@@ -148,27 +133,22 @@ where
                     }
                 }
                 successors
-            },
-        ).uniques()
-         .map(
-            | FiniteArc {
-                 from,
-                 to,
-                 label,
-                 weight,
-             } | {
-                FiniteArc {
-                    from: new_states.integerise(from),
-                    to: new_states.integerise(to),
-                    label,
-                    weight,
-                }
-            },
-        ).collect();
+            }).uniques()
+                .map(
+                    |FiniteArc { from, to, label, weight }| {
+                        FiniteArc {
+                            from: new_states.integerise(from),
+                            to: new_states.integerise(to),
+                            label,
+                            weight,
+                        }
+                    },
+                )
+                .collect();
 
         let mut intersect_finals = Vec::new();
-        for qf in finals {
-            for qf_ in &ffinals {
+        for qf in &self.finals {
+            for qf_ in &other.finals {
                 if let Some(i) = new_states.find_key(&(*qf, *qf_)) {
                     intersect_finals.push(i);
                 }
@@ -177,17 +157,18 @@ where
 
         FiniteAutomaton::from_integerized(
             intersect_arcs,
-            new_states.integerise((initial, finitial)),
+            new_states.integerise((self.initial, other.initial)),
             intersect_finals,
-            Rc::clone(labels),
+            Rc::clone(&self.labels),
         )
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
-    fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
+    fn generate<'a>(self, beamwidth: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
+        let heuristics = self.heuristics();
         let FiniteAutomaton {
             initial,
             finals,
@@ -195,51 +176,61 @@ where
             labels,
         } = self;
 
-        let heuristics = {
-            let mut backwards_transitions = HashMap::new();
-            for (from, arcs_from) in arcs.iter().enumerate() {
-                for &(to, weight) in arcs_from.values() {
-                    backwards_transitions
-                        .entry(to)
-                        .or_insert_with(BinaryHeap::new)
-                        .push((weight, from));
-                }
-            }
-            heuristics(backwards_transitions, finals.as_slice())
-        };
-
         Box::new(
-            {
-                let it = Search::weighted(
-                    vec![(initial, Vec::new(), LogDomain::one())],
-                    move |&(q, ref word, weight)| {
-                        let mut successors = Vec::new();
-                        for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
-                            let mut word_: Vec<usize> = word.clone();
-                            word_.push(label.clone());
-                            successors.push((to, word_, weight * w))
-                        }
-                        successors
-                    },
-                    Box::new(
-                        move |&(ref q, _, w)| {
-                            (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
-                        }
-                    ),
-                );
-                if let Capacity::Limit(i) = beam {
-                    it.beam(i)
-                } else { it }
-            }.filter(move |&(ref q, _, _)| finals.contains(q))
-             .map(
-                move |(_, wi, _)| {
+            Search::weighted(
+                vec![(initial, Vec::new(), LogDomain::one())],
+                move |&(q, ref word, weight)| {
+                    let mut successors = Vec::new();
+                    for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
+                        let mut word_: Vec<usize> = word.clone();
+                        word_.push(label.clone());
+                        successors.push((to, word_, weight * w))
+                    }
+                    successors
+                },
+                Box::new(move |&(ref q, _, w)| {
+                    (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
+                }),
+            ).beam(beamwidth)
+                .filter(move |&(ref q, _, _)| finals.contains(q))
+                .map(move |(_, wi, _)| {
                     wi.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
                         .collect()
-                }
-            ),
+                }),
         )
+    }
+
+    fn heuristics(&self) -> IntMap<LogDomain<f64>> {
+        // index of first vector are states,
+        // the second is unordered and holds all transitions targeting the state
+        // without alphabet symbols
+        let mut bwtrans: Vec<Vec<(usize, LogDomain<f64>)>> = Vec::new();
+        for (from, arcs_from) in self.arcs.iter().enumerate() {
+            for &(to, weight) in arcs_from.values() {
+                vec_entry(&mut bwtrans, to).push((from, weight));
+            }
+        }
+
+        Search::weighted(
+            self.finals
+                .iter()
+                .map(|q| WeightedSearchItem(*q, LogDomain::one())),
+            move |&WeightedSearchItem(to, w)| {
+                if let Some(arcs_to) = bwtrans.get(to) {
+                    arcs_to
+                        .iter()
+                        .map(|&(from, w_)| WeightedSearchItem(from, w_ * w))
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            },
+            Box::new(|&WeightedSearchItem(_, w)| w.pow(-1.0)),
+        ).uniques()
+            .map(|WeightedSearchItem(q, w)| (q, w))
+            .collect()
     }
 }
 
@@ -258,13 +249,10 @@ where
     }
 
     fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self {
-        self.intersect(other)
+        self.intersect(&other)
     }
 
-    fn generate<'a>(
-        self,
-        beam: Capacity,
-    ) -> Box<Iterator<Item = Vec<T>> + 'a>
+    fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
@@ -290,18 +278,11 @@ where
     where
         S: Serializer,
     {
-        let &FiniteAutomaton {
-            ref initial,
-            ref finals,
-            ref arcs,
-            ref labels,
-        } = self;
-
         (
-            initial,
-            finals,
-            arcs,
-            Borrow::<HashIntegeriser<T>>::borrow(labels),
+            &self.initial,
+            &self.finals,
+            &self.arcs,
+            Borrow::<HashIntegeriser<T>>::borrow(&self.labels),
         ).serialize(s)
     }
 }
@@ -333,25 +314,26 @@ where
     W: Display,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        let &FiniteAutomaton {
-            ref arcs,
-            ref initial,
-            ref finals,
-            ref labels,
-        } = self;
-
         let mut buffer = String::new();
-        for (from, arcs_from) in arcs.iter().enumerate() {
+
+        for (from, arcs_from) in self.arcs.iter().enumerate() {
             for (label, &(ref to, ref weight)) in arcs_from {
                 buffer.push_str(&format!(
                     "{} → [{}] {} # {}\n",
                     from,
-                    labels.find_value(*label).unwrap(),
+                    self.labels.find_value(*label).unwrap(),
                     to,
                     weight
                 ));
             }
         }
-        write!(f, "initial: {}, finals: {:?}\n{}", initial, finals, &buffer)
+
+        write!(
+            f,
+            "initial: {}, finals: {:?}\n{}",
+            &self.initial,
+            &self.finals,
+            &buffer
+        )
     }
 }
