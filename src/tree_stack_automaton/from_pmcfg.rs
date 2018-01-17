@@ -225,3 +225,27 @@ impl<N: Clone + Ord + PartialEq + Hash,
         )
     }
 }
+
+pub fn to_abstract_syntax_tree<A>((tree_map, _): (BTreeMap<Vec<usize>, PosState<A>>, Vec<usize>)) -> BTreeMap<Vec<usize>, A> {
+    let mut abstract_syntax_tree = BTreeMap::new();
+
+    for (address, pos_state) in tree_map {
+        let (curr_root_child, relative_address) = if let Some((first, rest)) = address.split_first() {
+            (first.clone(), rest.to_vec())
+        } else {
+            continue;
+        };
+
+        if curr_root_child != 0 {
+            continue;
+        }
+
+        if let PosState::Position(value, _, _) = pos_state {
+            abstract_syntax_tree.insert(relative_address, value);
+        } else {
+            panic!("The given tree map contains 'designated' or 'initial' nodes that are not the root!");
+        }
+    }
+
+    abstract_syntax_tree
+}
