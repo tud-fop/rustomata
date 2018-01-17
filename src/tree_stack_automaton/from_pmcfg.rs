@@ -225,3 +225,67 @@ impl<N: Clone + Ord + PartialEq + Hash,
         )
     }
 }
+
+pub fn to_abstract_syntax_tree<A>((tree_map, _): (BTreeMap<Vec<usize>, PosState<A>>, Vec<usize>)) -> BTreeMap<Vec<usize>, A> {
+    let mut abstract_syntax_tree = BTreeMap::new();
+
+    for (address, pos_state) in tree_map {
+        let (curr_root_child, relative_address) = if let Some((first, rest)) = address.split_first() {
+            (first.clone(), rest.to_vec())
+        } else {
+            continue;
+        };
+
+        if curr_root_child != 0 {
+            continue;
+        }
+
+        if let PosState::Position(value, _, _) = pos_state {
+            abstract_syntax_tree.insert(relative_address, value);
+        } else {
+            panic!("The given tree map contains 'designated' or 'initial' nodes that are not the root!");
+        }
+    }
+
+    abstract_syntax_tree
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_abstract_syntax_tree() {
+        let mut tree_map = BTreeMap::new();
+        tree_map.insert(vec![], PosState::Initial);
+        tree_map.insert(vec![0], PosState::Position('a', 0, 0));
+        tree_map.insert(vec![0,0], PosState::Position('b', 0, 0));
+        tree_map.insert(vec![0,2], PosState::Position('c', 0, 0));
+        tree_map.insert(vec![2], PosState::Position('d', 0, 0));
+
+        let mut abstract_syntax_tree = BTreeMap::new();
+        abstract_syntax_tree.insert(vec![], 'a');
+        abstract_syntax_tree.insert(vec![0], 'b');
+        abstract_syntax_tree.insert(vec![2], 'c');
+
+        assert_eq!(abstract_syntax_tree, to_abstract_syntax_tree((tree_map, vec![])));
+    }
+
+    #[test]
+    fn test_to_abstract_syntax_tree_empty_tree() {
+        let tree_map: BTreeMap<_, PosState<u8>> = BTreeMap::new();
+        assert_eq!(BTreeMap::new(), to_abstract_syntax_tree((tree_map, vec![])));
+    }
+
+    #[test]
+    #[should_panic(
+        expected="The given tree map contains 'designated' or 'initial' nodes that are not the root!"
+    )]
+    fn test_to_abstract_syntax_tree_invalid_tree() {
+        let mut tree_map: BTreeMap<_, PosState<u8>> = BTreeMap::new();
+        tree_map.insert(vec![], PosState::Initial);
+        tree_map.insert(vec![0], PosState::Initial);
+
+        to_abstract_syntax_tree((tree_map, vec![]));
+    }
+}
