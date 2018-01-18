@@ -208,6 +208,42 @@ pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Compo
     Composition::from(expanded_composition)
 }
 
+pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>) -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>) {
+    let mut identified_tree_map = BTreeMap::new();
+    let mut terminal_map = BTreeMap::new();
+
+    for (address, composition) in tree_map {
+        let vec_compos = &composition.composition;
+        let mut identified_compos = Vec::new();
+        let mut compos_var_pos = 0;
+
+        for component in vec_compos {
+            let mut identified_compon = Vec::new();
+
+            for variable in component {
+                match variable {
+                    &VarT::Var(x, y) => {
+                        identified_compon.push(VarT::Var(x, y));
+                    },
+                    &VarT::T(ref terminal) => {
+                        let terminal_id = (address.clone(), compos_var_pos);
+                        identified_compon.push(VarT::T(terminal_id.clone()));
+                        terminal_map.insert(terminal_id, terminal.clone());
+                    },
+                };
+
+                compos_var_pos += 1;
+            }
+
+            identified_compos.push(identified_compon);
+        }
+
+        identified_tree_map.insert(address.clone(), Composition::from(identified_compos));
+    }
+
+    (identified_tree_map, terminal_map)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
