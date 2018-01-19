@@ -217,45 +217,45 @@ mod tests {
     fn test_evaluate() {
         let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
         term_map.insert(vec![], Composition::from(vec![
-                vec![Var(0,0), Var(1,0), Var(0,1), Var(1,1)]
+            vec![Var(0, 0), Var(1, 0), Var(0, 1), Var(1, 1)]
         ]));
         term_map.insert(vec![0], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
+            vec![Var(1, 0), Var(0, 0)],
+            vec![Var(2, 0), Var(0, 1)]
         ]));
-        term_map.insert(vec![0,0], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
+        term_map.insert(vec![0, 0], Composition::from(vec![
+            vec![Var(1, 0), Var(0, 0)],
+            vec![Var(2, 0), Var(0, 1)]
         ]));
-        term_map.insert(vec![0,0,0], Composition::from(vec![
-                vec![],
-                vec![]
+        term_map.insert(vec![0, 0, 0], Composition::from(vec![
+            vec![],
+            vec![]
         ]));
-        term_map.insert(vec![0,0,1], Composition::from(vec![
-                vec![T('a')]
+        term_map.insert(vec![0, 0, 1], Composition::from(vec![
+            vec![T('a')]
         ]));
-        term_map.insert(vec![0,0,2], Composition::from(vec![
-                vec![T('c')]
+        term_map.insert(vec![0, 0, 2], Composition::from(vec![
+            vec![T('c')]
         ]));
-        term_map.insert(vec![0,1], Composition::from(vec![
-                vec![T('a')]
+        term_map.insert(vec![0, 1], Composition::from(vec![
+            vec![T('a')]
         ]));
-        term_map.insert(vec![0,2], Composition::from(vec![
-                vec![T('c')]
+        term_map.insert(vec![0, 2], Composition::from(vec![
+            vec![T('c')]
         ]));
         term_map.insert(vec![1], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
+            vec![Var(1, 0), Var(0, 0)],
+            vec![Var(2, 0), Var(0, 1)]
         ]));
-        term_map.insert(vec![1,0], Composition::from(vec![
-                vec![],
-                vec![]
+        term_map.insert(vec![1, 0], Composition::from(vec![
+            vec![],
+            vec![]
         ]));
-        term_map.insert(vec![1,1], Composition::from(vec![
-                vec![T('b')]
+        term_map.insert(vec![1, 1], Composition::from(vec![
+            vec![T('b')]
         ]));
-        term_map.insert(vec![1,2], Composition::from(vec![
-                vec![T('d')]
+        term_map.insert(vec![1, 2], Composition::from(vec![
+            vec![T('d')]
         ]));
 
         let expanded_compos = Composition::from(vec![
@@ -272,10 +272,10 @@ mod tests {
     fn test_evaluate_invalid_composition() {
         let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
         term_map.insert(vec![], Composition::from(vec![
-                vec![Var(0,0), Var(0,1)]
+            vec![Var(0, 0), Var(0, 1)]
         ]));
         term_map.insert(vec![0], Composition::from(vec![
-                vec![T('a')]
+            vec![T('a')]
         ]));
 
         evaluate(&term_map);

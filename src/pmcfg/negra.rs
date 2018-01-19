@@ -52,7 +52,7 @@ mod tests {
             vec![Var(1, 0)],
             vec![T("c")]
         ]));
-        tree_map.insert(vec![1, 0], Composition::from(vec![
+        tree_map.insert(vec![0, 1], Composition::from(vec![
             vec![T("d")]
         ]));
 
@@ -64,15 +64,15 @@ mod tests {
             vec![Var(1, 0)],
             vec![T((vec![0], 1))]
         ]));
-        identified_tree_map.insert(vec![1, 0], Composition::from(vec![
-            vec![T((vec![1, 0], 0))]
+        identified_tree_map.insert(vec![0, 1], Composition::from(vec![
+            vec![T((vec![0, 1], 0))]
         ]));
 
         let mut terminal_map = BTreeMap::new();
         terminal_map.insert((vec![], 1), "a");
         terminal_map.insert((vec![], 3), "b");
         terminal_map.insert((vec![0], 1), "c");
-        terminal_map.insert((vec![1, 0], 0), "d");
+        terminal_map.insert((vec![0, 1], 0), "d");
 
         assert_eq!((identified_tree_map, terminal_map), identify_terminals(&tree_map));
     }
