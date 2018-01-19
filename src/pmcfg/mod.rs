@@ -292,4 +292,46 @@ mod tests {
 
         evaluate(&term_map);
     }
+
+    #[test]
+    fn test_to_term() {
+        let compos0 = Composition::from(vec![
+            vec![Var(0, 0), T("a"), Var(0, 1), T("b")]
+        ]);
+        let compos1 = Composition::from(vec![
+            vec![Var(1, 0)],
+            vec![T("c")]
+        ]);
+        let compos2 = Composition::from(vec![
+            vec![],
+            vec![]
+        ]);
+
+        let mut tree_map = BTreeMap::new();
+        tree_map.insert(vec![], PMCFGRule {
+            head: 0,
+            tail: vec![],
+            composition: compos0.clone(),
+            weight: 0.5
+        });
+        tree_map.insert(vec![0], PMCFGRule {
+            head: 1,
+            tail: vec![],
+            composition: compos1.clone(),
+            weight: 1.5
+        });
+        tree_map.insert(vec![0, 1], PMCFGRule {
+            head: 2,
+            tail: vec![],
+            composition: compos2.clone(),
+            weight: 2.5
+        });
+
+        let mut term_map = BTreeMap::new();
+        term_map.insert(vec![], compos0);
+        term_map.insert(vec![0], compos1);
+        term_map.insert(vec![0, 1], compos2);
+
+        assert_eq!(term_map, to_term(&tree_map));
+    }
 }
