@@ -32,7 +32,7 @@ impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
 
 
     fn approximate_storage(&self, pd: PushDown<A1>)-> PushDown<A2> {
-        pd.map(self.mapping)
+        pd.map(&self.mapping)
     }
 
     fn approximate_instruction(&self, instr: &PushDownInstruction<A1>)
