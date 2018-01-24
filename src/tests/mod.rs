@@ -530,50 +530,23 @@ fn test_relabel_check() {
 
 #[test]
 fn test_ptk_to_nfa(){
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A, Nt A, Nt A, Nt A, Nt A ] # 1";
-    let r1_string = "A → [T a                         ] # 0.6";
-    let r2_string = "A → [T b                         ] # 0.4";
-
-
-    let mut g_string = String::from("initial: [S]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-
-    let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
+    let g: CFG<String, String, LogDomain<f64>>
+        = "initial: [A]\n\
+           \n\
+           A → [T a, Nt A, T b]  # 0.6\n\
+           A → []                # 0.4".parse().unwrap();
 
     let a = PushDownAutomaton::from(g);
 
-    let ptk = PDTopKElement::new(4);
+    let ptk = PDTopKElement::new(3);
 
     let (b, _) = ptk.approximate_automaton(&a);
 
-    let n = from_pd(&b);
+    let (nfa, _) = from_pd(&b).unwrap();
 
-    match n {
-        Some((nfa, nfa_dict))=>{
-            assert!(true);
-            assert_eq!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
-            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
-            assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            assert_ne!(None, nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next());
-            let m_obj = match nfa.recognise(&vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
-                Some(x) =>{Some(nfa_dict.translate(x.1))},
-                None => None,
-            };
-            let n_obj: Option<Vec<_>> = match b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string()]).next(){
-                Some(x) => Some(x.1.into()),
-                None => None,
-            };
-            assert_eq!(n_obj, m_obj);
-        },
-        None=>{
-            assert!(false);
-        },
-    }
-
+    assert_ne!(None, a.recognise(vec!["a".to_owned(), "b".to_owned()]).next());
+    assert_eq!(None, a.recognise(vec!["a".to_owned(), "a".to_owned()]).next());
+    assert_ne!(None, nfa.recognise(&vec!["a".to_owned(), "b".to_owned()]).next());
+    assert_eq!(None, a.recognise(vec!["a".to_owned(), "a".to_owned(), "b".to_owned()]).next());
+    assert_ne!(None, nfa.recognise(&vec!["a".to_owned(), "a".to_owned(), "b".to_owned()]).next());
 }

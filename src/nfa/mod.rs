@@ -26,7 +26,8 @@ pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
     weight: W,
 }
 
-/// Structure encoding a Automaton without storage (i.e. not a `Automaton`).
+/// Structure encoding an Automaton without storage (i.e. not an `Automaton`).
+#[derive(Debug, Clone)]
 pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
     //states: HashSet<S>,
     transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
@@ -197,6 +198,16 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
 
     let mut transitions = HashMap::new();
 
+    let mut transition_map = HashMap::new();
+    for t in a.transitions() {
+        let key =
+            match t.instruction {
+                PushDownInstruction::ReplaceK { ref current_val, .. }
+                | PushDownInstruction::Replace { ref current_val, .. } => current_val.first().unwrap().clone(),
+            };
+        transition_map.entry(key).or_insert(Vec::new()).push(t);
+    }
+
     initial_states.insert(integeriser.integerise(a.initial()));
     to_do.push(a.initial());
 
@@ -206,7 +217,7 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transition_map().get(c.current_symbol()) {
+        if let Some(rs) = transition_map.get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {

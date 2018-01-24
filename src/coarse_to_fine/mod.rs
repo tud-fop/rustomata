@@ -3,7 +3,6 @@ pub mod benchmark;
 
 use std::collections::BinaryHeap;
 use std::cmp::Ord;
-use std::fmt::Debug;
 use std::ops::Mul;
 use num_traits::One;
 use std::fmt;
@@ -21,13 +20,13 @@ type Item<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 pub fn ctf_level<I1, I2, T, W, ST, A>
     (run: Vec<Transition<I2, T, W>>, strat: &ApproximationInstance<ST, T, W>, automaton: &A) -> BinaryHeap<Item<I1::Storage, I1, T, W>>
     where I1::Storage: Clone + Debug + Eq + Ord,
-          I1: Eq + Clone + Debug + Instruction + PartialOrd,
-          I2: Eq + Clone + Debug + Instruction,
-          T: Eq + Clone + Debug + Ord,
-          W: Copy + Ord + Eq + Clone + Debug + Mul<Output = W> + One,
+          I1: Eq + Clone + Instruction + PartialOrd,
+          I2: Eq + Clone + Instruction,
+          T: Eq + Clone + Ord,
+          W: Copy + Ord + Eq + Clone + Mul<Output = W> + One,
           ST: ApproximationStrategy<I1=I1, I2=I2>,
           A: Automaton<T, W, I=I1>,
-          <A::IInt as Instruction>::Storage: Clone + Debug + Eq,
+          <A::IInt as Instruction>::Storage: Clone + Eq,
 {
     let mut outp = BinaryHeap::new();
     for e in strat.unapproximate_run(run) {

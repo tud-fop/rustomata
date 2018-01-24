@@ -1,3 +1,6 @@
+use integeriser::{HashIntegeriser, Integeriser};
+use integerisable::Integerisable1;
+use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::vec::IntoIter;
@@ -48,6 +51,20 @@ impl<A> Pushdown<A> {
         match *self {
             Pushdown::Empty => true,
             _ => false,
+        }
+    }
+
+    /// Applies a function `FnMut(&A) -> B`to every node in a `Pushdown<A>`.
+    pub fn map<F, B>(&self, f: &mut F) -> Pushdown<B>
+        where F: FnMut(&A) -> B,
+    {
+        match *self {
+            Pushdown::Empty => Pushdown::Empty,
+            Pushdown::Cons { ref value, ref below } =>
+                Pushdown::Cons {
+                    value: f(value),
+                    below: Rc::new(below.map(f)),
+                },
         }
     }
 }
@@ -122,6 +139,19 @@ impl<A: Clone> Into<Vec<A>> for Pushdown<A> {
         }
         res.reverse();
         res
+    }
+}
+
+impl<A: Clone + Eq + Hash> Integerisable1 for Pushdown<A> {
+    type AInt = Pushdown<usize>;
+    type I = HashIntegeriser<A>;
+
+    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
+        self.map(&mut |v| integeriser.integerise(v.clone()))
+    }
+
+    fn un_integerise(aint: &Self::AInt, integeriser: &Self::I) -> Self {
+        aint.map(&mut |&v| integeriser.find_value(v).unwrap().clone())
     }
 }
 

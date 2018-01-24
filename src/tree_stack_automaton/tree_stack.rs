@@ -6,7 +6,7 @@ use std::hash::Hash;
 use util::integerisable::Integerisable1;
 use integeriser::{HashIntegeriser, Integeriser};
 
-/// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `a`.
+/// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
 #[derive(Clone, Debug)]
 pub struct TreeStack<A> {
     parent: Option<(usize, Rc<TreeStack<A>>)>,
@@ -20,7 +20,7 @@ impl<A> TreeStack<A> {
         TreeStack { value: a, children: Vec::new(), parent: None }
     }
 
-    /// Applies a function `Fn(&A) -> B`to every node in a `TreeStack<A>`.
+    /// Applies a function `FnMut(&A) -> B` to every node in a `TreeStack<A>`.
     pub fn map<F, B>(&self, f: &mut F) -> TreeStack<B>
         where F: FnMut(&A) -> B,
     {
