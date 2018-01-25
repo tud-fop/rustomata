@@ -209,15 +209,17 @@ pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Compo
     Composition::from(expanded_composition)
 }
 
-pub fn to_term<K: Clone + cmp::Ord, V: Clone, A, B>(tree_map: &BTreeMap<K, PMCFGRule<A, V, B>>) -> BTreeMap<K, Composition<V>> {
+pub fn to_term<K: Clone + cmp::Ord, H: Clone, T: Clone, W>(tree_map: &BTreeMap<K, PMCFGRule<H, T, W>>) -> (BTreeMap<K, Composition<T>>, BTreeMap<K, H>) {
     let mut term_map = BTreeMap::new();
+    let mut head_map = BTreeMap::new();
 
     for (address, rule) in tree_map {
-        let &PMCFGRule { head: _, tail: _, ref composition, weight: _ } = rule;
+        let &PMCFGRule { ref head, tail: _, ref composition, weight: _ } = rule;
         term_map.insert(address.clone(), composition.clone());
+        head_map.insert(address.clone(), head.clone());
     }
 
-    term_map
+    (term_map, head_map)
 }
 
 #[cfg(test)]
