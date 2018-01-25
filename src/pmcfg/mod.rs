@@ -295,6 +295,15 @@ mod tests {
         evaluate(&term_map);
     }
 
+    pub fn to_dummy_pmcfg_rule<N, T>(head: N, composition: Composition<T>) -> PMCFGRule<N, T, usize> {
+        PMCFGRule {
+            head,
+            tail: vec![],
+            composition,
+            weight: 0,
+        }
+    }
+
     #[test]
     fn test_to_term() {
         let compos0 = Composition::from(vec![
@@ -310,30 +319,20 @@ mod tests {
         ]);
 
         let mut tree_map = BTreeMap::new();
-        tree_map.insert(vec![], PMCFGRule {
-            head: 0,
-            tail: vec![],
-            composition: compos0.clone(),
-            weight: 0.5
-        });
-        tree_map.insert(vec![0], PMCFGRule {
-            head: 1,
-            tail: vec![],
-            composition: compos1.clone(),
-            weight: 1.5
-        });
-        tree_map.insert(vec![0, 1], PMCFGRule {
-            head: 2,
-            tail: vec![],
-            composition: compos2.clone(),
-            weight: 2.5
-        });
+        tree_map.insert(vec![], to_dummy_pmcfg_rule("A", compos0.clone()));
+        tree_map.insert(vec![0], to_dummy_pmcfg_rule("B", compos1.clone()));
+        tree_map.insert(vec![0, 1], to_dummy_pmcfg_rule("C", compos2.clone()));
 
         let mut term_map = BTreeMap::new();
         term_map.insert(vec![], compos0);
         term_map.insert(vec![0], compos1);
         term_map.insert(vec![0, 1], compos2);
 
-        assert_eq!(term_map, to_term(&tree_map));
+        let mut head_map = BTreeMap::new();
+        head_map.insert(vec![], "A");
+        head_map.insert(vec![0], "B");
+        head_map.insert(vec![0, 1], "C");
+
+        assert_eq!((term_map, head_map), to_term(&tree_map));
     }
 }
