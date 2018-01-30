@@ -117,7 +117,7 @@ where
     }
 }
 
-impl<'a, I, F> Search<PriorityQueue<'a, usize, I>, I, F>
+impl<I, F> Search<Vec<I>, I, F>
 where
     I: Clone + Ord,
     F: FnMut(&I) -> Vec<I>
@@ -126,7 +126,7 @@ where
     where
         C: IntoIterator<Item = I>,
     {
-        Search::weighted(init, successors, Box::new(|_| 1))
+        Search::All(init.into_iter().collect(), successors)
     }
 }
 

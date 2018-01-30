@@ -21,6 +21,7 @@ mod nfa;
 mod dyck;
 mod mcfg;
 mod pmcfg;
+pub mod lcfrs;
 mod push_down_automaton;
 mod tree_stack_automaton;
 mod util;

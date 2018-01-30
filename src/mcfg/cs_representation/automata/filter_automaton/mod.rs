@@ -1,4 +1,4 @@
-use integeriser::HashIntegeriser;
+use integeriser::Integeriser;
 use pmcfg::PMCFGRule;
 use std::hash::Hash;
 use mcfg::cs_representation::bracket_fragment::BracketFragment;
@@ -16,61 +16,24 @@ pub use self::inside::InsideFilterAutomaton;
 /// derivation of the word in the grammar h(δ) = w.
 /// The generation of this `FiniteAutomaton` is divided into
 /// two steps; an initialization and the generation itself.
-pub trait FilterAutomaton<T>
+pub trait FilterAutomaton<'a, T: 'a>
 where
     T: Hash + Eq + Clone,
 {
-    fn new<N, W>(
-        grammar: &HashIntegeriser<PMCFGRule<N, T, W>>,
+    fn new<N: 'a, W: 'a, I, R>(
+        grammar_rules: R,
+        grammar: &I,
         reference_automaton: &GeneratorAutomaton<BracketFragment<T>>,
     ) -> Self
     where
         N: Hash + Eq + Clone,
-        W: Eq + Clone;
+        W: Eq + Clone,
+        R: Iterator<Item=&'a PMCFGRule<N, T, W>>,
+        I: Integeriser<Item=PMCFGRule<N, T, W>>;
 
     fn fsa(
         &self,
         word: &[T],
         reference_automaton: &GeneratorAutomaton<BracketFragment<T>>,
     ) -> FiniteAutomaton<BracketFragment<T>, ()>;
-}
-
-/// Splits a vector into head, tail.
-fn vec_split<T>(mut xs: Vec<T>) -> (Option<T>, Vec<T>) {
-    if xs.is_empty() {
-        (None, xs)
-    } else {
-        let x = xs.remove(0);
-        (Some(x), xs)
-    }
-}
-
-use std::collections::HashMap;
-
-/// For a given word and set of rules that may contain some prefix of this word,
-/// this function finds all pairs of a rule (usize), the remaining word &[T], and the length of the prefix (usize). 
-fn get_brackets_with<'a, 'b, T>(
-    current_word: &'a [T],
-    brackets_with: &'b HashMap<T, Vec<(Vec<T>, usize)>>,
-) -> Vec<(&'a [T], usize, usize)>
-where
-    T: Hash + Eq,
-{
-    if current_word.is_empty() || !brackets_with.contains_key(&current_word[0]) {
-        Vec::new()
-    } else {
-        let mut results = Vec::new();
-        for &(ref following_terminals, brackets) in brackets_with.get(&current_word[0]).unwrap() {
-            if following_terminals.is_empty()
-                || following_terminals.as_slice() == &current_word[1..(following_terminals.len())]
-            {
-                results.push((
-                    &current_word[(following_terminals.len() + 1)..],
-                    brackets,
-                    following_terminals.len() + 1,
-                ));
-            }
-        }
-        results
-    }
 }

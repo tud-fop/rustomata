@@ -49,6 +49,21 @@ impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation
     }
 }
 
+// impl Derivation<'a, String, String> {
+//     fn printexport(&self, position: Vec<usize>, component: usize, parent: usize) {
+
+//     }
+//     pub fn export(&self) {
+//         let stack = vec![(Vec::new(), 0, 500usize)]; // start with root pos
+        
+//         while let Some((position, component, parent)) = stack.pop() {
+//             for symbol in self.0.get(position).unwrap().composition.composition[component] {
+//                 match
+//             }
+//         }
+//     }
+// }
+
 /// The index of a bracket in cs representation.
 /// Assumes integerized rules.
 #[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
@@ -77,7 +92,7 @@ pub struct CSRepresentation<N, T, F, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: FilterAutomaton<T> + Serialize,
+    F: for <'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     generator: S::Generator,
@@ -93,7 +108,7 @@ impl<N, T, F, S> CSRepresentation<N, T, F, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: FilterAutomaton<T> + Serialize,
+    F: for <'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     /// Instantiates a CS representation for some `Into<MCFG>` and `GeneratorStrategy`.
@@ -108,7 +123,7 @@ where
         }
 
         let gen = strategy.create_generator_automaton(&irules, initial);
-        let fil = F::new(&irules, &gen);
+        let fil = F::new(irules.values().iter(), &irules, &gen);
         CSRepresentation {
             generator: gen,
             filter: fil,

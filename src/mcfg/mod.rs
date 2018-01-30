@@ -1,12 +1,13 @@
 pub mod cs_representation;
 
+pub mod rule_fragments;
 use pmcfg::{PMCFG, PMCFGRule};
 
 /// A mutliple context-free grammar.
 #[derive(Clone, Debug)]
 pub struct MCFG<N, T, W> {
-    rules: Vec<PMCFGRule<N, T, W>>,
-    initial: N,
+    pub rules: Vec<PMCFGRule<N, T, W>>,
+    pub initial: N,
 }
 
 impl<N, T, W> From<PMCFG<N, T, W>> for MCFG<N, T, W> {
