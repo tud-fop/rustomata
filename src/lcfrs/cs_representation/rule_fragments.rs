@@ -1,7 +1,7 @@
 use {PMCFGRule, VarT};
 use integeriser::Integeriser;
-use cs_representation::BracketContent;
-use cs_representation::bracket_fragment::BracketFragment;
+use super::BracketContent;
+use super::bracket_fragment::BracketFragment;
 use dyck::Bracket;
 
 #[derive(Debug)]

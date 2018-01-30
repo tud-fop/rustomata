@@ -4,17 +4,17 @@ use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
 use std::io::{stdin, stdout, Read};
 use std::fs::File;
 
-use PMCFG;
+use lcfrs::Lcfrs;
 use log_domain::LogDomain;
-use mcfg::cs_representation::CSRepresentation;
-use mcfg::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
+use lcfrs::cs_representation::CSRepresentation;
+use lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
 use util::agenda::Capacity;
 
 use flate2::{read, write, Compression};
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
-                .about("Chomsky-Schützenberger representation of MCFGs")
+                .about("Chomsky-Schützenberger representation of LCFRS")
                 .subcommand(
                     SubCommand::with_name("extract")
                                 .about("Reads a grammar from stdin and prints an object
@@ -106,7 +106,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             stdin().read_to_string(&mut grammar_string).expect(
                 "Could not read from stdin. Be sure to provide the gramar file as input.",
             );
-            let grammar: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().expect(
+            let grammar: Lcfrs<String, String, LogDomain<f64>> = grammar_string.parse().expect(
                 "Could not decode the grammar provided via stdin.",
             );
 

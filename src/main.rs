@@ -51,7 +51,7 @@ fn main() {
         .subcommand(cfg::cli::get_sub_command())
         .subcommand(tree_stack_automaton::cli::get_sub_command())
         .subcommand(approximation::cli::get_sub_command())
-        .subcommand(mcfg::cs_representation::cli::get_sub_command("cs"))
+        .subcommand(lcfrs::cs_representation::cli::get_sub_command("cs"))
         .get_matches();
 
     match matches.subcommand() {
@@ -64,7 +64,7 @@ fn main() {
         ("approximation", Some(r_matches)) =>
             approximation::cli::handle_sub_matches(r_matches),
         ("cs", Some(cs_matches)) =>
-            mcfg::cs_representation::cli::handle_sub_matches(cs_matches),
+            lcfrs::cs_representation::cli::handle_sub_matches(cs_matches),
         _ => (),
     }
 

@@ -13,10 +13,11 @@ use dyck;
 
 pub mod automata;
 pub mod bracket_fragment;
+mod rule_fragments;
 
 use self::automata::*;
 use self::bracket_fragment::BracketFragment;
-use super::MCFG;
+use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
 use time::PreciseTime;
@@ -114,9 +115,9 @@ where
     /// Instantiates a CS representation for some `Into<MCFG>` and `GeneratorStrategy`.
     pub fn new<M>(strategy: S, grammar: M) -> Self
     where
-        M: Into<MCFG<N, T, LogDomain<f64>>>,
+        M: Into<Lcfrs<N, T, LogDomain<f64>>>,
     {
-        let MCFG { initial, rules } = grammar.into();
+        let (rules, initial) = grammar.into().destruct();
         let mut irules = HashIntegeriser::new();
         for rule in rules {
             irules.integerise(rule);
@@ -274,11 +275,11 @@ mod test {
         use super::CSRepresentation;
         use super::LogDomain;
         use super::Derivation;
-        use super::MCFG;
+        use super::Lcfrs;
         use super::automata::{PushDownGenerator, NaiveFilterAutomaton};
 
-        let grammar = MCFG {
-            initial: "S",
+        let grammar = Lcfrs {
+            init: "S",
             rules: vec![
                 PMCFGRule {
                     head: "S",

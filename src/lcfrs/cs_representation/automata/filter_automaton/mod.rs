@@ -1,7 +1,7 @@
 use integeriser::Integeriser;
 use pmcfg::PMCFGRule;
 use std::hash::Hash;
-use mcfg::cs_representation::bracket_fragment::BracketFragment;
+use lcfrs::cs_representation::bracket_fragment::BracketFragment;
 
 pub mod naive;
 pub mod inside;

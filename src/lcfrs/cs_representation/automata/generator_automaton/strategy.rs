@@ -1,8 +1,8 @@
 use std::hash::Hash;
-use mcfg::cs_representation::bracket_fragment::BracketFragment;
+use lcfrs::cs_representation::bracket_fragment::BracketFragment;
 use integeriser::{HashIntegeriser, Integeriser};
 use log_domain::LogDomain;
-use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, PushDownArc, PushDownAutomaton, Operation, GeneratorAutomaton};
+use lcfrs::cs_representation::automata::{FiniteArc, FiniteAutomaton, PushDownArc, PushDownAutomaton, Operation, GeneratorAutomaton};
 use pmcfg::{PMCFGRule, VarT};
 
 
@@ -80,7 +80,7 @@ where
     }
 }
 
-use mcfg::cs_representation::BracketContent;
+use lcfrs::cs_representation::BracketContent;
 use dyck::Bracket;
 type State<N> = Bracket<(N, usize)>;
 type PushDownElem = (usize, usize, usize);

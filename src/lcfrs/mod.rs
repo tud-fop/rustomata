@@ -1,12 +1,14 @@
 use PMCFGRule;
-use mcfg::MCFG;
+use mcfg::Mcfg;
 use VarT;
 use std::hash::Hash;
 use std::collections::{BTreeSet, HashMap};
 
 mod conversion;
+mod from_str;
+pub mod cs_representation;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lcfrs<N, T, W> {
     rules: Vec<PMCFGRule<N, T, W>>,
     init: N,
@@ -48,6 +50,13 @@ where
         }
 
         Some(Lcfrs { rules, init })
+    }
+}
+
+impl<N, T, W> Lcfrs<N, T, W> {
+    /// Deconstructs the data type into its parts.
+    pub fn destruct(self) -> (Vec<PMCFGRule<N, T, W>>, N) {
+        (self.rules, self.init)
     }
 }
 
@@ -125,7 +134,8 @@ mod tests {
 
     #[test]
     fn conversion() {
-        let lcfrs: Lcfrs<(usize, BTreeSet<usize>), usize, ()> = MCFG{ rules: mcfg_rules(), initial: 1 }.into();
+        
+        let lcfrs: Lcfrs<(usize, BTreeSet<usize>), usize, ()> = Mcfg::new(mcfg_rules(), 1).into();
         eprintln!("{:?}", lcfrs);
     }
 

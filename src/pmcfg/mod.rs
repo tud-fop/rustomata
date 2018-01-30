@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
+use mcfg::Mcfg;
 
 mod from_str;
 // mod relabel;
@@ -76,6 +77,13 @@ pub struct PMCFG<N, T, W> {
     pub _dummy: PhantomData<T>,
     pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
+}
+
+impl<N, T, W> From<Mcfg<N, T, W>> for PMCFG<N, T, W> {
+    fn from(mcfg: Mcfg<N, T, W>) -> Self {
+        let (rules, initial) = mcfg.destruct();
+        PMCFG{ rules, initial: vec![initial], _dummy: PhantomData }
+    }
 }
 
 impl<N: Hash, T: Hash, W> Hash for PMCFGRule<N, T, W> {

@@ -2,25 +2,27 @@
 /// LCFRS for each MCFG.
 
 use PMCFGRule;
-use mcfg::MCFG;
+use mcfg::Mcfg;
 use VarT;
 use std::hash::Hash;
 use std::collections::{BTreeSet, HashMap};
 use super::*;
 
-/// Implements the conversion from any MCFG into a non-deleting MCFG.
-impl<N, T, W> From<MCFG<N, T, W>> for Lcfrs<(N, BTreeSet<usize>), T, W>
+/// Implements the conversion from any `Mcfg` into a non-deleting `Mcfg`.
+impl<N, T, W> From<Mcfg<N, T, W>> for Lcfrs<(N, BTreeSet<usize>), T, W>
 where
     N: Hash + Eq + Ord + Clone,
     T: Clone,
     W: Copy
 {
-    fn from(mcfg: MCFG<N, T, W>) -> Self {
+    fn from(mcfg: Mcfg<N, T, W>) -> Self {
         use recognisable::Search;
 
-        let fanouts = read_fanouts(&mcfg.rules).unwrap();
+        let (mcfg_rules, mcfg_initial) = mcfg.destruct();
+
+        let fanouts = read_fanouts(&mcfg_rules).unwrap();
         let mut rulemap: HashMap<&N, Vec<&PMCFGRule<N, T, W>>> = HashMap::new();
-        for rule in &mcfg.rules {
+        for rule in &mcfg_rules {
             rulemap
                 .entry(&rule.head)
                 .or_insert_with(Vec::new)
@@ -30,7 +32,7 @@ where
         let mut rules = Vec::new();
 
         for (a, deletions) in Search::unweighted(
-            vec![(&mcfg.initial, BTreeSet::new())],
+            vec![(&mcfg_initial, BTreeSet::new())],
             |&(a, ref deltetions)| {
                 let mut successors = Vec::new();
                 for rule in rulemap.get(a).unwrap_or(&Vec::new()) {
@@ -69,7 +71,7 @@ where
 
         Lcfrs {
             rules,
-            init: (mcfg.initial, BTreeSet::new()),
+            init: (mcfg_initial, BTreeSet::new()),
         }
     }
 }
@@ -96,7 +98,7 @@ fn composition_deletes<T>(
     deletions
 }
 
-/// Performs the conversion of an MCFG rule to an lcfrs rule.
+/// Performs the conversion of an `Mcfg` rule to an lcfrs rule.
 fn to_lcfrs_rule<N, T, W>(
     rule: PMCFGRule<N, T, W>,
     deletions: BTreeSet<usize>,

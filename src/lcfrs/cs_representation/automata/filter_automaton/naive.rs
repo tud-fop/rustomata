@@ -4,11 +4,11 @@ use std::hash::Hash;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use mcfg::cs_representation::bracket_fragment::{BracketFragment};
+use lcfrs::cs_representation::bracket_fragment::{BracketFragment};
 use super::{FilterAutomaton};
-use mcfg::cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
+use lcfrs::cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
 
-use mcfg::rule_fragments::fragments;
+use lcfrs::cs_representation::rule_fragments::fragments;
 
 /// The `NaiveFilterAutomaton` will produce a `FiniteAutomaton` that loops all
 /// brackets fragments in Δ' that do not contain any terminal symbols.
@@ -213,13 +213,12 @@ mod test {
 
     use std::fs::File;
     use std::io::Read;
-    use pmcfg::PMCFG;
-    use mcfg::MCFG;
+    use lcfrs::Lcfrs;
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
-    use mcfg::cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
+    use lcfrs::cs_representation::automata::{FilterAutomaton, GeneratorAutomaton, GeneratorStrategy,
                                       PushDownAutomaton, PushDownGenerator, NaiveFilterAutomaton};
-    use mcfg::cs_representation::bracket_fragment::BracketFragment;
+    use lcfrs::cs_representation::bracket_fragment::BracketFragment;
     use util::agenda::Capacity;
 
     #[test]
@@ -230,11 +229,10 @@ mod test {
             .read_to_string(&mut grammar_string)
             .expect("failed to read file");
 
-        let pmcfg: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
-        let grammar: MCFG<String, String, LogDomain<f64>> = pmcfg.into();
-        let initial = grammar.initial;
+        let lcfrs: Lcfrs<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+        let (lcfrs_rules, initial) = lcfrs.destruct();
         let mut rules = HashIntegeriser::new();
-        for rule in grammar.rules {
+        for rule in lcfrs_rules {
             rules.integerise(rule);
         }
         let word: Vec<String> = "a e c".split_whitespace().map(|s| s.to_string()).collect();

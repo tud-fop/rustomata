@@ -1,7 +1,7 @@
 use integeriser::HashIntegeriser;
 use std::hash::Hash;
 use dyck::Bracket;
-use mcfg::cs_representation::BracketContent;
+use lcfrs::cs_representation::BracketContent;
 use super::FiniteAutomaton;
 use std::rc::Rc;
 use util::agenda::Capacity;
