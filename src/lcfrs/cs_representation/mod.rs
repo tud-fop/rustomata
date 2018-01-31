@@ -3,10 +3,10 @@ pub mod cli;
 use serde::Serialize;
 use util::agenda::Capacity;
 use std::hash::Hash;
-use std::fmt;
 use integeriser::{HashIntegeriser, Integeriser};
 use std::collections::BTreeMap;
 
+use super::derivation::Derivation;
 use pmcfg::PMCFGRule;
 use log_domain::LogDomain;
 use dyck;
@@ -22,48 +22,6 @@ use super::Lcfrs;
 use std::fmt::{Display, Error, Formatter};
 use time::PreciseTime;
 
-/// A derivation tree of PMCFG rules.
-#[derive(PartialEq, Debug)]
-pub struct Derivation<'a, N: 'a, T: 'a>(
-    BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f64>>>,
-);
-
-use std::iter::{once, repeat};
-impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Display for Derivation<'a, N, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut buffer = String::new();
-        let &Derivation(ref tree) = self;
-
-        for (pos, rule) in tree {
-            if !pos.is_empty() {
-                let pipes: Vec<String> = repeat("|  ".to_string())
-                    .take(pos.len())
-                    .chain(once("\n".to_string()))
-                    .chain(repeat("|  ".to_string()).take(pos.len() - 1))
-                    .chain(once("+- ".to_string()))
-                    .collect();
-                buffer.push_str(&pipes.join(""));
-            }
-            buffer.push_str(format!("{}\n", rule).as_str());
-        }
-        write!(f, "{}", buffer)
-    }
-}
-
-// impl Derivation<'a, String, String> {
-//     fn printexport(&self, position: Vec<usize>, component: usize, parent: usize) {
-
-//     }
-//     pub fn export(&self) {
-//         let stack = vec![(Vec::new(), 0, 500usize)]; // start with root pos
-        
-//         while let Some((position, component, parent)) = stack.pop() {
-//             for symbol in self.0.get(position).unwrap().composition.composition[component] {
-//                 match
-//             }
-//         }
-//     }
-// }
 
 /// The index of a bracket in cs representation.
 /// Assumes integerized rules.
@@ -265,40 +223,19 @@ where
 
 #[cfg(test)]
 mod test {
+    use VarT;
+    use PMCFGRule;
+    use Composition;
+    use super::Capacity;
+    use super::CSRepresentation;
+    use super::LogDomain;
+    use super::Derivation;
+    use super::Lcfrs;
+    use super::automata::{PushDownGenerator, NaiveFilterAutomaton};
 
     #[test]
     fn csrep() {
-        use VarT;
-        use PMCFGRule;
-        use Composition;
-        use super::Capacity;
-        use super::CSRepresentation;
-        use super::LogDomain;
-        use super::Derivation;
-        use super::Lcfrs;
-        use super::automata::{PushDownGenerator, NaiveFilterAutomaton};
-
-        let grammar = Lcfrs {
-            init: "S",
-            rules: vec![
-                PMCFGRule {
-                    head: "S",
-                    tail: vec!["S", "S"],
-                    composition: Composition {
-                        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0)]],
-                    },
-                    weight: LogDomain::new(0.3f64).unwrap(),
-                },
-                PMCFGRule {
-                    head: "S",
-                    tail: vec![],
-                    composition: Composition {
-                        composition: vec![vec![VarT::T('A')]],
-                    },
-                    weight: LogDomain::new(0.7f64).unwrap(),
-                },
-            ],
-        };
+        let grammar = lcfrs();
         let d1 = Derivation(vec![(vec![], &grammar.rules[1])].into_iter().collect());
         let d2 = Derivation(
             vec![
@@ -318,5 +255,46 @@ mod test {
             cs.generate(&['A', 'A'], Capacity::Infinite).next(),
             Some(d2)
         );
+    }
+
+    #[test]
+    fn export_format() {
+        let grammar = lcfrs();
+        let d = Derivation(
+            vec![
+                (vec![], &grammar.rules[0]),
+                (vec![0], &grammar.rules[0]),
+                (vec![0,0], &grammar.rules[1]),
+                (vec![0,1], &grammar.rules[1]),
+                (vec![1], &grammar.rules[1]),
+            ].into_iter()
+                .collect(),
+        );
+
+        println!("{}", d);
+    }
+
+    fn lcfrs() -> Lcfrs<&'static str, char, LogDomain<f64>> {
+        Lcfrs {
+            init: "S",
+            rules: vec![
+                PMCFGRule {
+                    head: "S",
+                    tail: vec!["S", "S"],
+                    composition: Composition {
+                        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0)]],
+                    },
+                    weight: LogDomain::new(0.3f64).unwrap(),
+                },
+                PMCFGRule {
+                    head: "S",
+                    tail: vec![],
+                    composition: Composition {
+                        composition: vec![vec![VarT::T('A')]],
+                    },
+                    weight: LogDomain::new(0.7f64).unwrap(),
+                },
+            ],
+        }
     }
 }

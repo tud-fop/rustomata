@@ -169,14 +169,16 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             match (strategy, filter) {
                 (Strat::Keller, Filter::Inside) => {
                     let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
+                    for (sentence_id, sentence) in word_strings.lines().enumerate() {
+                        let words: Vec<String> = sentence.split_whitespace().map(|s| s.to_string()).collect();
 
                         if params.is_present("debugmode") {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("#BOS {} 0 0 0 0", sentence_id + 1);
+                                print!("{}", derivation);
+                                println!("#EOS {}", sentence_id + 1);
                             }
                         }
                     }

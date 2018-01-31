@@ -172,8 +172,6 @@ mod test {
 
     use std::fs::File;
     use std::io::Read;
-    use pmcfg::PMCFG;
-    use mcfg::Mcfg;
     use lcfrs::Lcfrs;
     use log_domain::LogDomain;
     use integeriser::{HashIntegeriser, Integeriser};
