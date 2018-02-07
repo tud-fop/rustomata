@@ -6,7 +6,6 @@ use util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
-pub mod ptk;
 pub mod tts;
 
 pub mod cli;
@@ -15,7 +14,6 @@ use recognisable::{Instruction, Transition};
 use recognisable::automaton::Automaton;
 
 use self::relabel::*;
-use self::ptk::*;
 use self::tts::*;
 
 

@@ -39,7 +39,6 @@ pub struct PushDownAutomaton<A, T, W>
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
     Replace { current_val: Vec<A>, new_val: Vec<A> },
-    ReplaceK { current_val: Vec<A>, new_val: Vec<A>, limit: usize },
 }
 
 impl<A> PushDownInstruction<A> {
@@ -51,12 +50,6 @@ impl<A> PushDownInstruction<A> {
                 PushDownInstruction::Replace {
                     current_val: current_val.iter().map(f).collect(),
                     new_val: new_val.iter().map(f).collect(),
-                },
-            PushDownInstruction::ReplaceK { ref current_val, ref new_val, ref limit } =>
-                PushDownInstruction::ReplaceK {
-                    current_val: current_val.iter().map(f).collect(),
-                    new_val: new_val.iter().map(f).collect(),
-                    limit: *limit,
                 },
         }
     }
@@ -71,12 +64,6 @@ impl<A> PushDownInstruction<A> {
                     new_val: map_vec_mut(new_val, f),
                 }
             },
-            PushDownInstruction::ReplaceK { ref current_val, ref new_val, ref limit } =>
-                PushDownInstruction::ReplaceK {
-                    current_val: map_vec_mut(current_val, f),
-                    new_val: map_vec_mut(new_val, f),
-                    limit: *limit,
-                },
         }
     }
 }
@@ -134,22 +121,6 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
                         .entry((t.word, t.instruction.clone()))
                         .or_insert(W::zero()) += t.weight;
                 },
-                PushDownInstruction::ReplaceK { ref current_val, .. } => {
-                    let a = current_val.first().unwrap().clone();
-
-                    *transition_map
-                        .entry(a)
-                        .or_insert(HashMap::new())
-                        .entry((t.word.clone(), t.instruction.clone()))
-                        .or_insert(W::zero()) += t.weight.clone();
-
-                    // Places all ReplaceK transitions also in for the empty symbol
-                    *transition_map
-                        .entry(init.empty.clone())
-                        .or_insert(HashMap::new())
-                        .entry((t.word, t.instruction.clone()))
-                        .or_insert(W::zero()) += t.weight;
-                },
             }
         }
 
@@ -194,8 +165,6 @@ impl<A> Instruction for PushDownInstruction<A>
         match *self {
             PushDownInstruction::Replace {ref current_val, ref new_val} =>
                 p.replace(current_val, new_val).ok().into_iter().collect(),
-            PushDownInstruction::ReplaceK {ref current_val, ref new_val, limit} =>
-                p.replacek(current_val, new_val, limit).ok().into_iter().collect(),
         }
     }
 }
@@ -379,29 +348,6 @@ impl<A> PushDown<A>
             Err(self)
         }
     }
-
-    /// Replaces uppermost element with the given elements.
-    /// Truncates to the last `limit` elements.
-    /// Also works without `cur_sym` if `is_bottom()`
-    /// TODO cur_sym ist given in reverse order.
-    pub fn replacek(mut self, cur_sym: &[A],  new_sym: &[A], limit: usize) -> Result<Self, Self> {
-        let mut new_cur_sym = cur_sym.to_vec();        //
-        new_cur_sym.truncate(self.elements.len() - 1); //
-        new_cur_sym.reverse();                         // TODO remove this
-
-        if self.elements.ends_with(&new_cur_sym) {
-            let n = self.elements.len();
-            self.elements.truncate(n - new_cur_sym.len());
-            self.elements.append(&mut new_sym.to_vec());
-            let m = self.elements.len();
-            if m > limit + 1 {
-                self.elements.drain(1 .. m - limit);
-            }
-            Ok(self)
-        } else {
-            Err(self)
-        }
-    }
 }
 
 
@@ -449,28 +395,6 @@ impl<A> Display for PushDownInstruction<A>
                     }
                 }
                 write!(f, "(Replace {} // {})", buffer1, buffer2)
-            }
-            PushDownInstruction::ReplaceK { ref current_val, ref new_val , ref limit} => {
-                let mut buffer1 = "".to_string();
-                let mut buffer2 = "".to_string();
-
-                let mut iter1 = current_val.iter().peekable();
-                let mut iter2 = new_val.iter().peekable();
-
-                while let Some(nt) = iter1.next() {
-                    buffer1.push_str(format!("\"{}\"", nt).as_str());
-                    if iter1.peek().is_some() {
-                        buffer1.push_str(", ");
-                    }
-                }
-
-                while let Some(nt) = iter2.next() {
-                    buffer2.push_str(format!("\"{}\"", nt).as_str());
-                    if iter2.peek().is_some() {
-                        buffer2.push_str(", ");
-                    }
-                }
-                write!(f, "(ReplaceK {} // {} {})", buffer1, buffer2, limit)
             }
         }
     }
