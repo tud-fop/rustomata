@@ -5,7 +5,7 @@ use cfg::CFG;
 use recognisable::Recognisable;
 use tree_stack_automaton::TreeStackAutomaton;
 use push_down_automaton::{PushDownAutomaton, PushState};
-use approximation::{ApproximationStrategy, PDTopKElement, RlbElement, TTSElement};
+use approximation::{ApproximationStrategy, RlbElement, TTSElement};
 use approximation::equivalence_classes::EquivalenceClass;
 
 use std::io::{self, Read};
@@ -159,61 +159,6 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
 
                     let (b, _) = rlb.approximate_automaton(&a);
 
-                    println!("{}", b);
-                }
-                _ => (),
-            }
-        }
-        ("topk", Some(topk_matches)) => {
-            match topk_matches.subcommand() {
-                ("parse", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
-
-                    let size = parse_matches
-                        .value_of("size")
-                        .unwrap()
-                        .parse::<usize>()
-                        .unwrap();
-
-                    let a = PushDownAutomaton::from(g);
-
-                    let ptk = PDTopKElement::new(size);
-
-                    let (b, _) = ptk.approximate_automaton(&a);
-
-                    let mut corpus = String::new();
-                    let _ = io::stdin().read_to_string(&mut corpus);
-
-                    for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
-                    }
-                }
-                ("automaton", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
-
-                    let size = parse_matches
-                        .value_of("size")
-                        .unwrap()
-                        .parse::<usize>()
-                        .unwrap();
-
-                    let a = PushDownAutomaton::from(g);
-
-                    let ptk = PDTopKElement::new(size);
-
-                    let (b, _) = ptk.approximate_automaton(&a);
                     println!("{}", b);
                 }
                 _ => (),
