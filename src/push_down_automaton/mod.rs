@@ -401,9 +401,9 @@ impl<A> Display for PushDownInstruction<A>
 }
 
 impl<A, T, W> Display for PushDownAutomaton<A, T, W>
-    where A: Clone + Display + Hash + Ord,
+    where A: Clone + Display + Hash + Ord + PartialEq,
           T: Clone + Debug + Display + Eq + Hash + Ord,
-          W: Clone + Display + Ord,
+          W: AddAssign + Clone + Display + MulAssign + One + Ord + Zero,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted_transitions = String::new();
@@ -411,6 +411,10 @@ impl<A, T, W> Display for PushDownAutomaton<A, T, W>
             formatted_transitions.push_str(&t.to_string());
             formatted_transitions.push_str("\n");
         }
-        write!(f, "initial: {}\n\n{}", self.initial.current_symbol(), formatted_transitions)
+        write!(f,
+               "initial: {}\n\n{}",
+               self.initial(),
+               formatted_transitions
+        )
     }
 }
