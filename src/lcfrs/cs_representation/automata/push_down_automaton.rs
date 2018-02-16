@@ -293,7 +293,7 @@ where
 
         PushDownAutomaton {
             arcs: new_arcs,
-            initial: states.find_key(&(self.initial, other.initial)).unwrap(),
+            initial: states.integerise((self.initial, other.initial)),
             finals: new_finals,
             labels: self.labels,
         }
@@ -313,10 +313,18 @@ where
             labels,
         } = self;
 
+        // empty agenda if there are no final states
+        let initial_agenda =
+            if !finals.is_empty() {
+                vec![(LogDomain::one(), initial, vec![], vec![])]
+            } else {
+                Vec::new()
+            };
+
 
         Box::new(
             Search::weighted(
-                vec![(LogDomain::one(), initial, vec![], vec![])],
+                initial_agenda,
                 move |&(weight_, q, ref word, ref pd)| {
                     let mut results = Vec::new();
                     if let Some(arcs_from) = arcs.get(q) {

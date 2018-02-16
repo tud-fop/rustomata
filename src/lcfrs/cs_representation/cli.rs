@@ -56,9 +56,9 @@ pub fn get_sub_command(name: &str) -> App {
                         .group("strategy")
                         .takes_value(true)
                 ).arg(
-                    Arg::with_name("keller")
+                    Arg::with_name("pd")
                         .help("Use a push-down automaton to generate candidates.")
-                        .long("keller")
+                        .long("pd")
                         .group("strategy")
                 ).group(
                     ArgGroup::with_name("filter")

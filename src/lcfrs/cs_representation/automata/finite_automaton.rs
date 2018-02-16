@@ -176,9 +176,16 @@ where
             labels,
         } = self;
 
+        let initial_agenda =
+            if !finals.is_empty() {
+                vec![(initial, Vec::new(), LogDomain::one())]
+            } else {
+                Vec::new()
+            };
+
         Box::new(
             Search::weighted(
-                vec![(initial, Vec::new(), LogDomain::one())],
+                initial_agenda,
                 move |&(q, ref word, weight)| {
                     let mut successors = Vec::new();
                     for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {

@@ -1,3 +1,4 @@
+mod multiple;
 use std::cmp::PartialEq;
 
 /// A bracket with some annotation of type `A`.

@@ -42,7 +42,7 @@ impl<T: Ord> Partition<T> {
         }
     }
 
-    /// Destructs the `Partition` and returns a sequence of unique cells.
+    /// Returns a pointer to each cell of the `Partition`.
     pub fn collapse(&self) -> Vec<&BTreeSet<T>> {
         let &Partition(ref map) = self;
         let mut cells: Vec<&BTreeSet<T>> = Vec::new();

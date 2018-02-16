@@ -81,6 +81,20 @@ impl<A> TreeStack<A> {
             _ => panic!("tree_stack.rs: could not push into index {}", index)
         }
     }
+
+    /// Checks a predicate for all nodes in the subtree at the current pointer.
+    pub fn all<F>(&self, predicate: &F) -> bool where F: Fn(&A) -> bool {
+        predicate(&self.value) 
+        && self.children.iter().all(
+            |maybe_child| {
+                if let &Some(ref child) = maybe_child {
+                    child.all(predicate)
+                } else {
+                    true
+                }
+            }
+        )
+    }
 }
 
 impl<A: Clone + fmt::Display> fmt::Display for TreeStack<A> {

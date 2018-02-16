@@ -114,6 +114,8 @@ mod tests {
     use super::*;
     use Composition;
     use VarT;
+    use std::collections::BTreeSet;
+    use mcfg::Mcfg;
 
     #[test]
     fn fanouts() {

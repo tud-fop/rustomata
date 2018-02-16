@@ -28,3 +28,12 @@ where
     }
     v.get_mut(i).unwrap()
 }
+
+use time::{PreciseTime, Duration};
+pub fn with_time<B, F>(f: F) -> (B, Duration) where F: FnOnce () -> B {
+    let t0 = PreciseTime::now();
+    let result = f();
+    let t1 = PreciseTime::now();
+    
+    (result, t0.to(t1))
+}

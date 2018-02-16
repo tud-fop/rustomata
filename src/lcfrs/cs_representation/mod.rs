@@ -20,7 +20,7 @@ use self::bracket_fragment::BracketFragment;
 use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
-use time::PreciseTime;
+use util::{with_time};
 
 
 /// The index of a bracket in cs representation.
@@ -102,47 +102,41 @@ where
     }
 
     pub fn debug(&self, word: &[T], beam: Capacity) {
-        let time = PreciseTime::now();
-        let f = self.filter.fsa(word, &self.generator);
-        let filter_const = time.to(PreciseTime::now()).num_milliseconds();
-        
+        let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
-
-        let time = PreciseTime::now();
-        let g_ = self.generator.intersect(f);
-        let intersection_time = time.to(PreciseTime::now()).num_milliseconds();
-
+        
+        let (g_, intersection_time) = with_time(|| self.generator.intersect(f));
         let intersection_size = g_.size();
         
         eprint!(
             "{} {} {} {} {} {} {}", 
             self.rules.size(),
             word.len(),
-            filter_const,
+            filter_const.num_nanoseconds().unwrap(),
             filter_size,
             self.generator.size(),
-            intersection_time,
+            intersection_time.num_nanoseconds().unwrap(),
             intersection_size
         );
 
-        // time for generation
-        let time = PreciseTime::now();
-        let (cans, ptime) = match g_.generate(beam)
-                .enumerate()
-                .map(|(i, frag)| (i, BracketFragment::concat(frag)))
-                .filter(| &(_, ref candidate) | dyck::recognize(candidate))
-                .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(| _ | (i + 1)))
-                .next() {
-            
-            Some(i) => (i, time.to(PreciseTime::now()).num_milliseconds()),
-            None => (0, time.to(PreciseTime::now()).num_milliseconds())
-
-        };
+        let (cans, ptime) = with_time(
+            || {
+                match g_.generate(beam)
+                    .enumerate()
+                    .map(|(i, frag)| (i, BracketFragment::concat(frag)))
+                    .filter(| &(_, ref candidate) | dyck::recognize(candidate))
+                    .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(| _ | (i + 1)))
+                    .next() {
+                        Some(i) => i,   // valid candidate
+                        None => 0       // failed
+                    }
+            }
+        );
 
         eprintln!(
             " {} {}",
             cans,
-            ptime
+            ptime.num_nanoseconds().unwrap()
         );
     }
 }
