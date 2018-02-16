@@ -17,6 +17,21 @@ pub struct FiniteArc<Q, T, W> {
     pub weight: W,
 }
 
+use Instruction;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StateInstruction<Q>(Q, Q);
+
+impl<Q> Instruction for StateInstruction<Q> where Q: Clone + PartialEq {
+    type Storage = Q;
+    fn apply(&self, from: Q) -> Vec<Q> {
+        if self.0 == from {
+            vec![self.1.clone()]
+        } else {
+            vec![]
+        }
+    }
+}
+
 /// A deterministic finite automaton.
 #[derive(Clone, Debug)]
 pub struct FiniteAutomaton<T, W>
@@ -343,4 +358,118 @@ where
             &buffer
         )
     }
+}
+
+use std::ops::MulAssign;
+use automaton::Automaton;
+use Transition;
+use Configuration;
+use std::collections::{HashMap, BinaryHeap};
+use recognisable::Item;
+impl<T, W> Automaton<T, W> for FiniteAutomaton<T, W> 
+where
+    T: Clone + Eq + Hash + Ord,
+    W: Copy + One + MulAssign + Ord
+{
+    type Key = usize;
+    type I = StateInstruction<usize>;
+    type IInt = StateInstruction<usize>;
+    type TInt = usize;
+
+    fn from_transitions<It>(transitions: It, initial: <Self::I as Instruction>::Storage) -> Self
+    where 
+        It: IntoIterator<Item=Transition<Self::I, T, W>>
+    {
+        panic!("not implemented")
+    }
+
+    /// Returns a boxed `Iterator` over the `Transitions` of this `Automaton`.
+    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>
+    {
+        let mut v = Vec::new();
+        for (from, arcs_from) in self.arcs.iter().enumerate() {
+            for (isym, &(to, weight)) in arcs_from {
+                v.push(
+                    Transition{ 
+                        word: vec![self.labels.find_value(*isym).unwrap().clone()],
+                        weight,
+                        instruction: StateInstruction(from, to)
+                    }
+                )
+            }
+        }
+
+        Box::new(
+            v.into_iter()
+        )
+    }
+
+    fn initial(&self) -> <Self::I as Instruction>::Storage
+    {
+        self.initial
+    }
+
+    /// Maps items from the internal representation to the desired output.
+    fn item_map(&self, i: &Item<usize, StateInstruction<usize>, usize, W>) -> Item<usize, StateInstruction<usize>, T, W>
+    {
+        let &(Configuration{ ref word, weight, storage }, ref pd) = i;
+
+        (
+            Configuration{
+                word: word.iter().map(|i| self.labels.find_value(*i).unwrap()).cloned().collect(),
+                weight,
+                storage
+            },
+            pd.map(
+                &mut | &Transition{ ref word, instruction, weight } |
+                Transition {
+                    word: word.iter().map(|i| self.labels.find_value(*i).unwrap()).cloned().collect(),
+                    instruction,
+                    weight
+                }
+            )
+        )
+    }
+
+    fn terminal_to_int(&self, t: &T) -> usize {
+        self.labels.find_key(t).unwrap()
+    }
+
+    fn extract_key(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> &Self::Key
+    {
+        &c.storage
+    }
+
+    fn is_terminal(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> bool
+    {
+        panic!("not implemented")
+    }
+
+    fn transition_map(&self) -> Rc<HashMap<usize, BinaryHeap<Transition<StateInstruction<usize>, usize, W>>>>
+    {
+        Rc::new(
+            self.arcs.iter().enumerate().map(
+                | (from, arcs_from) | {
+                    (
+                        from,
+                        arcs_from.iter().map(
+                            | (isymbol, &(to, weight)) | 
+                            Transition{ 
+                                word: vec![*isymbol],
+                                weight,
+                                instruction: StateInstruction(from, to)
+                            }
+                        ).collect()
+                    )
+                }
+            ).collect()
+        )
+    }
+
+    /// Returns the initial storage configuration (in its internal representation).
+    fn initial_int(&self) -> <Self::IInt as Instruction>::Storage
+    {
+        self.initial
+    }
+
 }

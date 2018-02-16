@@ -67,6 +67,22 @@ impl<A> TreeStack<A> {
         }
     }
 
+    pub fn push_with<F>(mut self, n: usize, a: F) -> Result<Self, Self> where F: Fn() -> A {
+        if n >= self.children.len() {
+            let len = n - self.children.len() + 1;
+            let filler = &mut vec![None; len];
+            self.children.append(filler);
+        }
+
+        if self.children[n].is_none() {
+            Ok(TreeStack { value: a(),
+                           children: Vec::new(),
+                           parent: Some((n, Rc::new(self))) })
+        } else {
+            Err(self)
+        }
+    }
+
     /// Writes a value in the first free child position.
     pub fn push_next(self, a: A) -> Self {
         let index = {
