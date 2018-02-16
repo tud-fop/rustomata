@@ -32,7 +32,7 @@ impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
 
 
     fn approximate_storage(&self, pd: PushDown<A1>)-> PushDown<A2> {
-        pd.map(self.mapping)
+        pd.map(&self.mapping)
     }
 
     fn approximate_instruction(&self, instr: &PushDownInstruction<A1>)
@@ -43,13 +43,6 @@ impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
                 PushDownInstruction::Replace {
                     current_val: current_val.iter().map(self.mapping).collect(),
                     new_val: new_val.iter().map(self.mapping).collect(),
-                }
-            },
-            PushDownInstruction::ReplaceK { ref current_val, ref new_val, limit} => {
-                PushDownInstruction::ReplaceK {
-                    current_val: current_val.iter().map(self.mapping).collect(),
-                    new_val: new_val.iter().map(self.mapping).collect(),
-                    limit: limit,
                 }
             },
         }

@@ -79,12 +79,12 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                             .recognise_beam_search(b.parse().unwrap(), word)
                             .take(n)
                         {
-                            println!("{:?}", parse.0);
+                            println!("{}", parse.0);
                         }
                     }
                     None => {
                         for parse in automaton.recognise(word).take(n) {
-                            println!("{:?}", parse.0);
+                            println!("{}", parse.0);
                         }
                     }
                 };

@@ -26,7 +26,8 @@ pub struct NFATransition<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq>{
     weight: W,
 }
 
-/// Structure encoding a Automaton without storage (i.e. not a `Automaton`).
+/// Structure encoding an Automaton without storage (i.e. not an `Automaton`).
+#[derive(Debug, Clone)]
 pub struct NFA<S: Eq + Hash, T: Eq + Hash, W: Eq + Ord>{
     //states: HashSet<S>,
     transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>,
@@ -189,13 +190,22 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
           W: AddAssign + Clone + Copy + Eq + Mul<Output=W> + MulAssign + One + Ord + Zero,
 {
     let mut integeriser: HashIntegeriser<PushDown<A>> = HashIntegeriser::new();
-    let mut map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();
+    let map: HashMap<NFATransition<usize, T, W>, Transition<PushDownInstruction<A>, T, W>> = HashMap::new();
     let mut to_do = Vec::new();
     let mut states = HashSet::new();
     let mut initial_states = HashSet::new();
     let mut final_states = HashSet::new();
 
-    let mut transitions = HashMap::new();
+    let transitions = HashMap::new();
+
+    let mut transition_map = HashMap::new();
+    for t in a.transitions() {
+        let key =
+            match t.instruction {
+                PushDownInstruction::Replace { ref current_val, .. } => current_val.first().unwrap().clone(),
+            };
+        transition_map.entry(key).or_insert(Vec::new()).push(t);
+    }
 
     initial_states.insert(integeriser.integerise(a.initial()));
     to_do.push(a.initial());
@@ -206,25 +216,11 @@ pub fn from_pd<A, T, W>(a: &PushDownAutomaton<A, T, W>)
         if c.is_bottom(){
             final_states.insert(ci);
         }
-        if let Some(rs) = a.transition_map().get(c.current_symbol()) {
+        if let Some(rs) = transition_map.get(c.current_symbol()) {
             for r in rs{
                 match r.instruction{
                     PushDownInstruction::Replace {..} => {
                         return None;
-                    }
-                    PushDownInstruction::ReplaceK {..} => {
-                        for c1 in r.instruction.apply(c.clone()){
-                            let c1i = integeriser.integerise(c1.clone());
-                            transitions.entry(ci).or_insert_with(BinaryHeap::new);
-                            let t = NFATransition::new(ci, c1i, r.word.clone(), r.weight);
-                            transitions.get_mut(&ci).unwrap().push(t.clone());
-                            map.insert(t, r.clone());
-
-                            if !states.contains(&c1i){
-                                states.insert(c1i);
-                                to_do.push(c1);
-                            }
-                        }
                     }
                 }
             }

@@ -233,7 +233,7 @@ fn test_bounded_priority_queue() {
     assert_eq!(q.size(), 5);
     assert!(q.is_at_capacity());
 
-    assert_eq!(q.enqueue('e'), Some(('i')));
+    assert_eq!(q.enqueue('e'), Some('i'));
 
     assert_eq!(q.set_capacity(7), vec![]);
 

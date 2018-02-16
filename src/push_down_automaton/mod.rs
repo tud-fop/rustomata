@@ -1,5 +1,9 @@
 extern crate num_traits;
 
+use integeriser::{HashIntegeriser, Integeriser};
+use num_traits::{One, Zero};
+use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::automaton::Automaton;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -8,10 +12,8 @@ use std::ops::{AddAssign, Mul, MulAssign};
 use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
-use num_traits::{One, Zero};
-
-use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
-use recognisable::automaton::Automaton;
+use util::integerisable::{Integerisable1, Integerisable2};
+use util::push_down::Pushdown;
 
 mod from_cfg;
 
@@ -24,18 +26,69 @@ type TransitionMap<A, T, W>
 #[derive(Debug, Clone)]
 pub struct PushDownAutomaton<A, T, W>
     where A: Clone + Hash + Ord,
-          T: Eq + Ord,
+          T: Eq + Hash,
           W: Ord,
 {
-    transitions: Rc<TransitionMap<A, T, W>>,
-    initial: PushDown<A>,
+    a_integeriser: HashIntegeriser<A>,
+    t_integeriser: HashIntegeriser<T>,
+    transitions: Rc<TransitionMap<usize, usize, W>>,
+    initial: PushDown<usize>,
 }
 
 /// Instruction on `PushDown<A>`s.
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
     Replace { current_val: Vec<A>, new_val: Vec<A> },
-    ReplaceK { current_val: Vec<A>, new_val: Vec<A>, limit: usize },
+}
+
+impl<A> PushDownInstruction<A> {
+    fn map<F, B>(&self, f: &F) -> PushDownInstruction<B>
+        where F: Fn(&A) -> B
+    {
+        match *self {
+            PushDownInstruction::Replace { ref current_val, ref new_val } =>
+                PushDownInstruction::Replace {
+                    current_val: current_val.iter().map(f).collect(),
+                    new_val: new_val.iter().map(f).collect(),
+                },
+        }
+    }
+
+    fn map_mut<F, B>(&self, f: &mut F) -> PushDownInstruction<B>
+        where F: FnMut(&A) -> B
+    {
+        match *self {
+            PushDownInstruction::Replace { ref current_val, ref new_val } => {
+                PushDownInstruction::Replace {
+                    current_val: map_vec_mut(current_val, f),
+                    new_val: map_vec_mut(new_val, f),
+                }
+            },
+        }
+    }
+}
+
+fn map_vec_mut<A, B, F>(v: &Vec<A>, f: &mut F) -> Vec<B>
+    where F: FnMut(&A) -> B
+{
+    let mut res = Vec::new();
+    for a in v {
+        res.push(f(a));
+    }
+    res
+}
+
+impl<A: Clone + Eq + Hash> Integerisable1 for PushDownInstruction<A> {
+    type AInt = PushDownInstruction<usize>;
+    type I = HashIntegeriser<A>;
+
+    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
+        self.map_mut(&mut |a| integeriser.integerise(a.clone()))
+    }
+
+    fn un_integerise(v: &Self::AInt, integeriser: &Self::I) -> Self {
+        v.map(&|i| integeriser.find_value(*i).unwrap().clone())
+    }
 }
 
 /// Stack with Elements of type `A`
@@ -53,30 +106,17 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
     pub fn new<It>(transitions: It, initial: PushDown<A>) -> Self
         where It: IntoIterator<Item=Transition<PushDownInstruction<A>, T, W>>
     {
+        let mut a_inter = HashIntegeriser::new();
+        let mut t_inter = HashIntegeriser::new();
+        let init = initial.integerise(&mut a_inter);
         let mut transition_map = HashMap::new();
 
-        for t in transitions.into_iter() {
+        for t in transitions.into_iter().map(|t| t.integerise(&mut t_inter, &mut a_inter)) {
             match t.instruction {
                 PushDownInstruction::Replace { ref current_val, .. } => {
                     let a = current_val.first().unwrap().clone();
                     *transition_map
                         .entry(a)
-                        .or_insert(HashMap::new())
-                        .entry((t.word, t.instruction.clone()))
-                        .or_insert(W::zero()) += t.weight;
-                },
-                PushDownInstruction::ReplaceK { ref current_val, .. } => {
-                    let a = current_val.first().unwrap().clone();
-
-                    *transition_map
-                        .entry(a)
-                        .or_insert(HashMap::new())
-                        .entry((t.word.clone(), t.instruction.clone()))
-                        .or_insert(W::zero()) += t.weight.clone();
-
-                    // Places all ReplaceK transitions also in for the empty symbol
-                    *transition_map
-                        .entry(initial.empty.clone())
                         .or_insert(HashMap::new())
                         .entry((t.word, t.instruction.clone()))
                         .or_insert(W::zero()) += t.weight;
@@ -88,22 +128,30 @@ impl<A, T, W> PushDownAutomaton<A, T, W>
             .map(|((w, i), wt)| Transition {word: w, instruction: i, weight: wt}).collect());
 
         PushDownAutomaton {
+            a_integeriser: a_inter,
+            t_integeriser: t_inter,
             transitions: Rc::new(transition_map.into_iter().map(f).collect()),
-            initial: initial,
+            initial: init,
         }
     }
 }
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
     where A: Clone + Hash + Ord,
-          T: Clone + Eq + Ord,
+          T: Clone + Hash + Eq + Ord,
           W: Clone + Ord,
 {
     pub fn list_transitions<'a>(&'a self)
                                 -> Box<Iterator<Item=Transition<PushDownInstruction<A>, T, W>> + 'a>
     {
         Box::new(
-            self.transitions.values().flat_map(|h| h.iter().cloned())
+            self.transitions.values()
+                .flat_map(
+                    move |h| h.iter()
+                        .map(move |t| Transition::un_integerise(t,
+                                                                &self.t_integeriser,
+                                                                &self.a_integeriser))
+                )
         )
     }
 }
@@ -117,8 +165,6 @@ impl<A> Instruction for PushDownInstruction<A>
         match *self {
             PushDownInstruction::Replace {ref current_val, ref new_val} =>
                 p.replace(current_val, new_val).ok().into_iter().collect(),
-            PushDownInstruction::ReplaceK {ref current_val, ref new_val, limit} =>
-                p.replacek(current_val, new_val, limit).ok().into_iter().collect(),
         }
     }
 }
@@ -128,12 +174,12 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
           T: Clone + Eq + Hash + Ord,
           W: AddAssign + Clone + MulAssign + One + Ord + Zero,
 {
-    type Key = A;
+    type Key = usize;
     type I = PushDownInstruction<A>;
-    type IInt = PushDownInstruction<A>;
-    type TInt = T;
+    type IInt = PushDownInstruction<usize>;
+    type TInt = usize;
 
-    fn extract_key(c: &Configuration<PushDown<A>, T, W>) -> &A {
+    fn extract_key(c: &Configuration<PushDown<usize>, usize, W>) -> &usize {
         if c.storage.is_bottom() {
             &c.storage.empty
         } else {
@@ -154,29 +200,51 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
     }
 
     fn initial(&self) -> PushDown<A> {
-        self.initial.clone()
+        Integerisable1::un_integerise(&self.initial, &self.a_integeriser)
     }
 
-    fn transition_map(&self) -> Rc<TransitionMap<A, T, W>> {
+    fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {
         self.transitions.clone()
     }
 
-    fn initial_int(&self) -> PushDown<A> {
+    fn initial_int(&self) -> PushDown<usize> {
         self.initial.clone()
     }
 
-    fn is_terminal(c: &Configuration<PushDown<A>, T, W>) -> bool {
+    fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
     }
 
-    fn item_map(&self, i: &Item<PushDown<A>, PushDownInstruction<A>, T, W>)
+    fn item_map(&self, i: &Item<PushDown<usize>, PushDownInstruction<usize>, usize, W>)
                 -> Item<PushDown<A>, PushDownInstruction<A>, T, W> {
-        i.clone()
+        match *i {
+            (Configuration { ref word, ref storage, ref weight }, ref pd) => {
+                let pd_vec: Vec<_>
+                    = pd.clone().into();
+                let pd_unint: Vec<_>
+                    = pd_vec.iter().map(
+                        |t| Integerisable2::un_integerise(t,
+                                                          &self.t_integeriser,
+                                                          &self.a_integeriser))
+                            .collect();
+                (
+                    Configuration {
+                        word: word
+                            .iter()
+                            .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())
+                            .collect(),
+                        storage: Integerisable1::un_integerise(storage, &self.a_integeriser),
+                        weight: weight.clone(),
+                    },
+                    Pushdown::from(pd_unint.as_slice())
+                )
+            }
+        }
     }
 
 
-    fn terminal_to_int(&self, t: &T) -> T {
-        t.clone()
+    fn terminal_to_int(&self, t: &T) -> usize {
+        self.t_integeriser.find_key(t).unwrap()
     }
 }
 
@@ -196,8 +264,7 @@ impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
     }
 }
 
-impl<A> PushDown<A>
-{
+impl<A> PushDown<A> {
     pub fn empty(&self) -> &A {
         &self.empty
     }
@@ -214,13 +281,35 @@ impl<A> PushDown<A>
         self.elements.iter()
     }
 
-    pub fn map<F, B>(&self, f: F) -> PushDown<B>
-        where F: Fn(&A) -> B
+    pub fn map<F, B>(&self, f: &F) -> PushDown<B>
+        where F: Fn(&A) -> B,
     {
         PushDown {
             empty: f(&self.empty),
             elements: self.elements.iter().map(f).collect(),
         }
+    }
+
+    pub fn map_mut<F, B>(&self, f: &mut F) -> PushDown<B>
+        where F: FnMut(&A) -> B,
+    {
+        PushDown {
+            empty: f(&self.empty),
+            elements: self.elements.iter().map(f).collect(),
+        }
+    }
+}
+
+impl<A: Clone + Eq + Hash> Integerisable1 for PushDown<A> {
+    type AInt = PushDown<usize>;
+    type I = HashIntegeriser<A>;
+
+    fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt {
+        self.map_mut(&mut |v| integeriser.integerise(v.clone()))
+    }
+
+    fn un_integerise(aint: &Self::AInt, integeriser: &Self::I) -> Self {
+        aint.map(&|i| integeriser.find_value(*i).unwrap().clone())
     }
 }
 
@@ -254,29 +343,6 @@ impl<A> PushDown<A>
             let n = self.elements.len();
             self.elements.truncate(n - cur_sym.len());
             self.elements.append(&mut new_sym.to_vec());
-            Ok(self)
-        } else {
-            Err(self)
-        }
-    }
-
-    /// Replaces uppermost element with the given elements.
-    /// Truncates to the last `limit` elements.
-    /// Also works without `cur_sym` if `is_bottom()`
-    /// TODO cur_sym ist given in reverse order.
-    pub fn replacek(mut self, cur_sym: &[A],  new_sym: &[A], limit: usize) -> Result<Self, Self> {
-        let mut new_cur_sym = cur_sym.to_vec();        //
-        new_cur_sym.truncate(self.elements.len() - 1); //
-        new_cur_sym.reverse();                         // TODO remove this
-
-        if self.elements.ends_with(&new_cur_sym) {
-            let n = self.elements.len();
-            self.elements.truncate(n - new_cur_sym.len());
-            self.elements.append(&mut new_sym.to_vec());
-            let m = self.elements.len();
-            if m > limit + 1 {
-                self.elements.drain(1 .. m - limit);
-            }
             Ok(self)
         } else {
             Err(self)
@@ -330,35 +396,13 @@ impl<A> Display for PushDownInstruction<A>
                 }
                 write!(f, "(Replace {} // {})", buffer1, buffer2)
             }
-            PushDownInstruction::ReplaceK { ref current_val, ref new_val , ref limit} => {
-                let mut buffer1 = "".to_string();
-                let mut buffer2 = "".to_string();
-
-                let mut iter1 = current_val.iter().peekable();
-                let mut iter2 = new_val.iter().peekable();
-
-                while let Some(nt) = iter1.next() {
-                    buffer1.push_str(format!("\"{}\"", nt).as_str());
-                    if iter1.peek().is_some() {
-                        buffer1.push_str(", ");
-                    }
-                }
-
-                while let Some(nt) = iter2.next() {
-                    buffer2.push_str(format!("\"{}\"", nt).as_str());
-                    if iter2.peek().is_some() {
-                        buffer2.push_str(", ");
-                    }
-                }
-                write!(f, "(ReplaceK {} // {} {})", buffer1, buffer2, limit)
-            }
         }
     }
 }
 
 impl<A, T, W> Display for PushDownAutomaton<A, T, W>
     where A: Clone + Display + Hash + Ord,
-          T: Clone + Debug + Display + Eq + Ord,
+          T: Clone + Debug + Display + Eq + Hash + Ord,
           W: Clone + Display + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
