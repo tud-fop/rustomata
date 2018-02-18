@@ -70,7 +70,7 @@ pub trait Automaton<T, W>
 
     /// Returns whether the given `Configuration`  (in its internal representation) is terminal,
     /// i.e. if it is a `Configuration` in which the `Automaton` may stop and accept.
-    fn is_terminal(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>)
+    fn is_terminal(&self, c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>)
                    -> bool;
 
     /// Returns a `Map` from `Self::Key` to the matching `Transition`s (in their internal representation).
@@ -168,7 +168,7 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
             configuration_characteristic: Box::new(|c| A::extract_key(c)),
             filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal(c)),
+            accepting: Box::new(move |c| a.is_terminal(c)),
             item_map: Box::new(move |i| a.item_map(&i)),
             already_found: None
         }
@@ -210,7 +210,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             configuration_characteristic: Box::new(|c| A::extract_key(c)),
             filtered_rules: a.transition_map(),
             apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(|c| A::is_terminal(c)),
+            accepting: Box::new(move |c| a.is_terminal(c)),
             item_map: Box::new(move |i| a.item_map(&i)),
             already_found: None
         }

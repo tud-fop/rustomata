@@ -149,7 +149,7 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         }
     }
 
-    fn is_terminal(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
+    fn is_terminal(&self, c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
         c.word.is_empty() && c.storage.is_at_bottom()
     }
 

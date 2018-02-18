@@ -81,7 +81,7 @@ where
             irules.integerise(rule);
         }
 
-        let gen = strategy.create_generator_automaton(&irules, initial);
+        let gen = strategy.create_generator_automaton(irules.values(), initial, &irules);
         let fil = F::new(irules.values().iter(), &irules, &gen);
         CSRepresentation {
             generator: gen,

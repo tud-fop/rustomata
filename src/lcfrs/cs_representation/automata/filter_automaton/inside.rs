@@ -6,11 +6,13 @@ use std::rc::Rc;
 
 use lcfrs::cs_representation::bracket_fragment::BracketFragment;
 use super::{FilterAutomaton};
-use lcfrs::cs_representation::automata::{FiniteArc, FiniteAutomaton, GeneratorAutomaton};
+use lcfrs::cs_representation::automata::{StateTransition, StateInstruction, FiniteAutomaton, GeneratorAutomaton};
 
 use lcfrs::cs_representation::rule_fragments::{fragments};
 use util::{IntMap};
 use recognisable::{Search};
+
+use Transition;
 
 /// In contrast to the `NaiveFilterAutomaton`, the `FiniteAutomaton`
 /// that is produced using the `InsideFilterAutomaton` will not loop
@@ -93,9 +95,9 @@ where
         reference: &GeneratorAutomaton<BracketFragment<T>>,
     ) -> FiniteAutomaton<BracketFragment<T>, ()> {
 
-        let mut arcs: Vec<FiniteArc<usize, usize, ()>> = Vec::new();
+        let mut arcs: Vec<StateTransition<usize, usize, ()>> = Vec::new();
         for b in &self.free_brackets {
-            arcs.extend((0..word.len()+1).map(|i| FiniteArc{ from: i, label: *b, to: i, weight: () }));
+            arcs.extend((0..word.len()+1).map(|i| Transition{ instruction: StateInstruction(i, i), word: vec![*b], weight: () }));
         }
         let mut nts: BTreeSet<usize> = self.free_nts.iter().cloned().collect();
 
@@ -119,7 +121,19 @@ where
                 ).collect();
                 if pos_bs.iter().all(|matches| !matches.is_empty()){
                     if required_nts.is_empty() {
-                        arcs.extend(pos_bs.into_iter().flat_map(|v| v.into_iter().map(| (from, label, to) |FiniteArc{ from, label, to, weight: ()})));
+                        arcs.extend(
+                            pos_bs.into_iter()
+                                  .flat_map(|v| v.into_iter()
+                                                 .map(
+                                                    | (from, label, to) | 
+                                                    Transition{ 
+                                                        instruction: StateInstruction(from, to),
+                                                        word: vec![label],
+                                                        weight: ()
+                                                    }
+                                                 )
+                                  )
+                        );
                         nts.insert(n);
                     } else {
                         for nt in &nts {
@@ -140,7 +154,7 @@ where
                         nts.insert(ensures);
                         for q in 0..word.len()+1 {
                             for b in bs {
-                                arcs.push(FiniteArc{ from: q, label: *b, to: q, weight: ()});
+                                arcs.push(Transition{ instruction: StateInstruction(q, q), word: vec![*b], weight: ()});
                             }
                         }
                         succ.push(ensures);
@@ -149,7 +163,7 @@ where
                 for &(ref requires, ref bs, ensures) in with_ts.get(&a).unwrap_or(&Vec::new()) {
                     if requires.iter().all(|i| nts.contains(i)) {
                         nts.insert(ensures);
-                        arcs.extend(bs.iter().flat_map(|b| b.iter().map(|&(q,l,q_)| FiniteArc{ from: q, label: l, to: q_, weight: () })));
+                        arcs.extend(bs.iter().flat_map(|b| b.iter().map(|&(q,l,q_)| Transition{ instruction: StateInstruction(q, q_), word: vec![l], weight: () })));
                         succ.push(ensures);
                     }
                 }
@@ -197,7 +211,7 @@ mod test {
         let word: Vec<String> = "Mögen Puristen aller Musikbereiche auch die Nase rümpfen , die Zukunft der Musik liegt für viele junge Komponisten im Crossover-Stil .".split_whitespace().map(|s| s.to_string()).collect();
 
         let generator: PushDownAutomaton<BracketFragment<String>, LogDomain<f64>> =
-            PushDownGenerator.create_generator_automaton(&rules, initial);
+            PushDownGenerator.create_generator_automaton(rules.values(), initial, &rules);
         let filter = InsideFilterAutomaton::new(rules.values().iter(), &rules, &generator);
         let naivefilter = NaiveFilterAutomaton::new(rules.values().iter(), &rules, &generator);
         // eprintln!("{:?}", filter);

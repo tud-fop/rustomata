@@ -211,7 +211,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         self.initial.clone()
     }
 
-    fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
+    fn is_terminal(&self, c: &Configuration<PushDown<usize>, usize, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
     }
 

@@ -140,7 +140,7 @@ where
         &()
     }
 
-    fn is_terminal(c: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> bool {
+    fn is_terminal(&self, c: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> bool {
         c.word.is_empty() && c.storage.is_at_bottom()
             && c.storage
                 .all(&|node: &MDTreeElem<T>| -> bool { node.is_empty() })

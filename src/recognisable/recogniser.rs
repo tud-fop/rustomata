@@ -11,7 +11,7 @@ pub struct Recogniser<'a, A, C, R: Ord, K: Hash, O> {
     pub configuration_characteristic: Box<Fn(&C) -> &K>,
     pub filtered_rules: Rc<HashMap<K, BinaryHeap<R>>>,
     pub apply: Box<Fn(&C, &R) -> Vec<C>>,
-    pub accepting: Box<Fn(&C) -> bool>,
+    pub accepting: Box<Fn(&C) -> bool + 'a>,
     pub item_map: Box<Fn(&(C, Pushdown<R>)) -> O + 'a>,
     pub already_found: Option<BTreeSet<C>>,
 }

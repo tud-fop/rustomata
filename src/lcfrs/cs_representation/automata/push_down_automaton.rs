@@ -6,30 +6,49 @@ use num_traits::{One, Zero};
 use integeriser::{HashIntegeriser, Integeriser};
 
 use recognisable::{Search, WeightedSearchItem};
-use super::{FiniteArc, FiniteAutomaton};
+use super::{StateInstruction, FiniteAutomaton};
 use std::rc::Rc;
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 
+use Transition;
+
 /// An operation on a push-down.
 /// The set of ops is limited to removal, addition and replacement.
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Debug, Serialize, Deserialize, Copy)]
-pub enum Operation<S> {
+pub enum PushDownInstruction<S> {
     Nothing,
     Remove(S),
     Add(S),
     Replace(S, S),
 }
 
-/// A weighted transition of a push-down `PushDownAutomaton`.
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Debug, Serialize, Deserialize)]
-pub struct PushDownArc<T, Q, S, W> {
-    pub from: Q,
-    pub to: Q,
-    pub label: T,
-    pub op: Operation<S>,
-    pub weight: W,
+type PDSInstruction<Q, S> = (StateInstruction<Q>, PushDownInstruction<S>);
+type PDSTransition<Q, S, T, W> = Transition<PDSInstruction<Q, S>, T, W>;
+
+use Instruction;
+impl<Q: Clone + PartialEq, S: Copy + PartialEq> Instruction for (StateInstruction<Q>, PushDownInstruction<S>) {
+    type Storage = (Q, Vec<S>);
+    
+    fn apply(&self, s: (Q, Vec<S>)) -> Vec<(Q, Vec<S>)> {
+        let (q, pd) = s;
+        self.0.apply(q)
+            .into_iter()
+            .filter_map(|q| self.1.apply(&pd).map(|pd| (q, pd)))
+            .collect()
+    }
 }
+
+
+/// A weighted transition of a push-down `PushDownAutomaton`.
+// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Debug, Serialize, Deserialize)]
+// pub struct PushDownArc<T, Q, S, W> {
+//     pub from: Q,
+//     pub to: Q,
+//     pub label: T,
+//     pub op: PushDownInstruction<S>,
+//     pub weight: W,
+// }
 
 /// A deterministic push-down `PushDownAutomaton`.
 #[derive(Debug, Clone)]
@@ -39,29 +58,29 @@ where
 {
     pub initial: usize,
     pub finals: Vec<usize>,
-    pub arcs: Vec<IntMap<(usize, W, Operation<usize>)>>,
+    pub arcs: Vec<IntMap<(usize, W, PushDownInstruction<usize>)>>,
     pub labels: Rc<HashIntegeriser<T>>,
 }
 
-impl<S> Operation<S>
+impl<S> PushDownInstruction<S>
 where
     S: Copy + PartialEq,
 {
-    /// Applies a `Operation` to a push-down
+    /// Applies a `PushDownInstruction` to a push-down
     /// and returns a push-down if it succeeds.
     /// The `Clone` is only performed if the operation
     /// is applicable.
     fn apply(&self, pd: &Vec<S>) -> Option<Vec<S>> {
         match *self {
-            Operation::Nothing => Some(pd.clone()),
-            Operation::Add(s) => {
+            PushDownInstruction::Nothing => Some(pd.clone()),
+            PushDownInstruction::Add(s) => {
                 let mut pd_ = pd.clone();
                 pd_.push(s);
                 Some(pd_)
             }
-            Operation::Remove(s) => pd.split_last()
+            PushDownInstruction::Remove(s) => pd.split_last()
                 .and_then(|(&s_, f)| if s_ == s { Some(f.to_vec()) } else { None }),
-            Operation::Replace(s, s_) => pd.split_last().and_then(|(&vs, f)| {
+            PushDownInstruction::Replace(s, s_) => pd.split_last().and_then(|(&vs, f)| {
                 if vs == s {
                     let mut pd_ = f.to_vec();
                     pd_.push(s_);
@@ -81,13 +100,13 @@ where
     ///   if the push-down is empty, due to compensation of cut offs
     fn apply_with_capacity(&self, pd: &Vec<S>, cap: usize) -> Option<Vec<S>> {
         let mut succ = match *self {
-            Operation::Nothing => Some(pd.clone()),
-            Operation::Add(ref s) => {
+            PushDownInstruction::Nothing => Some(pd.clone()),
+            PushDownInstruction::Add(ref s) => {
                 let mut pd_ = pd.clone();
                 pd_.insert(0, s.clone());
                 Some(pd_)
             }
-            Operation::Remove(ref s) => {
+            PushDownInstruction::Remove(ref s) => {
                 let mut pd_ = pd.clone();
                 if pd_.is_empty() || &pd_.remove(0) == s {
                     Some(pd_)
@@ -95,7 +114,7 @@ where
                     None
                 }
             }
-            Operation::Replace(ref s, ref s_) => {
+            PushDownInstruction::Replace(ref s, ref s_) => {
                 let mut pd_ = pd.clone();
                 if pd_.is_empty() || &pd_.remove(0) == s {
                     pd_.insert(0, s_.clone());
@@ -120,7 +139,7 @@ where
     /// Creates a deterministic `PushDownAutomaton` using a sequence of transisitons.
     /// If there are multiple transitions from the same state with the same label,
     /// the last one will be used.
-    pub fn new<Q, S>(oarcs: Vec<PushDownArc<T, Q, S, W>>, oinitial: Q, ofinals: Vec<Q>) -> Self
+    pub fn new<Q, S>(oarcs: Vec<PDSTransition<Q, S, T, W>>, oinitial: Q, ofinals: Vec<Q>) -> Self
     where
         Q: Hash + Eq + Clone,
         S: Hash + Eq + Clone,
@@ -132,25 +151,27 @@ where
         let initial = states.integerise(oinitial);
 
         let mut arcs = Vec::new();
-        for PushDownArc {
-            from,
-            to,
-            label,
-            op,
+        for Transition {
+            instruction: (StateInstruction(from, to), op),
+            mut word,
             weight,
         } in oarcs
         {
+            debug_assert!(word.len() == 1);
+            
+            // Integerize instruction
             let iop = match op {
-                Operation::Nothing => Operation::Nothing,
-                Operation::Add(s) => Operation::Add(pd_symbols.integerise(s)),
-                Operation::Remove(s) => Operation::Remove(pd_symbols.integerise(s)),
-                Operation::Replace(s, s_) => {
-                    Operation::Replace(pd_symbols.integerise(s), pd_symbols.integerise(s_))
+                PushDownInstruction::Nothing => PushDownInstruction::Nothing,
+                PushDownInstruction::Add(s) => PushDownInstruction::Add(pd_symbols.integerise(s)),
+                PushDownInstruction::Remove(s) => PushDownInstruction::Remove(pd_symbols.integerise(s)),
+                PushDownInstruction::Replace(s, s_) => {
+                    PushDownInstruction::Replace(pd_symbols.integerise(s), pd_symbols.integerise(s_))
                 }
             };
-            vec_entry::<IntMap<(usize, W, Operation<usize>)>>(&mut arcs, states.integerise(from))
+
+            vec_entry::<IntMap<(usize, W, PushDownInstruction<usize>)>>(&mut arcs, states.integerise(from))
                 .insert(
-                    labels.integerise(label),
+                    labels.integerise(word.remove(0)),
                     (states.integerise(to), weight, iop),
                 );
         }
@@ -175,41 +196,48 @@ where
     pub fn approximate(self, depth: usize) -> FiniteAutomaton<T, W> {
         let mut new_states = HashIntegeriser::new();
 
-        let mut agenda: Vec<FiniteArc<(usize, Vec<usize>), usize, W>> = Vec::new();
+        let mut agenda = Vec::new();
         for (label, &(to, weight, ref op)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
             let pd = Vec::new();
             if let Some(pd_) = op.apply_with_capacity(&pd, depth) {
-                agenda.push(FiniteArc {
-                    label: *label,
-                    from: (self.initial, pd),
-                    to: (to, pd_),
-                    weight,
-                })
+                agenda.push(
+                    (
+                        self.initial,
+                        pd,
+                        *label,
+                        pd_,
+                        to,
+                        weight,
+                    )
+                )
             }
         }
 
         let transitions = Search::unweighted(
             agenda,
-            |&FiniteArc { to: (from, ref pd), .. }| {
+            |&(_, _, _, ref pd, from, _)| {
                 let mut succ = Vec::new();
                 for (label, &(to, weight, ref op)) in self.arcs.get(from).unwrap_or(&IntMap::default()) {
                     if let Some(pd_) = op.apply_with_capacity(pd, depth) {
-                        succ.push(FiniteArc {
-                            label: *label,
-                            weight,
-                            from: (from, pd.clone()),
-                            to: (to, pd_),
-                        });
+                        succ.push(
+                            (
+                                from,
+                                pd.clone(),
+                                *label,
+                                pd_,
+                                to,
+                                weight
+                            )
+                        );
                     }
                 }
                 succ
             },
         ).map(
-            |FiniteArc { from, to, label, weight }| {
-                FiniteArc {
-                    from: new_states.integerise(from),
-                    to: new_states.integerise(to),
-                    label,
+            |(q, pd, s, pd_, q_, weight)| {
+                Transition {
+                    instruction: StateInstruction(new_states.integerise((q, pd)), new_states.integerise((q_, pd_))),
+                    word: vec![s],
                     weight,
                 }
             },
@@ -236,50 +264,55 @@ where
     /// Computes the Hadamard product of a deterministic `PushDownAutomaton` and
     /// a deterministic `FiniteAutomaton`.
     pub fn intersect<W>(self, other: &FiniteAutomaton<T, W>) -> Self {
-        let mut agenda: Vec<PushDownArc<usize, (usize, usize), usize, LogDomain<f64>>> = Vec::new();
+        let mut agenda = Vec::new();
+        
         for (label, &(to, weight, op)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
             if let Some(&(fto, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
-                agenda.push(PushDownArc {
-                    from: (self.initial, other.initial),
-                    to: (to, fto),
-                    label: *label,
-                    weight: weight,
-                    op: op,
-                });
+                agenda.push(
+                    (
+                        self.initial,
+                        other.initial,
+                        op,
+                        *label,
+                        to,
+                        fto,
+                        weight
+                    )
+                );
             }
         }
 
         let mut new_arcs = Vec::new();
         let mut states = HashIntegeriser::new();
-        for PushDownArc {
-            from,
-            to,
-            label,
-            weight,
-            op,
-        } in Search::unweighted(agenda, |arc| {
-            let mut succ = Vec::new();
-            let &PushDownArc { to: (kq, fq), .. } = arc;
-            
-            for (label, &(to, weight, op)) in self.arcs.get(kq).unwrap_or(&IntMap::default()) {
-                if let Some(&(fto, _)) = other.arcs.get(fq).and_then(|m| m.get(label)) {
-                    succ.push(PushDownArc {
-                        from: (kq, fq),
-                        to: (to, fto),
-                        label: *label,
-                        op: op,
-                        weight,
-                    });
+        for (from1, from2, i, s, to1, to2, weight) in Search::unweighted(
+            agenda,
+            | &(_, _, _, _, kq, fq, _) | {
+                let mut succ = Vec::new();
+                
+                for (label, &(to, weight, op)) in self.arcs.get(kq).unwrap_or(&IntMap::default()) {
+                    if let Some(&(fto, _)) = other.arcs.get(fq).and_then(|m| m.get(label)) {
+                        succ.push(
+                            (
+                                kq,
+                                fq,
+                                op,
+                                *label,
+                                to,
+                                fto,
+                                weight
+                            )
+                        );
+                    }
                 }
+                
+                succ
             }
-            
-            succ
-        }).uniques()
+        ).uniques()
         {
-            vec_entry::<IntMap<(usize, LogDomain<f64>, Operation<usize>)>>(
+            vec_entry::<IntMap<(usize, LogDomain<f64>, PushDownInstruction<usize>)>>(
                 &mut new_arcs,
-                states.integerise(from),
-            ).insert(label, (states.integerise(to), weight, op));
+                states.integerise((from1, from2)),
+            ).insert(s, (states.integerise((to1, to2)), weight, i));
         }
 
         let mut new_finals: Vec<usize> = Vec::new();
@@ -373,7 +406,7 @@ where
             WeightedSearchItem((*q, BTreeSet::new()), LogDomain::one())
         });
 
-        let mut bwtransitions: Vec<Vec<(usize, LogDomain<f64>, Operation<usize>)>> = Vec::new();
+        let mut bwtransitions: Vec<Vec<(usize, LogDomain<f64>, PushDownInstruction<usize>)>> = Vec::new();
         for (from, farcs) in self.arcs.iter().enumerate() {
             for &(to, weight, op) in farcs.values() {
                 vec_entry(&mut bwtransitions, to).push((from, weight, op));
@@ -393,7 +426,7 @@ where
                 for &(from, weight, op) in bwtransitions.get(q).unwrap_or(&Vec::new()) {
                     let mut removeables_ = news.clone();
                     match op {
-                        Operation::Remove(i) | Operation::Replace(i, _) => {
+                        PushDownInstruction::Remove(i) | PushDownInstruction::Replace(i, _) => {
                             removeables_.insert(i);
                         }
                         _ => (),
@@ -448,7 +481,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 type SerializedRepresentation<T, W> = (
     usize,
     Vec<usize>,
-    Vec<IntMap<(usize, W, Operation<usize>)>>,
+    Vec<IntMap<(usize, W, PushDownInstruction<usize>)>>,
     HashIntegeriser<T>,
 );
 
@@ -516,6 +549,136 @@ where
     }
 }
 
+use std::ops::MulAssign;
+use automaton::Automaton;
+use Configuration;
+use std::collections::{BinaryHeap, HashMap};
+use recognisable::Item;
+impl<T, W> Automaton<T, W> for PushDownAutomaton<T, W>
+where
+    T: Clone + Eq + Hash + Ord,
+    W: Copy + One + MulAssign + Ord,
+{
+    type Key = usize;
+    type I = PDSInstruction<usize, usize>;
+    type IInt = PDSInstruction<usize, usize>;
+    type TInt = usize;
+
+    fn from_transitions<It>(_: It, _: <Self::I as Instruction>::Storage) -> Self
+    where
+        It: IntoIterator<Item = Transition<Self::I, T, W>>,
+    {
+        panic!("not implemented")
+    }
+
+    fn transitions<'a>(&'a self) -> Box<Iterator<Item = Transition<Self::I, T, W>> + 'a> {
+        let mut v = Vec::new();
+        for (from, arcs_from) in self.arcs.iter().enumerate() {
+            for (isym, &(to, weight, i)) in arcs_from {
+                v.push(
+                    Transition {
+                        word: vec![self.labels.find_value(*isym).unwrap().clone()],
+                        weight,
+                        instruction: (StateInstruction(from, to), i),
+                    }
+                )
+            }
+        }
+
+        Box::new(v.into_iter())
+    }
+
+    fn initial(&self) -> <Self::I as Instruction>::Storage {
+        (self.initial, Vec::new())
+    }
+
+    /// Maps items from the internal representation to the desired output.
+    fn item_map(
+        &self,
+        i: &Item<(usize, Vec<usize>), PDSInstruction<usize, usize>, usize, W>,
+    ) -> Item<(usize, Vec<usize>), PDSInstruction<usize, usize>, T, W> {
+        let &(
+            Configuration {
+                ref word,
+                weight,
+                ref storage,
+            },
+            ref pd,
+        ) = i;
+
+        (
+            Configuration {
+                word: word.iter()
+                    .map(|i| self.labels.find_value(*i).unwrap())
+                    .cloned()
+                    .collect(),
+                weight,
+                storage: storage.clone(),
+            },
+            pd.map(&mut |&Transition {
+                             ref word,
+                             instruction,
+                             weight,
+                         }| Transition {
+                word: word.iter()
+                    .map(|i| self.labels.find_value(*i).unwrap())
+                    .cloned()
+                    .collect(),
+                instruction,
+                weight,
+            }),
+        )
+    }
+
+    fn terminal_to_int(&self, t: &T) -> usize {
+        self.labels.find_key(t).unwrap()
+    }
+
+    fn extract_key(
+        c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
+    ) -> &Self::Key {
+        &c.storage.0
+    }
+
+    fn is_terminal(
+        &self,
+        c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
+    ) -> bool {
+        c.word.is_empty() && self.finals.contains(&c.storage.0) && c.storage.1.is_empty()
+    }
+
+    fn transition_map(
+        &self,
+    ) -> Rc<HashMap<usize, BinaryHeap<PDSTransition<usize, usize, usize, W>>>> {
+        Rc::new(
+            self.arcs
+                .iter()
+                .enumerate()
+                .map(|(from, arcs_from)| {
+                    (
+                        from,
+                        arcs_from
+                            .iter()
+                            .map(
+                                |(isymbol, &(to, weight, i))|
+                                Transition {
+                                    word: vec![*isymbol],
+                                    weight,
+                                    instruction: (StateInstruction(from, to), i),
+                                }
+                            ).collect(),
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    /// Returns the initial storage configuration (in its internal representation).
+    fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
+        (self.initial, Vec::new())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -523,32 +686,24 @@ mod test {
     #[test]
     fn pda() {
         let arcs = vec![
-            PushDownArc {
-                from: 0,
-                to: 0,
-                label: "A",
-                op: Operation::Add(0),
+            Transition {
+                instruction: (StateInstruction(0, 0), PushDownInstruction::Add(0)),
+                word: vec!["A"],
                 weight: LogDomain::new(1.0).unwrap(),
             },
-            PushDownArc {
-                from: 0,
-                to: 1,
-                label: "B",
-                op: Operation::Remove(0),
+            Transition {
+                instruction: (StateInstruction(0, 1), PushDownInstruction::Remove(0)),
+                word: vec!["B"],
                 weight: LogDomain::new(0.5).unwrap(),
             },
-            PushDownArc {
-                from: 1,
-                to: 1,
-                label: "B",
-                op: Operation::Remove(0),
+            Transition {
+                instruction: (StateInstruction(1, 1), PushDownInstruction::Remove(0)),
+                word: vec!["B"],
                 weight: LogDomain::new(1.0).unwrap(),
             },
-            PushDownArc {
-                from: 0,
-                to: 0,
-                label: "C",
-                op: Operation::Add(1),
+            Transition {
+                instruction: (StateInstruction(0, 0), PushDownInstruction::Add(1)),
+                word: vec!["C"],
                 weight: LogDomain::new(1.0).unwrap(),
             },
         ];

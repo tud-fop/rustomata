@@ -6,22 +6,17 @@ use num_traits::{One, Zero};
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 use recognisable::{Search, WeightedSearchItem};
-
-
-/// A transition of a deterministic finite automaton.
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
-pub struct FiniteArc<Q, T, W> {
-    pub from: Q,
-    pub to: Q,
-    pub label: T,
-    pub weight: W,
-}
-
 use Instruction;
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StateInstruction<Q>(Q, Q);
 
-impl<Q> Instruction for StateInstruction<Q> where Q: Clone + PartialEq {
+pub type StateTransition<Q, T, W> = Transition<StateInstruction<Q>, T, W>;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StateInstruction<Q>(pub Q, pub Q);
+
+impl<Q> Instruction for StateInstruction<Q>
+where
+    Q: Clone + PartialEq,
+{
     type Storage = Q;
     fn apply(&self, from: Q) -> Vec<Q> {
         if self.0 == from {
@@ -53,7 +48,11 @@ where
     /// of transitions.
     /// If there are multiple transitions from the same state and with the same
     /// label, the last dominates.
-    pub fn new<Q>(arcs: Vec<FiniteArc<Q, T, W>>, qinitial: Q, qfinals: Vec<Q>) -> Self
+    pub fn new<Q>(
+        arcs: Vec<Transition<StateInstruction<Q>, T, W>>,
+        qinitial: Q,
+        qfinals: Vec<Q>,
+    ) -> Self
     where
         Q: Eq + Hash + Clone,
     {
@@ -63,15 +62,15 @@ where
 
         let initial = states.integerise(qinitial);
 
-        for FiniteArc {
-            from,
-            to,
-            label,
+        for Transition {
+            mut word,
+            instruction: StateInstruction(from, to),
             weight,
         } in arcs
         {
+            debug_assert!(word.len() == 1);
             vec_entry::<IntMap<(usize, W)>>(&mut arcmap, states.integerise(from))
-                .insert(labels.integerise(label), (states.integerise(to), weight));
+                .insert(labels.integerise(word.remove(0)), (states.integerise(to), weight));
         }
 
         let finals = qfinals
@@ -89,20 +88,20 @@ where
 
     /// Creates a new deterministic FSA from intergerized transitions.
     pub fn from_integerized(
-        arcv: Vec<FiniteArc<usize, usize, W>>,
+        arcv: Vec<Transition<StateInstruction<usize>, usize, W>>,
         initial: usize,
         finals: Vec<usize>,
         labels: Rc<HashIntegeriser<T>>,
     ) -> Self {
         let mut arcs = Vec::new();
-        for FiniteArc {
-            from,
-            to,
-            label,
+        for Transition {
+            mut word,
             weight,
+            instruction: StateInstruction(from, to)
         } in arcv
         {
-            vec_entry::<IntMap<(usize, W)>>(&mut arcs, from).insert(label, (to, weight));
+            debug_assert!(word.len() == 1);
+            vec_entry::<IntMap<(usize, W)>>(&mut arcs, from).insert(word.remove(0), (to, weight));
         }
 
         FiniteAutomaton {
@@ -122,39 +121,48 @@ where
     fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
         let mut new_states = HashIntegeriser::new();
 
-        let mut initial_arcs: Vec<FiniteArc<(usize, usize), usize, LogDomain<f64>>> = Vec::new();
+        let mut initial_arcs = Vec::new();
         for (label, &(to, weight)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
             if let Some(&(to_, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
-                initial_arcs.push(FiniteArc {
-                    from: (self.initial, other.initial),
-                    to: (to, to_),
-                    label: *label,
-                    weight,
-                });
+                initial_arcs.push(
+                    (
+                        self.initial,
+                        other.initial,
+                        *label,
+                        to,
+                        to_,
+                        weight
+                    )
+                );
             }
         }
 
         let intersect_arcs =
-            Search::unweighted(initial_arcs, |&FiniteArc { to: (sto, oto), .. }| {
-                let mut successors = Vec::new();
-                for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
-                    if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
-                        successors.push(FiniteArc {
-                            from: (sto, oto),
-                            to: (to, to_),
-                            label: *label,
-                            weight,
-                        });
-                    }
+            Search::unweighted(
+                initial_arcs,
+                |&(_, _, _, sto, oto, _)| {
+                    let mut successors = Vec::new();
+                    for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
+                        if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
+                            successors.push(
+                                (
+                                    sto,
+                                    oto,
+                                    *label,
+                                    to,
+                                    to_,
+                                    weight
+                                )
+                            );
+                        }
                 }
                 successors
             }).uniques()
                 .map(
-                    |FiniteArc { from, to, label, weight }| {
-                        FiniteArc {
-                            from: new_states.integerise(from),
-                            to: new_states.integerise(to),
-                            label,
+                    |(from1, from2, label, to1, to2, weight)| {
+                        Transition {
+                            instruction: StateInstruction(new_states.integerise((from1, from2)), new_states.integerise((to1, to2))),
+                            word: vec![label],
                             weight,
                         }
                     },
@@ -191,12 +199,11 @@ where
             labels,
         } = self;
 
-        let initial_agenda =
-            if !finals.is_empty() {
-                vec![(initial, Vec::new(), LogDomain::one())]
-            } else {
-                Vec::new()
-            };
+        let initial_agenda = if !finals.is_empty() {
+            vec![(initial, Vec::new(), LogDomain::one())]
+        } else {
+            Vec::new()
+        };
 
         Box::new(
             Search::weighted(
@@ -353,9 +360,7 @@ where
         write!(
             f,
             "initial: {}, finals: {:?}\n{}",
-            &self.initial,
-            &self.finals,
-            &buffer
+            &self.initial, &self.finals, &buffer
         )
     }
 }
@@ -364,70 +369,80 @@ use std::ops::MulAssign;
 use automaton::Automaton;
 use Transition;
 use Configuration;
-use std::collections::{HashMap, BinaryHeap};
+use std::collections::{BinaryHeap, HashMap};
 use recognisable::Item;
-impl<T, W> Automaton<T, W> for FiniteAutomaton<T, W> 
+impl<T, W> Automaton<T, W> for FiniteAutomaton<T, W>
 where
     T: Clone + Eq + Hash + Ord,
-    W: Copy + One + MulAssign + Ord
+    W: Copy + One + MulAssign + Ord,
 {
     type Key = usize;
     type I = StateInstruction<usize>;
     type IInt = StateInstruction<usize>;
     type TInt = usize;
 
-    fn from_transitions<It>(transitions: It, initial: <Self::I as Instruction>::Storage) -> Self
-    where 
-        It: IntoIterator<Item=Transition<Self::I, T, W>>
+    fn from_transitions<It>(_: It, _: <Self::I as Instruction>::Storage) -> Self
+    where
+        It: IntoIterator<Item = Transition<Self::I, T, W>>,
     {
         panic!("not implemented")
     }
 
     /// Returns a boxed `Iterator` over the `Transitions` of this `Automaton`.
-    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<Self::I, T, W>> + 'a>
-    {
+    fn transitions<'a>(&'a self) -> Box<Iterator<Item = Transition<Self::I, T, W>> + 'a> {
         let mut v = Vec::new();
         for (from, arcs_from) in self.arcs.iter().enumerate() {
             for (isym, &(to, weight)) in arcs_from {
-                v.push(
-                    Transition{ 
-                        word: vec![self.labels.find_value(*isym).unwrap().clone()],
-                        weight,
-                        instruction: StateInstruction(from, to)
-                    }
-                )
+                v.push(Transition {
+                    word: vec![self.labels.find_value(*isym).unwrap().clone()],
+                    weight,
+                    instruction: StateInstruction(from, to),
+                })
             }
         }
 
-        Box::new(
-            v.into_iter()
-        )
+        Box::new(v.into_iter())
     }
 
-    fn initial(&self) -> <Self::I as Instruction>::Storage
-    {
+    fn initial(&self) -> <Self::I as Instruction>::Storage {
         self.initial
     }
 
     /// Maps items from the internal representation to the desired output.
-    fn item_map(&self, i: &Item<usize, StateInstruction<usize>, usize, W>) -> Item<usize, StateInstruction<usize>, T, W>
-    {
-        let &(Configuration{ ref word, weight, storage }, ref pd) = i;
+    fn item_map(
+        &self,
+        i: &Item<usize, StateInstruction<usize>, usize, W>,
+    ) -> Item<usize, StateInstruction<usize>, T, W> {
+        let &(
+            Configuration {
+                ref word,
+                weight,
+                storage,
+            },
+            ref pd,
+        ) = i;
 
         (
-            Configuration{
-                word: word.iter().map(|i| self.labels.find_value(*i).unwrap()).cloned().collect(),
+            Configuration {
+                word: word.iter()
+                    .map(|i| self.labels.find_value(*i).unwrap())
+                    .cloned()
+                    .collect(),
                 weight,
-                storage
+                storage,
             },
-            pd.map(
-                &mut | &Transition{ ref word, instruction, weight } |
-                Transition {
-                    word: word.iter().map(|i| self.labels.find_value(*i).unwrap()).cloned().collect(),
-                    instruction,
-                    weight
-                }
-            )
+            pd.map(&mut |&Transition {
+                             ref word,
+                             instruction,
+                             weight,
+                         }| Transition {
+                word: word.iter()
+                    .map(|i| self.labels.find_value(*i).unwrap())
+                    .cloned()
+                    .collect(),
+                instruction,
+                weight,
+            }),
         )
     }
 
@@ -435,41 +450,45 @@ where
         self.labels.find_key(t).unwrap()
     }
 
-    fn extract_key(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> &Self::Key
-    {
+    fn extract_key(
+        c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
+    ) -> &Self::Key {
         &c.storage
     }
 
-    fn is_terminal(c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>) -> bool
-    {
-        panic!("not implemented")
+    fn is_terminal(
+        &self,
+        c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
+    ) -> bool {
+        c.word.is_empty() && self.finals.contains(&c.storage)
     }
 
-    fn transition_map(&self) -> Rc<HashMap<usize, BinaryHeap<Transition<StateInstruction<usize>, usize, W>>>>
-    {
+    fn transition_map(
+        &self,
+    ) -> Rc<HashMap<usize, BinaryHeap<Transition<StateInstruction<usize>, usize, W>>>> {
         Rc::new(
-            self.arcs.iter().enumerate().map(
-                | (from, arcs_from) | {
+            self.arcs
+                .iter()
+                .enumerate()
+                .map(|(from, arcs_from)| {
                     (
                         from,
-                        arcs_from.iter().map(
-                            | (isymbol, &(to, weight)) | 
-                            Transition{ 
+                        arcs_from
+                            .iter()
+                            .map(|(isymbol, &(to, weight))| Transition {
                                 word: vec![*isymbol],
                                 weight,
-                                instruction: StateInstruction(from, to)
-                            }
-                        ).collect()
+                                instruction: StateInstruction(from, to),
+                            })
+                            .collect(),
                     )
-                }
-            ).collect()
+                })
+                .collect(),
         )
     }
 
     /// Returns the initial storage configuration (in its internal representation).
-    fn initial_int(&self) -> <Self::IInt as Instruction>::Storage
-    {
+    fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
         self.initial
     }
-
 }
