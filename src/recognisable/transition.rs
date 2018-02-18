@@ -9,7 +9,7 @@ use recognisable::{Configuration, Instruction};
 use util::integerisable::{Integerisable1, Integerisable2};
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Transition<I, T, W> {
     pub word: Vec<T>,
     pub weight: W,

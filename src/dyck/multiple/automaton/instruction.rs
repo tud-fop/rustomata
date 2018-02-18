@@ -23,7 +23,7 @@ impl<T: Ord> MDTreeElem<T> {
 
 /// Instruction of an `Automaton` that recognizes multiple Dyck languages
 /// over an alphabet of elements in `T`.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
 pub enum MultipleDyckInstruction<T: Ord> {
     /// Nondeterministic `Up` for multiple Dyck languages.
     /// Returns a tree stack for each child with a set that contains the symbol and

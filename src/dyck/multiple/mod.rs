@@ -7,16 +7,17 @@ use std::collections::BTreeSet;
 
 /// An object that represents the mutliple Dyck language of an alphabet Σ with respect to
 /// a partition of Σ.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MultipleDyckLanguage<T: Ord + Clone>(MultipleDyckAutomaton<T>);
 
 impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
     /// Represents a multiple Dyck language with respect to
     /// a partition Π = {π₁, …, πₙ} of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
-    pub fn new(p: &Partition<T>) -> Self {
+    pub fn new(p: Partition<T>) -> Self {
         MultipleDyckLanguage(MultipleDyckAutomaton::new(p))
     }
 
-    pub fn sorted<F>(p: &Partition<T>, unsorted: &BTreeSet<T>, sort: F) -> Self
+    pub fn sorted<F>(p: Partition<T>, unsorted: BTreeSet<T>, sort: F) -> Self
     where
         F: Fn(&T) -> usize,
     {
@@ -80,7 +81,7 @@ mod test {
             vec![3, 4].into_iter().collect(),
         ]).unwrap();
 
-        let mdl = MultipleDyckLanguage::new(&partition);
+        let mdl = MultipleDyckLanguage::new(partition);
 
         for dyckword in words {
             assert!(mdl.recognize(&dyckword).is_some());
@@ -120,7 +121,7 @@ mod test {
 
         let sort = | i: &usize | -> usize { if vec![1usize, 2usize].contains(i) { 1 } else { 2 } };
 
-        let l = MultipleDyckLanguage::sorted(&partition, &unsorted, sort);
+        let l = MultipleDyckLanguage::sorted(partition, unsorted, sort);
 
         let words = vec![
             vec![Open(1), Close(1), Open(2), Close(2)],

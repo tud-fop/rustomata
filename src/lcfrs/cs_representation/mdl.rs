@@ -1,0 +1,70 @@
+
+use util::partition::Partition;
+use dyck::multiple::MultipleDyckLanguage;
+use pmcfg::PMCFGRule;
+use integeriser::Integeriser;
+use super::BracketContent;
+use std::collections::BTreeSet;
+use VarT;
+
+pub fn mdl<'a, R, I, N, T, W>(lcfrs: R, integeriser: &I) -> MultipleDyckLanguage<BracketContent<T>>
+where
+    R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
+    I: Integeriser<Item = PMCFGRule<N, T, W>>,
+    T: Ord + Clone + 'a,
+    W: 'a,
+    N: 'a
+{
+    let mut partition = Vec::new();
+    let mut terminals = BTreeSet::new();
+    for rule in lcfrs {
+        let rule_id = integeriser.find_key(rule).unwrap();
+        partition.push(
+            (0..rule.composition.composition.len())
+                .map(|component| BracketContent::Component(rule_id, component))
+                .collect(),
+        );
+        partition.extend(
+            (0..rule.tail.len())
+                .map(
+                    |successor|
+                    rule.composition.composition.iter().flat_map(
+                        |component|
+                        component.iter().filter_map(
+                            |vart| 
+                            if let &VarT::Var(i, j) = vart {
+                                if i == successor { Some(BracketContent::Variable(rule_id, i, j)) }
+                                else { None }
+                            } else {
+                                None
+                            }
+                        )
+                    ).collect()
+                )
+        );
+        terminals.extend(
+            rule.composition.composition.iter().flat_map(
+                |component|
+                component.iter().filter_map(
+                    |vart| 
+                    if let &VarT::T(ref t) = vart { 
+                        Some(BracketContent::Terminal(t.clone()))
+                    } else {
+                        None
+                    }
+                )
+            )
+        );
+    }
+
+    MultipleDyckLanguage::sorted(
+        Partition::new(partition).unwrap(),
+        terminals,
+        |symbol|
+        if let &BracketContent::Variable(_, i, _) = symbol {
+            i
+        } else {
+            1
+        }
+    )
+}

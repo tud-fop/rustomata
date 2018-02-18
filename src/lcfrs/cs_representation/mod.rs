@@ -20,8 +20,10 @@ use self::bracket_fragment::BracketFragment;
 use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
-use util::{with_time};
+use util::with_time;
 
+use dyck::multiple::MultipleDyckLanguage;
+mod mdl;
 
 /// The index of a bracket in cs representation.
 /// Assumes integerized rules.
@@ -51,15 +53,14 @@ pub struct CSRepresentation<N, T, F, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: for <'a> FilterAutomaton<'a, T> + Serialize,
+    F: for<'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     generator: S::Generator,
     rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
     filter: F,
+    checker: MultipleDyckLanguage<BracketContent<T>>
 }
-
-
 
 use self::automata::GeneratorStrategy;
 
@@ -67,7 +68,7 @@ impl<N, T, F, S> CSRepresentation<N, T, F, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: for <'a> FilterAutomaton<'a, T> + Serialize,
+    F: for<'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     /// Instantiates a CS representation for some `Into<MCFG>` and `GeneratorStrategy`.
@@ -81,12 +82,14 @@ where
             irules.integerise(rule);
         }
 
+        let checker = mdl::mdl(irules.values(), &irules);
         let gen = strategy.create_generator_automaton(irules.values(), initial, &irules);
         let fil = F::new(irules.values().iter(), &irules, &gen);
         CSRepresentation {
             generator: gen,
             filter: fil,
             rules: irules,
+            checker
         }
     }
 
@@ -94,22 +97,23 @@ where
     pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N> {
         let f = self.filter.fsa(word, &self.generator);
         let g = self.generator.intersect(f).generate(beam);
-        
+
         CSGenerator {
             candidates: g,
             rules: &self.rules,
+            checker: &self.checker
         }
     }
 
     pub fn debug(&self, word: &[T], beam: Capacity) {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
-        
+
         let (g_, intersection_time) = with_time(|| self.generator.intersect(f));
         let intersection_size = g_.size();
-        
+
         eprint!(
-            "{} {} {} {} {} {} {}", 
+            "{} {} {} {} {} {} {}",
             self.rules.size(),
             word.len(),
             filter_const.num_nanoseconds().unwrap(),
@@ -119,25 +123,20 @@ where
             intersection_size
         );
 
-        let (cans, ptime) = with_time(
-            || {
-                match g_.generate(beam)
-                    .enumerate()
-                    .map(|(i, frag)| (i, BracketFragment::concat(frag)))
-                    .filter(| &(_, ref candidate) | dyck::recognize(candidate))
-                    .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(| _ | (i + 1)))
-                    .next() {
-                        Some(i) => i,   // valid candidate
-                        None => 0       // failed
-                    }
+        let (cans, ptime) = with_time(|| {
+            match g_.generate(beam)
+                .enumerate()
+                .map(|(i, frag)| (i, BracketFragment::concat(frag)))
+                .filter(|&(_, ref candidate)| dyck::recognize(candidate))
+                .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(|_| (i + 1)))
+                .next()
+            {
+                Some(i) => i, // valid candidate
+                None => 0,    // failed
             }
-        );
+        });
 
-        eprintln!(
-            " {} {}",
-            cans,
-            ptime.num_nanoseconds().unwrap()
-        );
+        eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
     }
 }
 
@@ -187,6 +186,7 @@ where
 {
     candidates: Box<Iterator<Item = Vec<BracketFragment<T>>> + 'a>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
+    checker: &'a MultipleDyckLanguage<BracketContent<T>>
 }
 
 impl<'a, N, T> Iterator for CSGenerator<'a, T, N>
@@ -200,10 +200,11 @@ where
         let &mut CSGenerator {
             ref mut candidates,
             rules,
+            checker
         } = self;
         for fragments in candidates {
             let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments);
-            if dyck::recognize(&candidate) {
+            if checker.recognize(&candidate) {
                 if let Some(derivation) = from_brackets(rules, candidate) {
                     return Some(derivation);
                 }
@@ -213,7 +214,6 @@ where
         None
     }
 }
-
 
 #[cfg(test)]
 mod test {
@@ -225,7 +225,7 @@ mod test {
     use super::LogDomain;
     use super::Derivation;
     use super::Lcfrs;
-    use super::automata::{PushDownGenerator, NaiveFilterAutomaton};
+    use super::automata::{NaiveFilterAutomaton, PushDownGenerator};
 
     #[test]
     fn csrep() {
@@ -240,10 +240,11 @@ mod test {
                 .collect(),
         );
 
-        let cs = CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, PushDownGenerator>::new(
-            PushDownGenerator,
-            grammar.clone(),
-        );
+        let cs =
+            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, PushDownGenerator>::new(
+                PushDownGenerator,
+                grammar.clone(),
+            );
         assert_eq!(cs.generate(&['A'], Capacity::Infinite).next(), Some(d1));
         assert_eq!(
             cs.generate(&['A', 'A'], Capacity::Infinite).next(),
@@ -258,8 +259,8 @@ mod test {
             vec![
                 (vec![], &grammar.rules[0]),
                 (vec![0], &grammar.rules[0]),
-                (vec![0,0], &grammar.rules[1]),
-                (vec![0,1], &grammar.rules[1]),
+                (vec![0, 0], &grammar.rules[1]),
+                (vec![0, 1], &grammar.rules[1]),
                 (vec![1], &grammar.rules[1]),
             ].into_iter()
                 .collect(),

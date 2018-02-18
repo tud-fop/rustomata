@@ -24,7 +24,7 @@ pub struct MultipleDyckAutomaton<T: Ord> {
 impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
     /// Like a multiple Dyck language, the automaton is instantiated using a `Partition`
     /// Π = { π₁, …, πₙ } of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
-    pub fn new(partition: &Partition<T>) -> Self {
+    pub fn new(partition: Partition<T>) -> Self {
         let mut heap = BinaryHeap::new();
 
         for cell in partition.collapse() {
@@ -51,7 +51,7 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
     }
 
     /// Constructs a tree-stack automaton that recognizes a sorted multiple Dyck language.
-    pub fn sorted<F>(partition: &Partition<T>, unsorted: &BTreeSet<T>, sort: F) -> Self
+    pub fn sorted<F>(partition: Partition<T>, unsorted: BTreeSet<T>, sort: F) -> Self
     where
         F: Fn(&T) -> usize,
     {
@@ -152,5 +152,33 @@ where
 
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
         self.initial()
+    }
+}
+
+use serde::{Serialize, Serializer};
+
+impl<T> Serialize for MultipleDyckAutomaton<T>
+where
+    T: Serialize + Ord,
+{
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.transitions.get(&()).unwrap().serialize(serializer)
+    }
+}
+
+use serde::{Deserialize, Deserializer};
+use std::iter::once;
+
+impl<'de, T> Deserialize<'de> for MultipleDyckAutomaton<T>
+where
+    T: Deserialize<'de> + Ord,
+{
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let t = BinaryHeap::deserialize(deserializer)?;
+        Ok(
+            MultipleDyckAutomaton{
+                transitions: Rc::new( once(((), t)).collect() )
+            }
+        )
     }
 }
