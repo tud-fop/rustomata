@@ -25,7 +25,7 @@ use util::with_time;
 use dyck::multiple::MultipleDyckLanguage;
 mod mdl;
 
-/// The index of a bracket in cs representation.
+/// The indices of a bracket in a CS representation for MCFG.
 /// Assumes integerized rules.
 #[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum BracketContent<T> {
@@ -47,7 +47,8 @@ where
     }
 }
 
-/// A cs representation of a grammar contains a generator automaton and a Dyck language.
+/// A CS representation of an LCFRS contains a `GeneratorAutomaton`, a ´FilterAutomaton`,
+/// and a `MultipleDyckLanguage` over the same bracket alphabet.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CSRepresentation<N, T, F, S>
 where
@@ -71,7 +72,7 @@ where
     F: for<'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
-    /// Instantiates a CS representation for some `Into<MCFG>` and `GeneratorStrategy`.
+    /// Instantiates a CS representation for an `LCFRS` and `GeneratorStrategy`.
     pub fn new<M>(strategy: S, grammar: M) -> Self
     where
         M: Into<Lcfrs<N, T, LogDomain<f64>>>,
@@ -105,6 +106,7 @@ where
         }
     }
 
+    /// Produces additional output to stderr that logs construction times and the parsing time.
     pub fn debug(&self, word: &[T], beam: Capacity) {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();

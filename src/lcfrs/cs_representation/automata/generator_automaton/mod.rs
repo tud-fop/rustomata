@@ -15,11 +15,13 @@ pub trait GeneratorAutomaton<T>
 where
     T: Hash + Clone + Eq
 {
+    /// Size of the automaton (the number of transitions) for debugging purposes.
     fn size(&self) -> usize;
     
     /// Borrows the internal `Integeriser` that is used to integerize `BracketFragements`.
     fn get_integeriser(&self) -> Rc<HashIntegeriser<T>>;
 
+    /// Constructs the intersection of the automaton with an unweighted finite state automaton.
     fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self
     where Self: Sized;
 

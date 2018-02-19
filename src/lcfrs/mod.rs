@@ -8,6 +8,7 @@ mod conversion;
 mod from_str;
 pub mod cs_representation;
 
+/// A linear context-free rewriting system.
 #[derive(Debug, Clone)]
 pub struct Lcfrs<N, T, W> {
     rules: Vec<PMCFGRule<N, T, W>>,

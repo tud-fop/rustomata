@@ -8,8 +8,7 @@ use util::{vec_entry, IntMap};
 use recognisable::{Search, WeightedSearchItem};
 use Instruction;
 
-pub type StateTransition<Q, T, W> = Transition<StateInstruction<Q>, T, W>;
-
+/// The instruction for state transitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StateInstruction<Q>(pub Q, pub Q);
 
@@ -27,7 +26,7 @@ where
     }
 }
 
-/// A deterministic finite automaton.
+/// A deterministic finite state automaton.
 #[derive(Clone, Debug)]
 pub struct FiniteAutomaton<T, W>
 where
@@ -117,7 +116,7 @@ impl<T> FiniteAutomaton<T, LogDomain<f64>>
 where
     T: Eq + Hash + Clone,
 {
-    /// Computes the Hadamard product of two deterministic `FiniteAutomata`.
+    /// Constructs the intersection of two deterministic `FiniteAutomata`.
     fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
         let mut new_states = HashIntegeriser::new();
 
@@ -408,7 +407,6 @@ where
         self.initial
     }
 
-    /// Maps items from the internal representation to the desired output.
     fn item_map(
         &self,
         i: &Item<usize, StateInstruction<usize>, usize, W>,
@@ -487,7 +485,6 @@ where
         )
     }
 
-    /// Returns the initial storage configuration (in its internal representation).
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
         self.initial
     }

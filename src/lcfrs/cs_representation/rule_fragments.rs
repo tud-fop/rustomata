@@ -4,6 +4,11 @@ use super::BracketContent;
 use super::bracket_fragment::BracketFragment;
 use dyck::Bracket;
 
+/// Represents a part either
+/// * before the first variable,
+/// * between two variables, or
+/// * after the last variable
+/// for each component in the composition in a LCFRS rule.
 #[derive(Debug)]
 pub enum RuleFragment<'a, N, T, W>
 where
@@ -23,8 +28,10 @@ where
     Whole(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>),
 }
 
+/// Iterates over all `RuleFragment`s in a `PMCFGRule`.
 pub struct FragmentIterator<'a, N: 'a, T: 'a, W: 'a>(&'a PMCFGRule<N, T, W>, usize, i64);
 
+/// Constructs a `FragmentIterator` for each `PMCFGRule`
 pub fn fragments<'a, N: 'a, T: 'a, W: 'a>(
     rule: &'a PMCFGRule<N, T, W>,
 ) -> FragmentIterator<'a, N, T, W> {
@@ -90,6 +97,7 @@ where
         }
     }
 
+    /// Extracts a `BracketFragment` for the construction of the `GeneratorAutomaton` and ´FilterAutomaton` in a CS characterization.
     pub fn bracket_word(
         &self,
         integerizer: &Integeriser<Item = PMCFGRule<N, T, W>>,
@@ -123,6 +131,7 @@ where
         BracketFragment(bracks)
     }
 
+    /// Lists the terminals in a `RuleFragment`.
     pub fn terminals(&self) -> &[&'a T] {
         match *self {
             Start(_, _, ref ts, _)
@@ -189,6 +198,7 @@ where
     N: Clone + PartialEq,
     T: Clone + PartialEq,
 {
+    /// Extracts the transition of the push-down automaton for the construction of the `PushDownGenerator`. 
     pub fn pds(
         &self,
         integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,

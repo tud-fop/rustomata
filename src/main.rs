@@ -21,7 +21,7 @@ mod nfa;
 mod dyck;
 mod mcfg;
 mod pmcfg;
-pub mod lcfrs;
+mod lcfrs;
 mod push_down_automaton;
 mod tree_stack_automaton;
 mod util;
@@ -40,6 +40,8 @@ pub use pmcfg::*;
 pub use push_down_automaton::*;
 pub use tree_stack_automaton::*;
 pub use mcfg::*;
+pub use dyck::*;
+pub use lcfrs::*;
 
 fn main() {
     let matches

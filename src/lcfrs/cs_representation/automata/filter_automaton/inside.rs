@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use lcfrs::cs_representation::bracket_fragment::BracketFragment;
 use super::{FilterAutomaton};
-use lcfrs::cs_representation::automata::{StateTransition, StateInstruction, FiniteAutomaton, GeneratorAutomaton};
+use lcfrs::cs_representation::automata::{StateInstruction, FiniteAutomaton, GeneratorAutomaton};
 
 use lcfrs::cs_representation::rule_fragments::{fragments};
 use util::{IntMap};
@@ -95,7 +95,7 @@ where
         reference: &GeneratorAutomaton<BracketFragment<T>>,
     ) -> FiniteAutomaton<BracketFragment<T>, ()> {
 
-        let mut arcs: Vec<StateTransition<usize, usize, ()>> = Vec::new();
+        let mut arcs: Vec<Transition<StateInstruction<usize>, usize, ()>> = Vec::new();
         for b in &self.free_brackets {
             arcs.extend((0..word.len()+1).map(|i| Transition{ instruction: StateInstruction(i, i), word: vec![*b], weight: () }));
         }

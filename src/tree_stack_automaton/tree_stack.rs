@@ -67,6 +67,7 @@ impl<A> TreeStack<A> {
         }
     }
 
+    /// Same as `push` but evaluates `a` only if needed.
     pub fn push_with<F>(mut self, n: usize, a: F) -> Result<Self, Self> where F: Fn() -> A {
         if n >= self.children.len() {
             let len = n - self.children.len() + 1;

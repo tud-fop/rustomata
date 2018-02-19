@@ -10,6 +10,7 @@ pub struct Derivation<'a, N: 'a, T: 'a>(
     pub BTreeMap<Vec<usize>, &'a PMCFGRule<N, T, LogDomain<f64>>>,
 );
 
+/// Displays a derivation tree Haskell-style.
 impl<'a, N: 'a + fmt::Display, T: 'a + fmt::Display> fmt::Debug for Derivation<'a, N, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buffer = String::new();
@@ -62,6 +63,7 @@ fn descend_terminals<'a, N, T>(
     }
 }
 
+/// Implements the export format for constituent trees.
 impl<'a, N, T> fmt::Display for Derivation<'a, N, T>
 where
     N: 'a + fmt::Display + ToString,

@@ -20,6 +20,7 @@ pub trait FilterAutomaton<'a, T: 'a>
 where
     T: Hash + Eq + Clone,
 {
+    /// Constructor.
     fn new<N: 'a, W: 'a, I, R>(
         grammar_rules: R,
         grammar: &I,
@@ -31,6 +32,7 @@ where
         R: Iterator<Item=&'a PMCFGRule<N, T, W>>,
         I: Integeriser<Item=PMCFGRule<N, T, W>>;
 
+    /// Extracts an unweighted finite state automaton from the object.
     fn fsa(
         &self,
         word: &[T],

@@ -14,7 +14,7 @@ use util::{vec_entry, IntMap};
 use Transition;
 
 /// An operation on a push-down.
-/// The set of ops is limited to removal, addition and replacement.
+/// The set of ops is limited to removal, addition and replacement of a single symbol.
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Debug, Serialize, Deserialize, Copy)]
 pub enum PushDownInstruction<S> {
     Nothing,
@@ -38,17 +38,6 @@ impl<Q: Clone + PartialEq, S: Copy + PartialEq> Instruction for (StateInstructio
             .collect()
     }
 }
-
-
-/// A weighted transition of a push-down `PushDownAutomaton`.
-// #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Debug, Serialize, Deserialize)]
-// pub struct PushDownArc<T, Q, S, W> {
-//     pub from: Q,
-//     pub to: Q,
-//     pub label: T,
-//     pub op: PushDownInstruction<S>,
-//     pub weight: W,
-// }
 
 /// A deterministic push-down `PushDownAutomaton`.
 #[derive(Debug, Clone)]

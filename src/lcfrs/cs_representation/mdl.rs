@@ -7,6 +7,7 @@ use super::BracketContent;
 use std::collections::BTreeSet;
 use VarT;
 
+/// Construction of a sorted `MultipleDycklanguage` for the CS characterization of an LCFRS. 
 pub fn mdl<'a, R, I, N, T, W>(lcfrs: R, integeriser: &I) -> MultipleDyckLanguage<BracketContent<T>>
 where
     R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,

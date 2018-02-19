@@ -11,6 +11,9 @@ pub enum MDTreeElem<T> {
 }
 
 impl<T: Ord> MDTreeElem<T> {
+    /// Returns true, if
+    /// * the node is the root, or
+    /// * the node is (None, ∅).
     pub fn is_empty(&self) -> bool {
         match *self {
             MDTreeElem::Root => true,
