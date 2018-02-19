@@ -1,5 +1,5 @@
-use super::{VarT, Composition};
-use std::collections::BTreeMap;
+use super::*;
+use std::collections::{BTreeMap, LinkedList};
 
 pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>) -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>) {
     let mut identified_tree_map = BTreeMap::new();
@@ -35,6 +35,63 @@ pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<
     }
 
     (identified_tree_map, terminal_map)
+}
+
+pub fn to_negra_vector<H: Clone + ToString, T: Clone + ToString, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>) -> Vec<(String, String, usize)> {
+    let (term_map, nonterminal_map) = to_term(&tree_map);
+    let (identified_tree_map, terminal_map) = identify_terminals(&term_map);
+    let evaluated_compos = evaluate(&identified_tree_map);
+
+    let mut negra_vector = Vec::new();
+    let mut rule_queue = LinkedList::new();
+    let mut finished_map = BTreeMap::new();
+    let mut rule_counter = 0;
+
+    for component in evaluated_compos.composition {
+        for variable in component {
+            match variable {
+                VarT::Var(_, _) => {
+                    panic!("Nonterminals must not appear in a fully evaluated configuration!");
+                },
+                VarT::T(terminal_id) => {
+                    let terminal_symbol = terminal_map.get(&terminal_id).unwrap();
+                    let ref address = terminal_id.0;
+                    let rule_label = nonterminal_map.get(address).unwrap();
+                    let rule_number = get_rule_number(address, &mut rule_queue, &finished_map,
+                                                      &mut rule_counter);
+                    negra_vector.push((terminal_symbol.to_string(), rule_label.to_string(), rule_number));
+                }
+            }
+        }
+    }
+
+    while let Some((address, rule_number)) = rule_queue.pop_front() {
+        let mut parent_address = address.clone();
+
+        let parent_number = if let None = parent_address.pop() {
+            0
+        } else {
+            let number = get_rule_number(&parent_address, &mut rule_queue, &finished_map, &mut rule_counter);
+            finished_map.insert(parent_address.clone(), number);
+            number
+        };
+
+        let rule_label = nonterminal_map.get(&address).unwrap();
+        negra_vector.push((rule_number.to_string(), rule_label.to_string(), parent_number));
+    }
+
+    negra_vector
+}
+
+fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &BTreeMap<Vec<usize>, usize>, rule_counter: &mut usize) -> usize {
+    if let Some(rule_number) = finished_map.get(address) {
+        return *rule_number
+    }
+
+    let rule_number = *rule_counter;
+    *rule_counter = *rule_counter + 1;
+    rule_queue.push_back((address.clone(), rule_number));
+    rule_number
 }
 
 #[cfg(test)]
