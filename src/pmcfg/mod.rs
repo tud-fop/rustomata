@@ -282,48 +282,12 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
-        term_map.insert(vec![], Composition::from(vec![
-            vec![Var(0, 0), Var(1, 0), Var(0, 1), Var(1, 1)]
-        ]));
-        term_map.insert(vec![0], Composition::from(vec![
-            vec![Var(1, 0), Var(0, 0)],
-            vec![Var(2, 0), Var(0, 1)]
-        ]));
-        term_map.insert(vec![0, 0], Composition::from(vec![
-            vec![Var(1, 0), Var(0, 0)],
-            vec![Var(2, 0), Var(0, 1)]
-        ]));
-        term_map.insert(vec![0, 0, 0], Composition::from(vec![
-            vec![],
-            vec![]
-        ]));
-        term_map.insert(vec![0, 0, 1], Composition::from(vec![
-            vec![T('a')]
-        ]));
-        term_map.insert(vec![0, 0, 2], Composition::from(vec![
-            vec![T('c')]
-        ]));
-        term_map.insert(vec![0, 1], Composition::from(vec![
-            vec![T('a')]
-        ]));
-        term_map.insert(vec![0, 2], Composition::from(vec![
-            vec![T('c')]
-        ]));
-        term_map.insert(vec![1], Composition::from(vec![
-            vec![Var(1, 0), Var(0, 0)],
-            vec![Var(2, 0), Var(0, 1)]
-        ]));
-        term_map.insert(vec![1, 0], Composition::from(vec![
-            vec![],
-            vec![]
-        ]));
-        term_map.insert(vec![1, 1], Composition::from(vec![
-            vec![T('b')]
-        ]));
-        term_map.insert(vec![1, 2], Composition::from(vec![
-            vec![T('d')]
-        ]));
+        let tree_map = example_tree_map();
+        let mut term_map = BTreeMap::new();
+
+        for (address, PMCFGRule { head: _, tail: _, composition, weight: _ }) in tree_map {
+            term_map.insert(address, composition);
+        }
 
         let expanded_compos = Composition::from(vec![
             vec![T('a'), T('a'), T('b'), T('c'), T('c'), T('d')]
@@ -348,43 +312,37 @@ mod tests {
         evaluate(&term_map);
     }
 
-    pub fn to_dummy_pmcfg_rule<N, T>(head: N, composition: Composition<T>) -> PMCFGRule<N, T, usize> {
-        PMCFGRule {
-            head,
-            tail: vec![],
-            composition,
-            weight: 0,
-        }
-    }
-
     #[test]
     fn test_to_term() {
-        let compos0 = Composition::from(vec![
-            vec![Var(0, 0), T("a"), Var(0, 1), T("b")]
-        ]);
-        let compos1 = Composition::from(vec![
-            vec![Var(1, 0)],
-            vec![T("c")]
-        ]);
-        let compos2 = Composition::from(vec![
-            vec![],
-            vec![]
-        ]);
+        let mut tree_map: BTreeMap<_, PMCFGRule<String, char, usize>> = BTreeMap::new();
 
-        let mut tree_map = BTreeMap::new();
-        tree_map.insert(vec![], to_dummy_pmcfg_rule("A", compos0.clone()));
-        tree_map.insert(vec![0], to_dummy_pmcfg_rule("B", compos1.clone()));
-        tree_map.insert(vec![0, 1], to_dummy_pmcfg_rule("C", compos2.clone()));
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "A -> [[Var 0 0, T a, Var 0 1, T b]] (B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "B -> [[Var 1 0], [T c]] (C) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "C -> [[], []] () # 1"
+        ).unwrap());
 
         let mut term_map = BTreeMap::new();
-        term_map.insert(vec![], compos0);
-        term_map.insert(vec![0], compos1);
-        term_map.insert(vec![0, 1], compos2);
+        term_map.insert(vec![], Composition::from(vec![
+            vec![Var(0, 0), T('a'), Var(0, 1), T('b')]
+        ]));
+        term_map.insert(vec![0], Composition::from(vec![
+            vec![Var(1, 0)],
+            vec![T('c')]
+        ]));
+        term_map.insert(vec![0, 1], Composition::from(vec![
+            vec![],
+            vec![]
+        ]));
 
         let mut head_map = BTreeMap::new();
-        head_map.insert(vec![], "A");
-        head_map.insert(vec![0], "B");
-        head_map.insert(vec![0, 1], "C");
+        head_map.insert(vec![], String::from("A"));
+        head_map.insert(vec![0], String::from("B"));
+        head_map.insert(vec![0, 1], String::from("C"));
 
         assert_eq!((term_map, head_map), to_term(&tree_map));
     }
