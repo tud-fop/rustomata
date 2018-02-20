@@ -235,6 +235,50 @@ pub fn to_term<K, H, T, W>(tree_map: &BTreeMap<K, PMCFGRule<H, T, W>>)
 mod tests {
     use super::*;
     use self::VarT::{Var, T};
+    use std::str::FromStr;
+
+    pub fn example_tree_map() -> BTreeMap<Vec<usize>, PMCFGRule<String, char, usize>> {
+        let mut tree_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (A, a, c) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "A -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (A, a, c) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 0], PMCFGRule::from_str(
+            "A -> [[], []] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 1], PMCFGRule::from_str(
+            "a -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 2], PMCFGRule::from_str(
+            "c -> [[T c]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "a -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 2], PMCFGRule::from_str(
+            "c -> [[T c]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (B, b, d) # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "B -> [[], []] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 1], PMCFGRule::from_str(
+            "b -> [[T b]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 2], PMCFGRule::from_str(
+            "d -> [[T d]] () # 1"
+        ).unwrap());
+
+        tree_map
+    }
 
     #[test]
     fn test_evaluate() {
