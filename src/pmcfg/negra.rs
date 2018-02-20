@@ -1,7 +1,10 @@
 use super::*;
 use std::collections::{BTreeMap, LinkedList};
 
-pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>) -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>) {
+pub fn identify_terminals<A>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>)
+        -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>)
+    where A: Clone,
+{
     let mut identified_tree_map = BTreeMap::new();
     let mut terminal_map = BTreeMap::new();
 
@@ -37,8 +40,13 @@ pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<
     (identified_tree_map, terminal_map)
 }
 
-pub fn to_negra_vector<H: Clone + ToString, T: Clone + ToString, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>) -> Vec<(String, String, usize)> {
+pub fn to_negra_vector<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>)
+        -> Vec<(String, String, usize)>
+    where H: Clone + ToString,
+          T: Clone + ToString,
+{
     let (term_map, nonterminal_map) = to_term(&tree_map);
+    // TODO: Enforce negra grammar restrictions
     let (identified_tree_map, terminal_map) = identify_terminals(&term_map);
     let evaluated_compos = evaluate(&identified_tree_map);
 
@@ -83,7 +91,9 @@ pub fn to_negra_vector<H: Clone + ToString, T: Clone + ToString, W>(tree_map: &B
     negra_vector
 }
 
-fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &BTreeMap<Vec<usize>, usize>, rule_counter: &mut usize) -> usize {
+fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &BTreeMap<Vec<usize>, usize>, rule_counter: &mut usize)
+        -> usize
+{
     if let Some(rule_number) = finished_map.get(address) {
         return *rule_number
     }

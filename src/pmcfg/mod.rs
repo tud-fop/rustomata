@@ -163,11 +163,16 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
     }
 }
 
-pub fn evaluate<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>) -> Composition<T> {
+pub fn evaluate<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>)
+        -> Composition<T>
+{
     evaluate_pos(term_map, vec![])
 }
 
-pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address: Vec<usize>) -> Composition<T> {
+pub fn evaluate_pos<T>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address: Vec<usize>)
+        -> Composition<T>
+    where T: Clone + fmt::Debug,
+{
     let unexpanded_composition = &term_map.get(&address).unwrap().composition;
     let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
     let mut expanded_composition = Vec::new();
@@ -209,7 +214,11 @@ pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Compo
     Composition::from(expanded_composition)
 }
 
-pub fn to_term<K: Clone + cmp::Ord, H: Clone, T: Clone, W>(tree_map: &BTreeMap<K, PMCFGRule<H, T, W>>) -> (BTreeMap<K, Composition<T>>, BTreeMap<K, H>) {
+pub fn to_term<K, H, T, W>(tree_map: &BTreeMap<K, PMCFGRule<H, T, W>>)
+        -> (BTreeMap<K, Composition<T>>, BTreeMap<K, H>)
+    where K: Clone + cmp::Ord,
+          H: Clone, T: Clone,
+{
     let mut term_map = BTreeMap::new();
     let mut head_map = BTreeMap::new();
 
