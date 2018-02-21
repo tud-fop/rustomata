@@ -222,7 +222,8 @@ where
                 }
                 succ
             },
-        ).map(
+        ).uniques()
+         .map(
             |(q, pd, s, pd_, q_, weight)| {
                 Transition {
                     instruction: StateInstruction(new_states.integerise((q, pd)), new_states.integerise((q_, pd_))),

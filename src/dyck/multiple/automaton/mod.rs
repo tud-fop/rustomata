@@ -18,7 +18,8 @@ type MDTransition<T> = Transition<MultipleDyckInstruction<T>, Bracket<T>, u8>;
 /// over symbols in `T`.
 #[derive(Debug)]
 pub struct MultipleDyckAutomaton<T: Ord> {
-    transitions: Rc<HashMap<(), BinaryHeap<MDTransition<T>>>>,
+    transitions:
+        Rc<HashMap<(), BinaryHeap<Transition<MultipleDyckInstruction<T>, Bracket<T>, u8>>>>,
 }
 
 impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
@@ -175,10 +176,8 @@ where
 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let t = BinaryHeap::deserialize(deserializer)?;
-        Ok(
-            MultipleDyckAutomaton{
-                transitions: Rc::new( once(((), t)).collect() )
-            }
-        )
+        Ok(MultipleDyckAutomaton {
+            transitions: Rc::new(once(((), t)).collect()),
+        })
     }
 }
