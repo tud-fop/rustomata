@@ -8,7 +8,7 @@ use rustomata::push_down_automaton::{PushDownAutomaton, PushState};
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
-use rustomata::approximation::equivalence_classes::EquivalenceClass;
+use rustomata::approximation::equivalence_classes::EquivalenceRelation;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -125,7 +125,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut classes_file = File::open(classes_file_name).unwrap();
                     let mut classes_string = String::new();
                     let _ = classes_file.read_to_string(&mut classes_string);
-                    let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                    let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
 
                     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
                     let rlb = RlbElement::new(&f);
@@ -155,7 +155,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut classes_file = File::open(classes_file_name).unwrap();
                     let mut classes_string = String::new();
                     let _ = classes_file.read_to_string(&mut classes_string);
-                    let e: EquivalenceClass<String, String> = classes_string.parse().unwrap();
+                    let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
 
                     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
                     let rlb = RlbElement::new(&f);

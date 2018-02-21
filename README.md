@@ -111,7 +111,7 @@ Creates both automata and recognizes words from stdin using the latter.
 ```
 S [S    ]
 N [A, B ]
-R [*    ]
+R *
 ```
 
 with `*` matching every non-terminal not included.

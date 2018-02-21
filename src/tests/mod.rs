@@ -2,7 +2,7 @@ use recognisable::*;
 use pmcfg::*;
 use cfg::*;
 use approximation::ApproximationStrategy;
-use approximation::equivalence_classes::EquivalenceClass;
+use approximation::equivalence_classes::EquivalenceRelation;
 use approximation::relabel::RlbElement;
 use approximation::tts::TTSElement;
 use push_down_automaton::*;
@@ -132,7 +132,7 @@ fn test_relabel_pushdown() {
     e_string.push_str("N [A, B]\n");
     e_string.push_str("R [*]\n");
 
-    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
+    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
 
     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
     let rlb = RlbElement::new(&f);
@@ -214,9 +214,9 @@ fn test_relabel_check() {
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
-    e_string.push_str("R [*]\n");
+    e_string.push_str("R *\n");
 
-    let e: EquivalenceClass<String, String> = e_string.parse().unwrap();
+    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
 
     let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
     let rlb = RlbElement::new(&f);

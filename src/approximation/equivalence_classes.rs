@@ -8,30 +8,43 @@ use nom::{IResult, is_space};
 use util::parsing::*;
 
 /// Structure containing the elements of type `A` in a equivalence class of type `B`
-pub struct EquivalenceSet<A, B>{
+pub struct EquivalenceClass<A, B>{
     pub key: B,
-    pub set: Vec<A>,
+    pub set: Option<Vec<A>>,
 }
 
 /// A struct containing a remapping of elements of type `A` into their respective equivalence classes of type `B`.
-#[derive(Clone)]
-pub struct EquivalenceClass<A, B>{
+#[derive(Clone, Debug)]
+pub struct EquivalenceRelation<A, B>
+    where A: Eq + Hash,
+{
     pub map: HashMap<A, B>,
     pub default: B,
 }
 
-impl<A: Clone + Eq + Hash, B: Clone + Eq + Hash> EquivalenceClass<A, B> {
-    pub fn new(map: HashMap<B, Vec<A>>, default: B) -> EquivalenceClass<A, B> {
+impl<A, B> PartialEq for EquivalenceRelation<A, B>
+    where A: Eq + Hash,
+          B: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.default == other.default
+            && self.map.keys().all(|k| self.map[k] == other.map[k])
+            && other.map.keys().all(|k| self.map[k] == other.map[k])
+    }
+}
+
+impl<A: Eq + Hash, B: Clone + Eq + Hash> EquivalenceRelation<A, B> {
+    pub fn new(map: HashMap<B, Vec<A>>, default: B) -> Self {
         let mut rmap = HashMap::new();
         for (class_name, members) in map {
             for value in members {
                 match rmap.entry(value) {
-                    Entry::Vacant(e) => { e.insert(class_name.clone()); },
+                    Entry::Vacant(v) => { v.insert(class_name.clone()); },
                     Entry::Occupied(_) => panic!("The value occurs more than once in the equivalence class"),
                 }
             }
         }
-        EquivalenceClass {
+        EquivalenceRelation {
             map: rmap,
             default: default,
         }
@@ -46,7 +59,7 @@ impl<A: Clone + Eq + Hash, B: Clone + Eq + Hash> EquivalenceClass<A, B> {
     }
 }
 
-impl <A: Clone + Eq + Hash + FromStr, B: Clone + Eq + Hash + FromStr> FromStr for EquivalenceClass<A, B>
+impl <A, B> FromStr for EquivalenceRelation<A, B>
     where A: Clone + Eq + Hash + FromStr,
           A::Err: Debug,
           B: Clone + Eq + Hash + FromStr,
@@ -62,21 +75,19 @@ impl <A: Clone + Eq + Hash + FromStr, B: Clone + Eq + Hash + FromStr> FromStr fo
         };
         for l in s.lines() {
             if !l.is_empty() {
-                let a: EquivalenceSet<A, B> = try!(l.trim().parse());
-                if !map.contains_key(&a.key) {
-                    map.insert(a.key.clone(), a.set.clone());
+                match l.trim().parse()? {
+                    EquivalenceClass { key, set: Some(set) } => { map.insert(key, set); },
+                    EquivalenceClass { key, set: None } => { default = key; },
                 }
-                default = a.key.clone();
-
             }
         }
 
-        Ok(EquivalenceClass::new(map, default))
+        Ok(EquivalenceRelation::new(map, default))
 
     }
 }
 
-impl <A, B> FromStr for EquivalenceSet<A, B>
+impl <A, B> FromStr for EquivalenceClass<A, B>
     where A: FromStr,
           A::Err: Debug,
           B: FromStr,
@@ -92,7 +103,7 @@ impl <A, B> FromStr for EquivalenceSet<A, B>
     }
 }
 
-fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceSet<A, B>>
+fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceClass<A, B>>
     where A: FromStr,
           A::Err: Debug,
           B: FromStr,
@@ -102,8 +113,16 @@ fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceSet<A, B>>
         input,
         key: parse_token >>
             take_while!(is_space) >>
-        set: parse_heap >>
-            (EquivalenceSet {
+            set: alt!(
+                do_parse!(
+                    tag!("*") >> (None)
+                )
+                    |
+                do_parse!(
+                    the_set: parse_heap >> (Some(the_set))
+                )
+            ) >>
+            (EquivalenceClass {
                 key: key,
                 set: set,
             })
@@ -115,4 +134,16 @@ fn parse_heap<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
           A::Err: Debug,
 {
     parse_vec(input, parse_token, "[", "]", ",")
+}
+
+#[test]
+fn test_equivalence_relation() {
+
+    let rel_parse: EquivalenceRelation<usize, usize> = "0 [0, 1]\n1 [2, 3]\n3 *".to_string().parse().unwrap();
+    let mut map = HashMap::new();
+    map.insert(0usize, vec![0usize, 1usize]);
+    map.insert(1usize, vec![2usize, 3usize]);
+    let rel = EquivalenceRelation::new(map, 3usize);
+
+    assert_eq!(rel_parse, rel);
 }

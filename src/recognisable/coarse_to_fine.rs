@@ -150,7 +150,7 @@ macro_rules! coarse_to_fine_recogniser {
 fn test_coarse_to_fine_recogniser() {
     use approximation::relabel::RlbElement;
     use approximation::tts::TTSElement;
-    use approximation::equivalence_classes::EquivalenceClass;
+    use approximation::equivalence_classes::EquivalenceRelation;
     use log_domain::LogDomain;
     use pmcfg::{PMCFG, PMCFGRule};
     use tree_stack_automaton::{PosState, TreeStackAutomaton};
@@ -167,7 +167,7 @@ fn test_coarse_to_fine_recogniser() {
 
     let tts = TTSElement::new();
 
-    let e: EquivalenceClass<String, String> = "0 [A, B]\n1 [*]".parse().unwrap();
+    let e: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
     let f = |ps: &PosState<_>| ps.map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| e.project(nt)));
     let rlb = RlbElement::new(&f);
 
