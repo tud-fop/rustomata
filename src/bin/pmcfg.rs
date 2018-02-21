@@ -1,54 +1,55 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use pmcfg::PMCFG;
-use recognisable::Recognisable;
-use tree_stack_automaton::TreeStackAutomaton;
+use rustomata::pmcfg::PMCFG;
+use rustomata::recognisable::Recognisable;
+use rustomata::tree_stack_automaton::TreeStackAutomaton;
 
 use std::io::{self, Read};
 use std::fs::File;
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("mcfg")
-    .about("functions related to multiple context-free grammars")
-    .subcommand(
-        SubCommand::with_name("parse")
-            .about("parses from stdin with a multiple context-free grammar")
-            .arg(
-                Arg::with_name("grammar")
-                    .help("grammar file to use")
-                    .index(1)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name("number-of-parses")
-                    .help("number of parses that should be returned")
-                    .short("n")
-                    .long("number")
-                    .value_name("number-of-parses")
-                    .default_value("1")
-                    .required(false),
-            )
-            .arg(
-                Arg::with_name("beam-width")
-                    .help("maximum number of frontier nodes in the search space")
-                    .short("b")
-                    .long("beam")
-                    .value_name("beam-width")
-                    .required(false),
-            ),
-    )
-    .subcommand(
-        SubCommand::with_name("automaton")
-            .about(
-                "constructs a tree-stack automaton from the given multiple context-free grammar",
-            )
-            .arg(
-                Arg::with_name("grammar")
-                    .help("grammar file to use")
-                    .index(1)
-                    .required(true),
-            ),
-    )
+        .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
+        .about("functions related to multiple context-free grammars")
+        .subcommand(
+            SubCommand::with_name("parse")
+                .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
+                .about("parses from stdin with a multiple context-free grammar")
+                .arg(
+                    Arg::with_name("grammar")
+                        .help("grammar file to use")
+                        .index(1)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("number-of-parses")
+                        .help("number of parses that should be returned")
+                        .short("n")
+                        .long("number")
+                        .value_name("number-of-parses")
+                        .default_value("1")
+                        .required(false),
+                )
+                .arg(
+                    Arg::with_name("beam-width")
+                        .help("maximum number of frontier nodes in the search space")
+                        .short("b")
+                        .long("beam")
+                        .value_name("beam-width")
+                        .required(false),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("automaton")
+                .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
+                .about("constructs a tree-stack automaton from the given multiple context-free grammar")
+                .arg(
+                    Arg::with_name("grammar")
+                        .help("grammar file to use")
+                        .index(1)
+                        .required(true),
+                ),
+        )
 }
 
 pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {

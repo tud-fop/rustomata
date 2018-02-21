@@ -8,13 +8,8 @@ pub mod equivalence_classes;
 pub mod relabel;
 pub mod tts;
 
-pub mod cli;
-
 use recognisable::{Instruction, Transition};
 use recognisable::automaton::Automaton;
-
-use self::relabel::*;
-use self::tts::*;
 
 
 /// Object defining the strategies used for `approximation`

@@ -1,18 +1,21 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use pmcfg::PMCFG;
-use cfg::CFG;
-use recognisable::Recognisable;
-use tree_stack_automaton::TreeStackAutomaton;
-use push_down_automaton::{PushDownAutomaton, PushState};
-use approximation::{ApproximationStrategy, RlbElement, TTSElement};
-use approximation::equivalence_classes::EquivalenceClass;
+use rustomata::pmcfg::PMCFG;
+use rustomata::cfg::CFG;
+use rustomata::recognisable::Recognisable;
+use rustomata::tree_stack_automaton::TreeStackAutomaton;
+use rustomata::push_down_automaton::{PushDownAutomaton, PushState};
+use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::relabel::RlbElement;
+use rustomata::approximation::tts::TTSElement;
+use rustomata::approximation::equivalence_classes::EquivalenceClass;
 
 use std::io::{self, Read};
 use std::fs::File;
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("approximation")
+        .author("Max Korn <max.korn@tu-dresden.de>")
         .about("functions related to single approximations")
         .subcommand(
             SubCommand::with_name("relabel")

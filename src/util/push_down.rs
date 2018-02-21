@@ -1,5 +1,5 @@
 use integeriser::{HashIntegeriser, Integeriser};
-use integerisable::Integerisable1;
+use util::integerisable::Integerisable1;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;

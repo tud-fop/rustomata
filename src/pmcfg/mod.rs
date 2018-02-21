@@ -6,8 +6,6 @@ use std::marker::PhantomData;
 mod from_str;
 // mod relabel;
 
-pub mod cli;
-
 /// Variable or terminal symbol in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum VarT<T> {
@@ -247,7 +245,7 @@ pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use VarT::{Var, T};
+    use self::VarT::{Var, T};
 
     #[test]
     fn test_evaluate() {

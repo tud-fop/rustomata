@@ -3,6 +3,14 @@ name = "rustomata"
 version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 
+[lib]
+name = "rustomata"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustomata"
+path = "src/bin/main.rs"
+
 [dependencies]
 clap = "2.19"
 integeriser = { git = "https://github.com/tud-fop/rust-integeriser.git" }
