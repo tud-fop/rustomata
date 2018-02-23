@@ -176,9 +176,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("#BOS {} 0 0 0 0", sentence_id + 1);
                                 print!("{}", derivation);
-                                println!("#EOS {}", sentence_id + 1);
                             }
                         }
                     }
