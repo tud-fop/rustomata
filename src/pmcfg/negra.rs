@@ -1,8 +1,20 @@
 use super::*;
 use std::collections::{BTreeMap, VecDeque};
 
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct TermId {
+    address: Vec<usize>,
+    compos_var_pos: usize,
+}
+
+impl From<(Vec<usize>, usize)> for TermId {
+    fn from((address, compos_var_pos): (Vec<usize>, usize)) -> TermId {
+        TermId { address, compos_var_pos }
+    }
+}
+
 pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
-        -> (GornTree<Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>)
+        -> (GornTree<Composition<TermId>>, BTreeMap<TermId, A>)
     where A: Clone,
 {
     let mut identified_tree_map = GornTree::new();
@@ -22,7 +34,7 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
                         identified_compon.push(VarT::Var(x, y));
                     },
                     &VarT::T(ref terminal) => {
-                        let terminal_id = (address.clone(), compos_var_pos);
+                        let terminal_id = TermId { address: address.clone(), compos_var_pos };
                         identified_compon.push(VarT::T(terminal_id.clone()));
                         terminal_map.insert(terminal_id, terminal.clone());
                     },
@@ -79,7 +91,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
                 },
                 VarT::T(terminal_id) => {
                     let terminal_symbol = terminal_map.get(&terminal_id).unwrap();
-                    let ref address = terminal_id.0;
+                    let ref address = terminal_id.address;
                     let rule_label = nonterminal_map.get(address).unwrap();
                     let rule_number = get_rule_number(address, &mut rule_queue, &finished_map,
                                                       &mut rule_counter);
@@ -141,21 +153,21 @@ mod tests {
 
         let mut identified_tree_map = GornTree::new();
         identified_tree_map.insert(vec![], Composition::from(vec![
-            vec![Var(0, 0), T((vec![], 1)), Var(0, 1), T((vec![], 3))]
+            vec![Var(0, 0), T(TermId::from((vec![], 1))), Var(0, 1), T(TermId::from((vec![], 3)))]
         ]));
         identified_tree_map.insert(vec![0], Composition::from(vec![
             vec![Var(1, 0)],
-            vec![T((vec![0], 1))]
+            vec![T(TermId::from((vec![0], 1)))]
         ]));
         identified_tree_map.insert(vec![0, 1], Composition::from(vec![
-            vec![T((vec![0, 1], 0))]
+            vec![T(TermId::from((vec![0, 1], 0)))]
         ]));
 
         let mut terminal_map = BTreeMap::new();
-        terminal_map.insert((vec![], 1), "a");
-        terminal_map.insert((vec![], 3), "b");
-        terminal_map.insert((vec![0], 1), "c");
-        terminal_map.insert((vec![0, 1], 0), "d");
+        terminal_map.insert(TermId::from((vec![], 1)), "a");
+        terminal_map.insert(TermId::from((vec![], 3)), "b");
+        terminal_map.insert(TermId::from((vec![0], 1)), "c");
+        terminal_map.insert(TermId::from((vec![0, 1], 0)), "d");
 
         assert_eq!((identified_tree_map, terminal_map), identify_terminals(&tree_map));
     }
