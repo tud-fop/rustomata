@@ -1,12 +1,12 @@
-use std::cmp;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+use util::tree::GornTree;
+
 mod from_str;
 // mod relabel;
-
 pub mod negra;
 
 /// Variable or terminal symbol in an MCFG.
@@ -163,13 +163,13 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
     }
 }
 
-pub fn evaluate<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>)
+pub fn evaluate<T: Clone + fmt::Debug>(term_map: &GornTree<Composition<T>>)
         -> Composition<T>
 {
     evaluate_pos(term_map, vec![])
 }
 
-pub fn evaluate_pos<T>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address: Vec<usize>)
+pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
         -> Composition<T>
     where T: Clone + fmt::Debug,
 {
@@ -214,13 +214,12 @@ pub fn evaluate_pos<T>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address:
     Composition::from(expanded_composition)
 }
 
-pub fn to_term<K, H, T, W>(tree_map: &BTreeMap<K, PMCFGRule<H, T, W>>)
-        -> (BTreeMap<K, Composition<T>>, BTreeMap<K, H>)
-    where K: Clone + cmp::Ord,
-          H: Clone, T: Clone,
+pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+        -> (GornTree<Composition<T>>, GornTree<H>)
+    where H: Clone, T: Clone,
 {
-    let mut term_map = BTreeMap::new();
-    let mut head_map = BTreeMap::new();
+    let mut term_map = GornTree::new();
+    let mut head_map = GornTree::new();
 
     for (address, rule) in tree_map {
         let &PMCFGRule { ref head, tail: _, ref composition, weight: _ } = rule;
@@ -237,8 +236,8 @@ mod tests {
     use self::VarT::{Var, T};
     use std::str::FromStr;
 
-    pub fn example_tree_map() -> BTreeMap<Vec<usize>, PMCFGRule<String, char, usize>> {
-        let mut tree_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+    pub fn example_tree_map() -> GornTree<PMCFGRule<String, char, usize>> {
+        let mut tree_map = GornTree::new();
 
         tree_map.insert(vec![], PMCFGRule::from_str(
             "S -> [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1"
@@ -283,7 +282,7 @@ mod tests {
     #[test]
     fn test_evaluate() {
         let tree_map = example_tree_map();
-        let mut term_map = BTreeMap::new();
+        let mut term_map = GornTree::new();
 
         for (address, PMCFGRule { head: _, tail: _, composition, weight: _ }) in tree_map {
             term_map.insert(address, composition);
@@ -301,7 +300,7 @@ mod tests {
         "[[Var(0, 0), Var(0, 1)]]: use of 1-th component of nonterminal 0 that has only 1 components!"
     )]
     fn test_evaluate_invalid_composition() {
-        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+        let mut term_map = GornTree::new();
         term_map.insert(vec![], Composition::from(vec![
             vec![Var(0, 0), Var(0, 1)]
         ]));
@@ -314,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_to_term() {
-        let mut tree_map: BTreeMap<_, PMCFGRule<String, char, usize>> = BTreeMap::new();
+        let mut tree_map: GornTree<PMCFGRule<String, char, usize>> = GornTree::new();
 
         tree_map.insert(vec![], PMCFGRule::from_str(
             "A -> [[Var 0 0, T a, Var 0 1, T b]] (B) # 1"
@@ -326,7 +325,7 @@ mod tests {
             "C -> [[], []] () # 1"
         ).unwrap());
 
-        let mut term_map = BTreeMap::new();
+        let mut term_map = GornTree::new();
         term_map.insert(vec![], Composition::from(vec![
             vec![Var(0, 0), T('a'), Var(0, 1), T('b')]
         ]));
@@ -339,7 +338,7 @@ mod tests {
             vec![]
         ]));
 
-        let mut head_map = BTreeMap::new();
+        let mut head_map = GornTree::new();
         head_map.insert(vec![], String::from("A"));
         head_map.insert(vec![0], String::from("B"));
         head_map.insert(vec![0, 1], String::from("C"));

@@ -1,11 +1,11 @@
 use super::*;
 use std::collections::{BTreeMap, LinkedList};
 
-pub fn identify_terminals<A>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>)
-        -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>)
+pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
+        -> (GornTree<Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>)
     where A: Clone,
 {
-    let mut identified_tree_map = BTreeMap::new();
+    let mut identified_tree_map = GornTree::new();
     let mut terminal_map = BTreeMap::new();
 
     for (address, composition) in tree_map {
@@ -40,7 +40,7 @@ pub fn identify_terminals<A>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>)
     (identified_tree_map, terminal_map)
 }
 
-pub fn to_negra<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>, sentence_num: usize)
+pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_num: usize)
         -> String
     where H: Clone + ToString,
           T: Clone + ToString,
@@ -56,7 +56,7 @@ pub fn to_negra<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>, se
     output
 }
 
-pub fn to_negra_vector<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, W>>)
+pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> Vec<(String, String, usize)>
     where H: Clone + ToString,
           T: Clone + ToString,
@@ -68,7 +68,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, 
 
     let mut negra_vector = Vec::new();
     let mut rule_queue = LinkedList::new();
-    let mut finished_map = BTreeMap::new();
+    let mut finished_map = GornTree::new();
     let mut rule_counter = 0;
 
     for component in evaluated_compos.composition {
@@ -107,7 +107,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &BTreeMap<Vec<usize>, PMCFGRule<H, T, 
     negra_vector
 }
 
-fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &BTreeMap<Vec<usize>, usize>, rule_counter: &mut usize)
+fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &GornTree<usize>, rule_counter: &mut usize)
         -> usize
 {
     if let Some(rule_number) = finished_map.get(address) {
@@ -123,11 +123,11 @@ fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use VarT::{Var, T};
+    use self::VarT::{Var, T};
 
     #[test]
     fn test_identify_terminals() {
-        let mut tree_map = BTreeMap::new();
+        let mut tree_map = GornTree::new();
         tree_map.insert(vec![], Composition::from(vec![
             vec![Var(0, 0), T("a"), Var(0, 1), T("b")]
         ]));
@@ -139,7 +139,7 @@ mod tests {
             vec![T("d")]
         ]));
 
-        let mut identified_tree_map = BTreeMap::new();
+        let mut identified_tree_map = GornTree::new();
         identified_tree_map.insert(vec![], Composition::from(vec![
             vec![Var(0, 0), T((vec![], 1)), Var(0, 1), T((vec![], 3))]
         ]));
