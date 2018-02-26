@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::{BTreeMap, LinkedList};
+use std::collections::{BTreeMap, VecDeque};
 
 pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
         -> (GornTree<Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>)
@@ -67,7 +67,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     let evaluated_compos = evaluate(&identified_tree_map);
 
     let mut negra_vector = Vec::new();
-    let mut rule_queue = LinkedList::new();
+    let mut rule_queue = VecDeque::new();
     let mut finished_map = GornTree::new();
     let mut rule_counter = 0;
 
@@ -107,7 +107,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     negra_vector
 }
 
-fn get_rule_number(address: &Vec<usize>, rule_queue: &mut LinkedList<(Vec<usize>, usize)>, finished_map: &GornTree<usize>, rule_counter: &mut usize)
+fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, usize)>, finished_map: &GornTree<usize>, rule_counter: &mut usize)
         -> usize
 {
     if let Some(rule_number) = finished_map.get(address) {
