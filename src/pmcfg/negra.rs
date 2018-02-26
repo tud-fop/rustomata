@@ -80,8 +80,8 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
 
     let mut negra_vector = Vec::new();
     let mut rule_queue = VecDeque::new();
-    let mut finished_map = GornTree::new();
-    let mut rule_counter = 0;
+    let mut rule_number_map = GornTree::new();
+    let mut rule_counter = 1;
 
     for component in evaluated_compos.composition {
         for variable in component {
@@ -91,11 +91,17 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
                 },
                 VarT::T(terminal_id) => {
                     let terminal_symbol = terminal_map.get(&terminal_id).unwrap();
-                    let ref address = terminal_id.address;
-                    let rule_label = nonterminal_map.get(address).unwrap();
-                    let rule_number = get_rule_number(address, &mut rule_queue, &finished_map,
-                                                      &mut rule_counter);
-                    negra_vector.push((terminal_symbol.to_string(), rule_label.to_string(), rule_number));
+                    let address = terminal_id.address;
+                    let rule_label = nonterminal_map.get(&address).unwrap();
+
+                    let mut parent_address = address;
+                    let parent_number = if let None = parent_address.pop() {
+                        panic!("Terminals must have a nonterminal-only rule as their parent!");
+                    } else {
+                        get_rule_number(&parent_address, &mut rule_queue, &mut rule_number_map,
+                                        &mut rule_counter)
+                    };
+                    negra_vector.push((terminal_symbol.to_string(), rule_label.to_string(), parent_number));
                 }
             }
         }
@@ -107,27 +113,27 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         let parent_number = if let None = parent_address.pop() {
             0
         } else {
-            let number = get_rule_number(&parent_address, &mut rule_queue, &finished_map, &mut rule_counter);
-            finished_map.insert(parent_address.clone(), number);
-            number
+            get_rule_number(&parent_address, &mut rule_queue, &mut rule_number_map, &mut rule_counter)
         };
 
         let rule_label = nonterminal_map.get(&address).unwrap();
-        negra_vector.push((rule_number.to_string(), rule_label.to_string(), parent_number));
+        negra_vector.push((format!("#{}", rule_number), rule_label.to_string(), parent_number));
     }
 
     negra_vector
 }
 
-fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, usize)>, finished_map: &GornTree<usize>, rule_counter: &mut usize)
+fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, usize)>, rule_number_map: &mut GornTree<usize>, rule_counter: &mut usize)
         -> usize
 {
-    if let Some(rule_number) = finished_map.get(address) {
+    if let Some(rule_number) = rule_number_map.get(address) {
         return *rule_number
     }
 
     let rule_number = *rule_counter;
     *rule_counter = *rule_counter + 1;
+
+    rule_number_map.insert(address.clone(), rule_number.clone());
     rule_queue.push_back((address.clone(), rule_number));
     rule_number
 }
