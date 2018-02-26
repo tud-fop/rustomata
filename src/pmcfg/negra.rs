@@ -141,6 +141,7 @@ fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::tests::*;
     use self::VarT::{Var, T};
 
     #[test]
@@ -176,5 +177,24 @@ mod tests {
         terminal_map.insert(TermId::from((vec![0, 1], 0)), "d");
 
         assert_eq!((identified_tree_map, terminal_map), identify_terminals(&tree_map));
+    }
+
+    #[test]
+    fn test_to_negra_vector() {
+        let tree_map = example_tree_map();
+        let negra_vector = vec![
+            (String::from("a"), String::from("a"), 1),
+            (String::from("a"), String::from("a"), 2),
+            (String::from("b"), String::from("b"), 3),
+            (String::from("c"), String::from("c"), 1),
+            (String::from("c"), String::from("c"), 2),
+            (String::from("d"), String::from("d"), 3),
+            (String::from("#1"), String::from("A"), 4),
+            (String::from("#2"), String::from("A"), 1),
+            (String::from("#3"), String::from("B"), 4),
+            (String::from("#4"), String::from("S"), 0)
+        ];
+
+        assert_eq!(negra_vector, to_negra_vector(&tree_map));
     }
 }
