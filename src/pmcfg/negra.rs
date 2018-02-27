@@ -57,6 +57,11 @@ pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: u
     where H: Clone + ToString,
           T: Clone + ToString,
 {
+    if !meets_negra_criteria(&tree_map) {
+        panic!("The given tree does not meet the negra criteria! All rules must either consist \
+                only of nonterminals or of exactly one terminal symbol.");
+    }
+
     let negra_vector = to_negra_vector(&tree_map);
     let mut output = format!("#BOS {}\n", sentence_id);
 
@@ -68,13 +73,45 @@ pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: u
     output
 }
 
+pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+        -> bool
+{
+    for (_address, rule) in tree_map {
+        let &PMCFGRule { head: _, tail: _, ref composition, weight: _ } = rule;
+        let mut contains_nonterminal = false;
+        let mut contains_terminal = false;
+
+        for component in &composition.composition {
+            for variable in component {
+                match variable {
+                    &VarT::Var(_, _) => {
+                        if contains_terminal {
+                            return false;
+                        }
+
+                        contains_nonterminal = true;
+                    },
+                    &VarT::T(_) => {
+                        if contains_nonterminal || contains_terminal {
+                            return false;
+                        }
+
+                        contains_terminal = true;
+                    },
+                }
+            }
+        }
+    }
+
+    true
+}
+
 pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> Vec<(String, String, usize)>
     where H: Clone + ToString,
           T: Clone + ToString,
 {
     let (term_map, nonterminal_map) = to_term(&tree_map);
-    // TODO: Enforce negra grammar restrictions
     let (identified_tree_map, terminal_map) = identify_terminals(&term_map);
     let evaluated_compos = evaluate(&identified_tree_map);
 
