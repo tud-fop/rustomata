@@ -221,8 +221,7 @@ pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     let mut term_map = GornTree::new();
     let mut head_map = GornTree::new();
 
-    for (address, rule) in tree_map {
-        let &PMCFGRule { ref head, tail: _, ref composition, weight: _ } = rule;
+    for (address, &PMCFGRule { ref head, tail: _, ref composition, weight: _ }) in tree_map {
         term_map.insert(address.clone(), composition.clone());
         head_map.insert(address.clone(), head.clone());
     }
