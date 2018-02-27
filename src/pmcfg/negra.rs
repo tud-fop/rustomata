@@ -135,11 +135,11 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
                     let parent_number = if let None = parent_address.pop() {
                         panic!("Terminals must have a nonterminal-only rule as their parent!");
                     } else {
-                        get_rule_number(&parent_address, &mut rule_queue, &mut rule_number_map,
+                        get_rule_number(parent_address, &mut rule_queue, &mut rule_number_map,
                                         &mut rule_counter)
                     };
                     negra_vector.push((terminal_symbol.to_string(), rule_label.to_string(), parent_number));
-                }
+                },
             }
         }
     }
@@ -150,7 +150,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         let parent_number = if let None = parent_address.pop() {
             0
         } else {
-            get_rule_number(&parent_address, &mut rule_queue, &mut rule_number_map, &mut rule_counter)
+            get_rule_number(parent_address, &mut rule_queue, &mut rule_number_map, &mut rule_counter)
         };
 
         let rule_label = nonterminal_map.get(&address).unwrap();
@@ -160,10 +160,10 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     negra_vector
 }
 
-fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, usize)>, rule_number_map: &mut GornTree<usize>, rule_counter: &mut usize)
+fn get_rule_number(address: Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, usize)>, rule_number_map: &mut GornTree<usize>, rule_counter: &mut usize)
         -> usize
 {
-    if let Some(rule_number) = rule_number_map.get(address) {
+    if let Some(rule_number) = rule_number_map.get(&address) {
         return *rule_number
     }
 
@@ -171,7 +171,7 @@ fn get_rule_number(address: &Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, 
     *rule_counter = *rule_counter + 1;
 
     rule_number_map.insert(address.clone(), rule_number.clone());
-    rule_queue.push_back((address.clone(), rule_number));
+    rule_queue.push_back((address, rule_number));
     rule_number
 }
 
