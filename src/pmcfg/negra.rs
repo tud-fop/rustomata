@@ -180,6 +180,7 @@ mod tests {
     use super::*;
     use super::super::tests::*;
     use self::VarT::{Var, T};
+    use std::str::FromStr;
 
     #[test]
     fn test_identify_terminals() {
@@ -233,5 +234,44 @@ mod tests {
         ];
 
         assert_eq!(negra_vector, to_negra_vector(&tree_map));
+    }
+
+    #[test]
+    fn test_meets_negra_criteria() {
+        let mut tree_map: GornTree<PMCFGRule<String, char, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[T a, T b]] () #1"
+        ).unwrap());
+
+        assert_eq!(false, meets_negra_criteria(&tree_map));
+
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, T a]] (A) #1"
+        ).unwrap());
+
+        assert_eq!(false, meets_negra_criteria(&tree_map));
+
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0], [Var 1 0]] (a, b) #1"
+        ).unwrap());
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "A -> [[T a]] () #1"
+        ).unwrap());
+
+        assert_eq!(true, meets_negra_criteria(&tree_map));
+    }
+
+    #[test]
+    #[should_panic(expected =
+        "The given tree does not meet the negra criteria! All rules must either consist \
+         only of nonterminals or of exactly one terminal symbol."
+    )]
+    fn test_to_negra_violated_criteria() {
+        let mut tree_map: GornTree<PMCFGRule<String, char, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[T a, T b]] () #1"
+        ).unwrap());
+
+        to_negra(&tree_map, 0);
     }
 }
