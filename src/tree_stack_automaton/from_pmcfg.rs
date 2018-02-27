@@ -259,8 +259,8 @@ pub mod tests {
         let mut tree_map = BTreeMap::new();
         tree_map.insert(vec![], PosState::Initial);
         tree_map.insert(vec![0], PosState::Position('a', 0, 0));
-        tree_map.insert(vec![0,0], PosState::Position('b', 0, 0));
-        tree_map.insert(vec![0,2], PosState::Position('c', 0, 0));
+        tree_map.insert(vec![0, 0], PosState::Position('b', 0, 0));
+        tree_map.insert(vec![0, 2], PosState::Position('c', 0, 0));
         tree_map.insert(vec![2], PosState::Position('d', 0, 0));
 
         let mut abstract_syntax_tree = BTreeMap::new();

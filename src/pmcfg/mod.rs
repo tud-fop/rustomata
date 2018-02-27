@@ -3,8 +3,11 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+use util::tree::GornTree;
+
 mod from_str;
 // mod relabel;
+pub mod negra;
 
 /// Variable or terminal symbol in an MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -160,11 +163,16 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
     }
 }
 
-pub fn evaluate<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>) -> Composition<T> {
+pub fn evaluate<T: Clone + fmt::Debug>(term_map: &GornTree<Composition<T>>)
+        -> Composition<T>
+{
     evaluate_pos(term_map, vec![])
 }
 
-pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Composition<T>>, address: Vec<usize>) -> Composition<T> {
+pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
+        -> Composition<T>
+    where T: Clone + fmt::Debug,
+{
     let unexpanded_composition = &term_map.get(&address).unwrap().composition;
     let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
     let mut expanded_composition = Vec::new();
@@ -206,91 +214,78 @@ pub fn evaluate_pos<T: Clone + fmt::Debug>(term_map: &BTreeMap<Vec<usize>, Compo
     Composition::from(expanded_composition)
 }
 
-pub fn identify_terminals<A: Clone>(tree_map: &BTreeMap<Vec<usize>, Composition<A>>) -> (BTreeMap<Vec<usize>, Composition<(Vec<usize>, usize)>>, BTreeMap<(Vec<usize>, usize), A>) {
-    let mut identified_tree_map = BTreeMap::new();
-    let mut terminal_map = BTreeMap::new();
+pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+        -> (GornTree<Composition<T>>, GornTree<H>)
+    where H: Clone, T: Clone,
+{
+    let mut term_map = GornTree::new();
+    let mut head_map = GornTree::new();
 
-    for (address, composition) in tree_map {
-        let vec_compos = &composition.composition;
-        let mut identified_compos = Vec::new();
-        let mut compos_var_pos = 0;
-
-        for component in vec_compos {
-            let mut identified_compon = Vec::new();
-
-            for variable in component {
-                match variable {
-                    &VarT::Var(x, y) => {
-                        identified_compon.push(VarT::Var(x, y));
-                    },
-                    &VarT::T(ref terminal) => {
-                        let terminal_id = (address.clone(), compos_var_pos);
-                        identified_compon.push(VarT::T(terminal_id.clone()));
-                        terminal_map.insert(terminal_id, terminal.clone());
-                    },
-                };
-
-                compos_var_pos += 1;
-            }
-
-            identified_compos.push(identified_compon);
-        }
-
-        identified_tree_map.insert(address.clone(), Composition::from(identified_compos));
+    for (address, &PMCFGRule { ref head, tail: _, ref composition, weight: _ }) in tree_map {
+        term_map.insert(address.clone(), composition.clone());
+        head_map.insert(address.clone(), head.clone());
     }
 
-    (identified_tree_map, terminal_map)
+    (term_map, head_map)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use self::VarT::{Var, T};
+    use std::str::FromStr;
+
+    pub fn example_tree_map() -> GornTree<PMCFGRule<String, char, usize>> {
+        let mut tree_map = GornTree::new();
+
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (A, a, c) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "A -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (A, a, c) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 0], PMCFGRule::from_str(
+            "A -> [[], []] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 1], PMCFGRule::from_str(
+            "a -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0, 2], PMCFGRule::from_str(
+            "c -> [[T c]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "a -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 2], PMCFGRule::from_str(
+            "c -> [[T c]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[Var 1 0, Var 0 0], [Var 2 0, Var 0 1]] (B, b, d) # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "B -> [[], []] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 1], PMCFGRule::from_str(
+            "b -> [[T b]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 2], PMCFGRule::from_str(
+            "d -> [[T d]] () # 1"
+        ).unwrap());
+
+        tree_map
+    }
 
     #[test]
     fn test_evaluate() {
-        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
-        term_map.insert(vec![], Composition::from(vec![
-                vec![Var(0,0), Var(1,0), Var(0,1), Var(1,1)]
-        ]));
-        term_map.insert(vec![0], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
-        ]));
-        term_map.insert(vec![0,0], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
-        ]));
-        term_map.insert(vec![0,0,0], Composition::from(vec![
-                vec![],
-                vec![]
-        ]));
-        term_map.insert(vec![0,0,1], Composition::from(vec![
-                vec![T('a')]
-        ]));
-        term_map.insert(vec![0,0,2], Composition::from(vec![
-                vec![T('c')]
-        ]));
-        term_map.insert(vec![0,1], Composition::from(vec![
-                vec![T('a')]
-        ]));
-        term_map.insert(vec![0,2], Composition::from(vec![
-                vec![T('c')]
-        ]));
-        term_map.insert(vec![1], Composition::from(vec![
-                vec![Var(1,0), Var(0,0)],
-                vec![Var(2,0), Var(0,1)]
-        ]));
-        term_map.insert(vec![1,0], Composition::from(vec![
-                vec![],
-                vec![]
-        ]));
-        term_map.insert(vec![1,1], Composition::from(vec![
-                vec![T('b')]
-        ]));
-        term_map.insert(vec![1,2], Composition::from(vec![
-                vec![T('d')]
-        ]));
+        let tree_map = example_tree_map();
+        let mut term_map = GornTree::new();
+
+        for (address, PMCFGRule { head: _, tail: _, composition, weight: _ }) in tree_map {
+            term_map.insert(address, composition);
+        }
 
         let expanded_compos = Composition::from(vec![
             vec![T('a'), T('a'), T('b'), T('c'), T('c'), T('d')]
@@ -304,49 +299,72 @@ mod tests {
         "[[Var(0, 0), Var(0, 1)]]: use of 1-th component of nonterminal 0 that has only 1 components!"
     )]
     fn test_evaluate_invalid_composition() {
-        let mut term_map: BTreeMap<Vec<usize>, _> = BTreeMap::new();
+        let mut term_map = GornTree::new();
         term_map.insert(vec![], Composition::from(vec![
-                vec![Var(0,0), Var(0,1)]
+            vec![Var(0, 0), Var(0, 1)]
         ]));
         term_map.insert(vec![0], Composition::from(vec![
-                vec![T('a')]
+            vec![T('a')]
         ]));
 
         evaluate(&term_map);
     }
 
     #[test]
-    fn test_identify_terminals() {
-        let mut tree_map = BTreeMap::new();
-        tree_map.insert(vec![], Composition::from(vec![
-            vec![Var(0,0), T("a"), Var(0,1), T("b")]
+    fn test_to_term() {
+        let mut tree_map: GornTree<PMCFGRule<String, char, usize>> = GornTree::new();
+
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "A -> [[Var 0 0, T a, Var 0 1, T b]] (B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "B -> [[Var 1 0], [T c]] (C) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "C -> [[], []] () # 1"
+        ).unwrap());
+
+        let mut term_map = GornTree::new();
+        term_map.insert(vec![], Composition::from(vec![
+            vec![Var(0, 0), T('a'), Var(0, 1), T('b')]
         ]));
-        tree_map.insert(vec![0], Composition::from(vec![
-            vec![Var(1,0)],
-            vec![T("c")]
+        term_map.insert(vec![0], Composition::from(vec![
+            vec![Var(1, 0)],
+            vec![T('c')]
         ]));
-        tree_map.insert(vec![1,0], Composition::from(vec![
-            vec![T("d")]
+        term_map.insert(vec![0, 1], Composition::from(vec![
+            vec![],
+            vec![]
         ]));
 
-        let mut identified_tree_map = BTreeMap::new();
-        identified_tree_map.insert(vec![], Composition::from(vec![
-            vec![Var(0,0), T((vec![], 1)), Var(0,1), T((vec![], 3))]
-        ]));
-        identified_tree_map.insert(vec![0], Composition::from(vec![
-            vec![Var(1,0)],
-            vec![T((vec![0], 1))]
-        ]));
-        identified_tree_map.insert(vec![1,0], Composition::from(vec![
-            vec![T((vec![1,0], 0))]
-        ]));
+        let mut head_map = GornTree::new();
+        head_map.insert(vec![], String::from("A"));
+        head_map.insert(vec![0], String::from("B"));
+        head_map.insert(vec![0, 1], String::from("C"));
 
-        let mut terminal_map = BTreeMap::new();
-        terminal_map.insert((vec![], 1), "a");
-        terminal_map.insert((vec![], 3), "b");
-        terminal_map.insert((vec![0], 1), "c");
-        terminal_map.insert((vec![1,0], 0), "d");
+        assert_eq!((term_map, head_map), to_term(&tree_map));
+    }
 
-        assert_eq!((identified_tree_map, terminal_map), identify_terminals(&tree_map));
+    #[test]
+    fn test_to_term_inverse() {
+        let tree_map = example_tree_map();
+        let (term_map, head_map) = to_term(&tree_map);
+        let mut reconstructed_tree_map = GornTree::new();
+
+        for (address, composition) in term_map {
+            let head = head_map.get(&address).unwrap().clone();
+            reconstructed_tree_map.insert(address, PMCFGRule {
+                head, tail: vec![], composition, weight: 0
+            });
+        }
+
+        for (address, rule) in tree_map {
+            let PMCFGRule { head: ref orig_head, tail: _, composition: ref orig_composition, weight: _ } =
+                rule;
+            let &PMCFGRule { ref head, tail: _, ref composition, weight: _ } =
+                reconstructed_tree_map.get(&address).unwrap();
+            assert_eq!(orig_head, head);
+            assert_eq!(orig_composition, composition);
+        }
     }
 }
