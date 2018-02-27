@@ -218,6 +218,40 @@ mod tests {
     }
 
     #[test]
+    fn test_identify_terminals_inverse() {
+        let (tree_map, _) = to_term(&example_tree_map());
+        let (identified_tree_map, terminal_map) = identify_terminals(&tree_map);
+        let mut unidentified_tree_map = GornTree::new();
+
+        for (address, composition) in identified_tree_map {
+            let mut unidentified_compos = Vec::new();
+
+            for component in composition.composition {
+                let mut unidentified_compon: Vec<VarT<char>> = Vec::new();
+
+                for variable in component {
+                    match variable {
+                        VarT::Var(x, y) => {
+                            unidentified_compon.push(VarT::Var(x, y));
+                        },
+                        VarT::T(terminal_id) => {
+                            unidentified_compon.push(
+                                VarT::T(terminal_map.get(&terminal_id).unwrap().clone())
+                            );
+                        },
+                    }
+                }
+
+                unidentified_compos.push(unidentified_compon);
+            }
+
+            unidentified_tree_map.insert(address, Composition::from(unidentified_compos));
+        }
+
+        assert_eq!(tree_map, unidentified_tree_map);
+    }
+
+    #[test]
     fn test_to_negra_vector() {
         let tree_map = example_tree_map();
         let negra_vector = vec![
