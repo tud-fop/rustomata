@@ -52,19 +52,19 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
     (identified_tree_map, terminal_map)
 }
 
-pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_num: usize)
+pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: usize)
         -> String
     where H: Clone + ToString,
           T: Clone + ToString,
 {
     let negra_vector = to_negra_vector(&tree_map);
-    let mut output = format!("#BOS {}\n", sentence_num);
+    let mut output = format!("#BOS {}\n", sentence_id);
 
-    for (symbol1, symbol2, number) in negra_vector {
-        output.push_str(&format!("{}\t{}\t{}\n", symbol1, symbol2, number));
+    for (word, tag, parent) in negra_vector {
+        output.push_str(&format!("{}\t{}\t--\t--\t{}\n", word, tag, parent));
     }
 
-    output.push_str(&format!("#EOS {}", sentence_num));
+    output.push_str(&format!("#EOS {}", sentence_id));
     output
 }
 
