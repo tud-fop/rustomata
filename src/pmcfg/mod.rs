@@ -344,4 +344,27 @@ mod tests {
 
         assert_eq!((term_map, head_map), to_term(&tree_map));
     }
+
+    #[test]
+    fn test_to_term_inverse() {
+        let tree_map = example_tree_map();
+        let (term_map, head_map) = to_term(&tree_map);
+        let mut reconstructed_tree_map = GornTree::new();
+
+        for (address, composition) in term_map {
+            let head = head_map.get(&address).unwrap().clone();
+            reconstructed_tree_map.insert(address, PMCFGRule {
+                head, tail: vec![], composition, weight: 0
+            });
+        }
+
+        for (address, rule) in tree_map {
+            let PMCFGRule { head: ref orig_head, tail: _, composition: ref orig_composition, weight: _ } =
+                rule;
+            let &PMCFGRule { ref head, tail: _, ref composition, weight: _ } =
+                reconstructed_tree_map.get(&address).unwrap();
+            assert_eq!(orig_head, head);
+            assert_eq!(orig_composition, composition);
+        }
+    }
 }
