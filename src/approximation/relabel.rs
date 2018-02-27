@@ -14,7 +14,7 @@ pub struct RlbElement<'a, A1, A2>
 impl<'a, A1, A2> RlbElement<'a, A1, A2> {
     pub fn new(mapping: &'a Fn(&A1) -> A2) -> Self {
         RlbElement {
-            mapping: mapping,
+            mapping,
         }
     }
 }

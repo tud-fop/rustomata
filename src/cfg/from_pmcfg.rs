@@ -46,7 +46,7 @@ impl<N: Clone + Ord + PartialEq,
 
         CFG { _dummy: PhantomData,
                initial: pmcfg.initial.clone(),
-               rules: rules,
+               rules,
         }
     }
 }

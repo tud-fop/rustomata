@@ -43,7 +43,7 @@ pub struct Run<A> {
 
 impl<A> Run<A> {
     pub fn new(v: Vec<A>) -> Run<A> {
-        Run { v: v }
+        Run { v }
     }
 }
 

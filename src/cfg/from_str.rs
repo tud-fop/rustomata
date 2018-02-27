@@ -37,14 +37,14 @@ impl<N, T, W> FromStr for CFG<N, T, W>
 
         for l in s.lines() {
             if !l.is_empty() && !l.starts_with("initial: ") {
-                rules.push(try!(l.trim().parse()));
+                rules.push(l.trim().parse()?);
             }
         }
 
         Ok(CFG {
             _dummy: PhantomData,
-            initial: initial,
-            rules: rules,
+            initial,
+            rules,
         })
 
     }

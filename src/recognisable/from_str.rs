@@ -26,7 +26,7 @@ fn vec_from_str<T: FromStr>(s: &str) -> Result<Vec<T>, String> {
                 },
             ('"' , true , false)  // read unescaped '"' in inner mode
                 => {
-                    result.push(try!(buffer.parse().map_err(|_| format!("Substring {} could not be parsed.", buffer))));
+                    result.push(buffer.parse().map_err(|_| format!("Substring {} could not be parsed.", buffer))?);
                     is_inside = false;
                     buffer.clear();
                 }
@@ -55,12 +55,12 @@ impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I,
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.starts_with("Transition ") {
-            let word: Vec<T> = try!(match (s.find('['), s.rfind(']')) {
+            let word: Vec<T> = match (s.find('['), s.rfind(']')) {
                 (Some(bl), Some(br)) => vec_from_str(&s[bl..br + 1]),
                 _ => return Err("Substring \"[⟨word⟩]\" not found.".to_string()),
-            });
+            }?;
 
-            let weight: W = try!(match s.find('#') {
+            let weight: W = match s.find('#') {
                 Some(rl) => {
                     s[rl + 1..]
                         .trim()
@@ -68,21 +68,21 @@ impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I,
                         .map_err(|_| format!("Substring {} is no weight.", &s[rl + 1..]))
                 }
                 _ => return Err("Substring \"#⟨weight⟩\" not found.".to_string()),
-            });
+            }?;
 
-            let instruction: I = try!(match (s.find('('), s.rfind(')')) {
+            let instruction: I = match (s.find('('), s.rfind(')')) {
                 (Some(pl), Some(pr)) => {
                     s[pl + 1..pr]
                         .parse()
                         .map_err(|_| format!("Substring {} is not an instruction.", &s[pl + 1..pr]))
                 }
                 _ => Err("Substring \"(⟨instr⟩)\" not found.".to_string()),
-            });
+            }?;
 
             Ok(Transition {
-                word: word,
-                weight: weight,
-                instruction: instruction,
+                word,
+                weight,
+                instruction,
             })
         } else {
             Err("Not a transition.".to_string())

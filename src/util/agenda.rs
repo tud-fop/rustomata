@@ -89,7 +89,7 @@ impl<P: Ord + Clone, I: Weighted<Weight=P>> Agenda for BoundedPriorityQueue<P, I
 impl<P: Ord, I> BoundedPriorityQueue<P, I> {
     pub fn new(capacity: usize) -> BoundedPriorityQueue<P, I> {
         assert!(capacity > 0);
-        BoundedPriorityQueue { data: BTreeMap::new(), capacity: capacity, size: 0, last_key: None }
+        BoundedPriorityQueue { data: BTreeMap::new(), capacity, size: 0, last_key: None }
     }
 }
 

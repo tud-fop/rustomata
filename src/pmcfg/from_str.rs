@@ -36,12 +36,12 @@ impl<N, T, W> FromStr for PMCFG<N, T, W>
 
         for l in s.lines() {
             if !l.is_empty() && !l.starts_with("initial: ") && !l.trim_left().starts_with("%") {
-                rules.push(try!(l.trim().parse()));
+                rules.push(l.trim().parse()?);
             }
         }
         Ok(PMCFG {
-            initial: initial,
-            rules: rules,
+            initial,
+            rules,
         })
 
     }

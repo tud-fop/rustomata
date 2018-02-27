@@ -32,13 +32,13 @@ impl<A> TreeStackInstruction<A> {
     {
         match *self {
             TreeStackInstruction::Up { n, ref current_val, ref old_val, ref new_val } =>
-                TreeStackInstruction::Up { n: n,
+                TreeStackInstruction::Up { n,
                                            current_val: f(current_val),
                                            old_val: f(old_val),
                                            new_val: f(new_val),
                 },
             TreeStackInstruction::Push { n, ref current_val, ref new_val } =>
-                TreeStackInstruction::Push { n: n,
+                TreeStackInstruction::Push { n,
                                              current_val: f(current_val),
                                              new_val: f(new_val),
                 },

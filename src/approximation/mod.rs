@@ -61,7 +61,7 @@ impl<Strategy, T, W> ApproximationInstance<Strategy, T, W>
     pub fn new(strategy: Strategy) -> Self {
         ApproximationInstance {
             reverse_transition_map: BTreeMap::new(),
-            strategy: strategy,
+            strategy,
         }
     }
 

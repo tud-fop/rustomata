@@ -179,14 +179,6 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
     type IInt = PushDownInstruction<usize>;
     type TInt = usize;
 
-    fn extract_key(c: &Configuration<PushDown<usize>, usize, W>) -> &usize {
-        if c.storage.is_bottom() {
-            &c.storage.empty
-        } else {
-            c.storage.current_symbol()
-        }
-    }
-
     fn from_transitions<It>(transitions: It, initial: PushDown<A>) -> Self
         where It: IntoIterator<Item=Transition<PushDownInstruction<A>, T, W>>
     {
@@ -201,18 +193,6 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
 
     fn initial(&self) -> PushDown<A> {
         Integerisable1::un_integerise(&self.initial, &self.a_integeriser)
-    }
-
-    fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {
-        self.transitions.clone()
-    }
-
-    fn initial_int(&self) -> PushDown<usize> {
-        self.initial.clone()
-    }
-
-    fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
-        c.word.is_empty() && c.storage.is_bottom()
     }
 
     fn item_map(&self, i: &Item<PushDown<usize>, PushDownInstruction<usize>, usize, W>)
@@ -242,9 +222,29 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         }
     }
 
-
     fn terminal_to_int(&self, t: &T) -> usize {
         self.t_integeriser.find_key(t).unwrap()
+    }
+
+    fn extract_key(c: &Configuration<PushDown<usize>, usize, W>) -> &usize {
+        if c.storage.is_bottom() {
+            &c.storage.empty
+        } else {
+            c.storage.current_symbol()
+        }
+    }
+
+    fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
+        c.word.is_empty() && c.storage.is_bottom()
+    }
+
+    fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {
+        self.transitions.clone()
+    }
+
+
+    fn initial_int(&self) -> PushDown<usize> {
+        self.initial.clone()
     }
 }
 

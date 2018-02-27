@@ -42,7 +42,7 @@ impl<A> Pushdown<A> {
     pub fn set(self, a: A) -> Result<Self, Self> {
         match self {
             Pushdown::Empty => Err(Pushdown::Empty),
-            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below: below }),
+            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below }),
         }
     }
 
