@@ -1,12 +1,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
-
 use util::tree::GornTree;
 
 mod from_str;
-// mod relabel;
 pub mod negra;
 
 /// Variable or terminal symbol in an MCFG.
@@ -58,7 +55,6 @@ impl<N, T, W> PMCFGRule<N, T, W>
 /// A weighted MCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
-    pub _dummy: PhantomData<T>,
     pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
 }

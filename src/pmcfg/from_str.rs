@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use num_traits::One;
-use std::marker::PhantomData;
 use std::str::{FromStr, from_utf8};
 
 use nom::{IResult, is_space, digit};
@@ -41,7 +40,6 @@ impl<N, T, W> FromStr for PMCFG<N, T, W>
             }
         }
         Ok(PMCFG {
-            _dummy: PhantomData,
             initial: initial,
             rules: rules,
         })
@@ -242,7 +240,6 @@ fn test_from_str_pmcfg() {
                r4_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
 
     let g: PMCFG<String, String, LogDomain<f64>> = PMCFG {
-        _dummy: PhantomData,
         initial: vec!["S".to_string()],
         rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
     };

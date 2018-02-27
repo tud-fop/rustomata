@@ -251,7 +251,5 @@ fn test_tree_stack() {
 
     ts = ts.down().unwrap();
     ts = ts.down().unwrap();
-
-    println!("Display: {}", &ts);
-    println!("Debug: {:?}", &ts);
+    assert_eq!(&0, ts.current_symbol());
 }

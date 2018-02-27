@@ -14,7 +14,7 @@ pub mod nfa;
 pub mod pmcfg;
 pub mod push_down_automaton;
 pub mod tree_stack_automaton;
-mod util;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
