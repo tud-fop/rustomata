@@ -21,7 +21,7 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
     let mut terminal_map = BTreeMap::new();
 
     for (address, composition) in tree_map {
-        let vec_compos = &composition.composition;
+        let vec_compos = composition;
         let mut identified_compos = Vec::new();
         let mut compos_var_pos = 0;
 
@@ -81,7 +81,7 @@ fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         let mut contains_nonterminal = false;
         let mut contains_terminal = false;
 
-        for component in &composition.composition {
+        for component in composition {
             for variable in component {
                 match variable {
                     &VarT::Var(_, _) => {
@@ -120,7 +120,7 @@ fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     let mut rule_number_map = GornTree::new();
     let mut rule_counter = 1;
 
-    for component in evaluated_compos.composition {
+    for component in evaluated_compos {
         for variable in component {
             match variable {
                 VarT::Var(_, _) => {

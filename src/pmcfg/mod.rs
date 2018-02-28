@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::slice;
+use std::vec;
+
 use util::tree::GornTree;
 
 mod from_str;
@@ -24,6 +27,33 @@ pub struct Composition<T> {
 impl<T> From<Vec<Vec<VarT<T>>>> for Composition<T> {
     fn from(encapsulated_value: Vec<Vec<VarT<T>>>) -> Self {
         Composition { composition: encapsulated_value }
+    }
+}
+
+impl<T> IntoIterator for Composition<T> {
+    type Item = Vec<VarT<T>>;
+    type IntoIter = vec::IntoIter<Vec<VarT<T>>>;
+
+    fn into_iter(self) -> vec::IntoIter<Vec<VarT<T>>> {
+        self.composition.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Composition<T> {
+    type Item = &'a Vec<VarT<T>>;
+    type IntoIter = slice::Iter<'a, Vec<VarT<T>>>;
+
+    fn into_iter(self) -> slice::Iter<'a, Vec<VarT<T>>> {
+        (&self.composition).into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut Composition<T> {
+    type Item = &'a mut Vec<VarT<T>>;
+    type IntoIter = slice::IterMut<'a, Vec<VarT<T>>>;
+
+    fn into_iter(self) -> slice::IterMut<'a, Vec<VarT<T>>> {
+        (&mut self.composition).into_iter()
     }
 }
 
@@ -169,7 +199,7 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
         -> Composition<T>
     where T: Clone + fmt::Debug,
 {
-    let unexpanded_composition = &term_map.get(&address).unwrap().composition;
+    let unexpanded_composition = term_map.get(&address).unwrap();
     let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
     let mut expanded_composition = Vec::new();
 
