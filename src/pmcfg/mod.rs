@@ -196,7 +196,6 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
                         panic!("{:?}: use of {}-th component of nonterminal {} that has only {} components!",
                                unexpanded_composition, num_compon, num_nonter, nonter_compos.len());
                     }
-
                 },
                 &VarT::T(ref terminal) => {
                     expanded_component.push(VarT::T(terminal.clone()));
@@ -212,7 +211,8 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
 
 pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> (GornTree<Composition<T>>, GornTree<H>)
-    where H: Clone, T: Clone,
+    where H: Clone,
+          T: Clone,
 {
     let mut term_map = GornTree::new();
     let mut head_map = GornTree::new();

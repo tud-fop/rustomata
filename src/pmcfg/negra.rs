@@ -73,7 +73,7 @@ pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: u
     output
 }
 
-pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> bool
 {
     for (_address, rule) in tree_map {
@@ -106,7 +106,7 @@ pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     true
 }
 
-pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> Vec<(String, String, usize)>
     where H: Clone + ToString,
           T: Clone + ToString,
