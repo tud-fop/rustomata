@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
 use std::hash::Hash;
-use util::integerisable::Integerisable1;
+
 use integeriser::{HashIntegeriser, Integeriser};
+use util::integerisable::Integerisable1;
+use util::tree::GornTree;
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
 #[derive(Clone, Debug)]
@@ -134,8 +135,8 @@ impl<A: Clone> TreeStack<A> {
         }
     }
 
-    pub fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
-        let mut tree_map = BTreeMap::new();
+    pub fn to_tree(&self) -> (GornTree<A>, Vec<usize>) {
+        let mut tree_map = GornTree::new();
         let mut curr_path = Vec::new();
 
         if let Some((num, ref parent)) = self.parent {
