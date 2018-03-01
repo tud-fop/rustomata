@@ -258,4 +258,27 @@ pub mod tests {
         ts = ts.down().unwrap();
         assert_eq!(&0, ts.current_symbol());
     }
+
+    #[test]
+    fn test_to_tree() {
+        let mut ts: TreeStack<char> = TreeStack::new('@');
+        ts = ts.push(0, 'a').unwrap();
+        ts = ts.push(0, 'b').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(1, 'c').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(3, 'd').unwrap();
+        ts = ts.push(1, 'e').unwrap();
+
+        let mut tree_map = GornTree::new();
+        tree_map.insert(vec![], '@');
+        tree_map.insert(vec![0], 'a');
+        tree_map.insert(vec![0, 0], 'b');
+        tree_map.insert(vec![1], 'c');
+        tree_map.insert(vec![3], 'd');
+        tree_map.insert(vec![3, 1], 'e');
+
+        assert_eq!((tree_map, vec![3, 1]), ts.to_tree());
+    }
 }
