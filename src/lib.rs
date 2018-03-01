@@ -15,6 +15,3 @@ pub mod pmcfg;
 pub mod push_down_automaton;
 pub mod tree_stack_automaton;
 pub mod util;
-
-#[cfg(test)]
-mod tests;
