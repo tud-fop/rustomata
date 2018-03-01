@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::iter::Extend;
 use std::slice;
 use std::vec;
 
@@ -254,6 +255,97 @@ pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     }
 
     (term_map, head_map)
+}
+
+pub fn separate_terminal_rules<HT, W>(tree_map: &GornTree<PMCFGRule<HT, HT, W>>)
+        -> GornTree<PMCFGRule<HT, HT, W>>
+    where HT: Clone + Eq + Extend<HT> + Hash,
+          W: Clone,
+{
+    let mut new_tree = GornTree::new();
+    let mut old_heads = Vec::new();
+
+    for (_, &PMCFGRule { ref head, tail: _, composition: _, weight: _ }) in tree_map {
+        old_heads.push(head.clone());
+    }
+
+    for (address, &PMCFGRule { ref head, ref tail, ref composition, ref weight }) in tree_map {
+        let mut next_child_num = tail.len()..;
+        let mut terminal_child_num = HashMap::new();
+        let mut terminal_children = Vec::new();
+        let mut new_composition = Vec::new();
+        let mut first_variable = true;
+        let mut contains_only_one_terminal = false;
+
+        for component in composition {
+            let mut new_component = Vec::new();
+
+            for variable in component {
+                match variable {
+                    &VarT::Var(num_nonter, num_compon) => {
+                        new_component.push(VarT::Var(num_nonter, num_compon));
+                    },
+                    &VarT::T(ref terminal) => {
+                        contains_only_one_terminal = first_variable;
+
+                        let child_num = if terminal_child_num.contains_key(terminal) {
+                            *terminal_child_num.get(terminal).unwrap()
+                        } else {
+                            let number = next_child_num.next().unwrap();
+                            terminal_child_num.insert(terminal.clone(), number);
+                            terminal_children.push(terminal.clone());
+                            number
+                        };
+
+                        new_component.push(VarT::Var(child_num, 0));
+                    },
+                }
+
+                first_variable = false;
+            }
+
+            new_composition.push(new_component);
+        }
+
+        let new_rule = if contains_only_one_terminal {
+            PMCFGRule {
+                head: head.clone(), tail: tail.clone(), composition: composition.clone(),
+                weight: weight.clone()
+            }
+        } else {
+            let mut unique_terminal_children = Vec::new();
+
+            for mut terminal in terminal_children {
+                let original_terminal = terminal.clone();
+
+                while old_heads.contains(&terminal) {
+                    terminal.extend(vec![original_terminal.clone()]);
+                }
+
+                unique_terminal_children.push(terminal.clone());
+
+                let mut child_address = address.clone();
+                child_address.push(*terminal_child_num.get(&original_terminal).unwrap());
+                new_tree.insert(child_address, PMCFGRule {
+                    head: terminal, tail: Vec::new(), composition: Composition::from(vec![
+                        vec![VarT::T(original_terminal)]
+                    ]), weight: weight.clone()
+                });
+            }
+
+            let mut new_tail = tail.clone();
+            new_tail.append(&mut unique_terminal_children);
+
+            PMCFGRule {
+                head: head.clone(), tail: new_tail, composition: Composition::from(new_composition),
+                weight: weight.clone()
+            }
+        };
+
+        new_tree.insert(address.clone(), new_rule);
+    }
+
+    new_tree
 }
 
 #[cfg(test)]
