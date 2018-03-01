@@ -224,3 +224,15 @@ fn test_from_str_cfg() {
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
 
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cfg_from_str_leading_comments() {
+        let grammar = "% leading comment\n\
+                       initial: [S]\n\n\
+                       S → [T a]";
+        let _: CFG<char, char, usize> = grammar.parse().unwrap();
+    }
+}

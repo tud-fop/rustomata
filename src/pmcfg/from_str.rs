@@ -261,3 +261,16 @@ fn test_from_str_pmcfg() {
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mcfg_from_str_leading_comments() {
+        let grammar = "% leading comment\n\
+                       initial: [S]\n\n\
+                       S → [[T a]]";
+        let _: PMCFG<char, char, usize> = grammar.parse().unwrap();
+    }
+}
