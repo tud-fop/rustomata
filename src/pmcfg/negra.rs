@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::{BTreeMap, VecDeque};
+use std::fmt;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TermId {
@@ -10,6 +11,12 @@ pub struct TermId {
 impl From<(Vec<usize>, usize)> for TermId {
     fn from((address, compos_var_pos): (Vec<usize>, usize)) -> TermId {
         TermId { address, compos_var_pos }
+    }
+}
+
+impl fmt::Display for TermId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({:?}, {})", self.address, self.compos_var_pos)
     }
 }
 

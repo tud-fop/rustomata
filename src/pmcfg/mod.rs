@@ -189,15 +189,16 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
     }
 }
 
-pub fn evaluate<T: Clone + fmt::Debug>(term_map: &GornTree<Composition<T>>)
+pub fn evaluate<T>(term_map: &GornTree<Composition<T>>)
         -> Composition<T>
+    where T: Clone + fmt::Display,
 {
     evaluate_pos(term_map, vec![])
 }
 
 pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
         -> Composition<T>
-    where T: Clone + fmt::Debug,
+    where T: Clone + fmt::Display,
 {
     let unexpanded_composition = term_map.get(&address).unwrap();
     let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
@@ -223,7 +224,7 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
                             expanded_component.push(terminal.clone());
                         }
                     } else {
-                        panic!("{:?}: use of {}-th component of nonterminal {} that has only {} components!",
+                        panic!("{}: use of {}-th component of nonterminal {} that has only {} components!",
                                unexpanded_composition, num_compon, num_nonter, nonter_compos.len());
                     }
                 },
@@ -322,7 +323,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected =
-        "[[Var(0, 0), Var(0, 1)]]: use of 1-th component of nonterminal 0 that has only 1 components!"
+        "[[Var 0 0, Var 0 1]]: use of 1-th component of nonterminal 0 that has only 1 components!"
     )]
     fn test_evaluate_invalid_composition() {
         let mut term_map = GornTree::new();
