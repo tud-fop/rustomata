@@ -487,4 +487,99 @@ mod tests {
             assert_eq!(orig_composition, composition);
         }
     }
+
+    #[test]
+    fn test_separate_terminal_rules() {
+        let mut tree_map: GornTree<PMCFGRule<String, String, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, T b, Var 1 0, T d]] (A, B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 0 0], [T x]] (C) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "C -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[T c]] () # 1"
+        ).unwrap());
+
+        let mut separated_control_map = GornTree::new();
+        separated_control_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 2 0, Var 1 0, Var 3 0]] (A, B, b, d) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 0 0], [Var 1 0]] (C, x) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "C -> [[T a]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "x -> [[T x]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[T c]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![2], PMCFGRule::from_str(
+            "b -> [[T b]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![3], PMCFGRule::from_str(
+            "d -> [[T d]] () # 1"
+        ).unwrap());
+
+        for (ref address, ref rule) in separate_terminal_rules(&tree_map) {
+            assert_eq!((address, separated_control_map.get(address).unwrap()), (address, rule));
+        }
+    }
+
+    #[test]
+    fn test_separate_terminal_rules_idempotence() {
+        let tree_map = example_tree_map();
+
+        let separated_tree_map1 = separate_terminal_rules(&tree_map);
+        assert_eq!(&tree_map, &separated_tree_map1);
+        let separated_tree_map2 = separate_terminal_rules(&separated_tree_map1);
+        assert_eq!(&tree_map, &separated_tree_map2);
+    }
+
+    #[test]
+    fn test_separate_terminal_rules_conflicting_names() {
+        let mut tree_map: GornTree<PMCFGRule<String, String, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, T a, Var 1 0, T b]] (a, b) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "a -> [[T b]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "b -> [[Var 0 0]] (bb) # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "bb -> [[T c]] () # 1"
+        ).unwrap());
+
+        let mut separated_control_map = GornTree::new();
+        separated_control_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 2 0, Var 1 0, Var 3 0]] (a, b, aa, bbb) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0], PMCFGRule::from_str(
+            "a -> [[T b]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1], PMCFGRule::from_str(
+            "b -> [[Var 0 0]] (bb) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "bb -> [[T c]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![2], PMCFGRule::from_str(
+            "aa -> [[T a]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![3], PMCFGRule::from_str(
+            "bbb -> [[T b]] () # 1"
+        ).unwrap());
+
+        for (ref address, ref rule) in separate_terminal_rules(&tree_map) {
+            assert_eq!((address, separated_control_map.get(address).unwrap()), (address, rule));
+        }
+    }
 }
