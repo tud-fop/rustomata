@@ -234,7 +234,7 @@ mod tests {
             let mut unidentified_compos = Vec::new();
 
             for component in composition.composition {
-                let mut unidentified_compon: Vec<VarT<char>> = Vec::new();
+                let mut unidentified_compon = Vec::new();
 
                 for variable in component {
                     match variable {

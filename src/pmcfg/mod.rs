@@ -262,7 +262,7 @@ mod tests {
     use self::VarT::{Var, T};
     use std::str::FromStr;
 
-    pub fn example_tree_map() -> GornTree<PMCFGRule<String, char, usize>> {
+    pub fn example_tree_map() -> GornTree<PMCFGRule<String, String, usize>> {
         let mut tree_map = GornTree::new();
 
         tree_map.insert(vec![], PMCFGRule::from_str(
@@ -315,7 +315,8 @@ mod tests {
         }
 
         let expanded_compos = Composition::from(vec![
-            vec![T('a'), T('a'), T('b'), T('c'), T('c'), T('d')]
+            vec![T(String::from("a")), T(String::from("a")), T(String::from("b")),
+                 T(String::from("c")), T(String::from("c")), T(String::from("d"))]
         ]);
 
         assert_eq!(expanded_compos, evaluate(&term_map));
