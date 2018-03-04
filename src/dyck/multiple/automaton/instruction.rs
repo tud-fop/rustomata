@@ -36,8 +36,6 @@ pub enum MultipleDyckInstruction<T: Ord> {
     /// * is vacant, or
     /// * contains the symbol in its set.
     UpAt(usize, T, BTreeSet<T>),
-    /// Pushes a child node in the first free position and moves to it.
-    UpNext(T),
     /// Moves down.
     Down(T),
 }
@@ -50,11 +48,6 @@ impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
         use self::MultipleDyckInstruction::*;
 
         match *self {
-            UpNext(ref symbol) => {
-                vec![
-                    ts.push_next(MDTreeElem::Node(Some(symbol.clone()), BTreeSet::new()))
-                ]
-            },
             UpAt(position, ref symbol, ref cell) => {
                 match ts.push_with(position, 
                     || { // try to push node in this position

@@ -3,7 +3,6 @@ use dyck::multiple::automaton::MultipleDyckAutomaton;
 use util::partition::Partition;
 pub use dyck::Bracket;
 use recognisable::automaton::recognise;
-use std::collections::BTreeSet;
 
 /// An object that represents the mutliple Dyck language of an alphabet Σ with respect to
 /// a partition of Σ.
@@ -17,11 +16,11 @@ impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
         MultipleDyckLanguage(MultipleDyckAutomaton::new(p))
     }
 
-    pub fn sorted<F>(p: Partition<T>, unsorted: BTreeSet<T>, sort: F) -> Self
+    pub fn sorted<F>(p: Partition<T>, sort: F) -> Self
     where
         F: Fn(&T) -> usize,
     {
-        MultipleDyckLanguage(MultipleDyckAutomaton::sorted(p, unsorted, sort))
+        MultipleDyckLanguage(MultipleDyckAutomaton::sorted(p, sort))
     }
 
     /// Unweightedly recognizes an element w ∈ Σ* of a multiple Dyck language with respect to
@@ -116,12 +115,10 @@ mod test {
             vec![1, 2].into_iter().collect(),
             vec![3, 4].into_iter().collect(),
         ]).unwrap();
-        
-        let unsorted = vec![5].into_iter().collect();
 
         let sort = | i: &usize | -> usize { if vec![1usize, 2usize].contains(i) { 1 } else { 2 } };
 
-        let l = MultipleDyckLanguage::sorted(partition, unsorted, sort);
+        let l = MultipleDyckLanguage::sorted(partition, sort);
 
         let words = vec![
             vec![Open(1), Close(1), Open(2), Close(2)],
@@ -153,10 +150,6 @@ mod test {
                 Open(2),
                 Open(4),
                 Close(4),
-                Open(5),
-                Close(5),
-                Open(5),
-                Close(5),
                 Close(2),
             ],
         ];

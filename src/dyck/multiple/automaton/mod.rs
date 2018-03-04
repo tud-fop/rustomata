@@ -1,6 +1,6 @@
 pub mod instruction;
 
-use std::collections::{BTreeSet, BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap};
 pub use dyck::multiple::automaton::instruction::{MDTreeElem, MultipleDyckInstruction};
 use util::partition::Partition;
 use Transition;
@@ -52,24 +52,11 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
     }
 
     /// Constructs a tree-stack automaton that recognizes a sorted multiple Dyck language.
-    pub fn sorted<F>(partition: Partition<T>, unsorted: BTreeSet<T>, sort: F) -> Self
+    pub fn sorted<F>(partition: Partition<T>, sort: F) -> Self
     where
         F: Fn(&T) -> usize,
     {
         let mut heap = BinaryHeap::new();
-
-        for symbol in unsorted {
-            heap.push(Transition {
-                word: vec![Bracket::Open(symbol.clone())],
-                weight: 0,
-                instruction: MultipleDyckInstruction::UpNext(symbol.clone()),
-            });
-            heap.push(Transition {
-                word: vec![Bracket::Close(symbol.clone())],
-                weight: 0,
-                instruction: MultipleDyckInstruction::Down(symbol.clone()),
-            });
-        }
 
         for cell in partition.collapse() {
             for symbol in cell {

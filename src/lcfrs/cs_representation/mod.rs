@@ -17,6 +17,7 @@ mod rule_fragments;
 
 use self::automata::*;
 use self::bracket_fragment::BracketFragment;
+use dyck::Bracket;
 use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
@@ -205,7 +206,10 @@ where
             checker
         } = self;
         for fragments in candidates {
-            let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments);
+            let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments).into_iter().filter(|b| match *b {
+                Bracket::Open(BracketContent::Terminal(_)) | Bracket::Close(BracketContent::Terminal(_)) => false,
+                _ => true
+            }).collect();
             if checker.recognize(&candidate) {
                 if let Some(derivation) = from_brackets(rules, candidate) {
                     return Some(derivation);

@@ -17,7 +17,6 @@ where
     N: 'a
 {
     let mut partition = Vec::new();
-    let mut terminals = BTreeSet::new();
     for rule in lcfrs {
         let rule_id = integeriser.find_key(rule).unwrap();
         partition.push(
@@ -43,24 +42,10 @@ where
                     ).collect()
                 )
         );
-        terminals.extend(
-            rule.composition.composition.iter().flat_map(
-                |component|
-                component.iter().filter_map(
-                    |vart| 
-                    if let &VarT::T(ref t) = vart { 
-                        Some(BracketContent::Terminal(t.clone()))
-                    } else {
-                        None
-                    }
-                )
-            )
-        );
     }
 
     MultipleDyckLanguage::sorted(
         Partition::new(partition).unwrap(),
-        terminals,
         |symbol|
         if let &BracketContent::Variable(_, i, _) = symbol {
             i
