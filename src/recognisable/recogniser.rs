@@ -49,7 +49,7 @@ where
     }
 }
 
-/// Implements a `Search` in a graph definied by a set of elements and a successor function.
+/// Implements a `Search` in a graph that is defined by a set of elements and a successor function.
 pub enum Search<A, I, F>
 where
     A: Agenda<Item = I>,

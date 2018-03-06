@@ -9,7 +9,7 @@ use dyck::Bracket;
 
 use serde::{Serialize, Deserialize};
 
-/// A `GeneratorStrategy` is a method to create a `GeneratorAutomaton` with respect to an MCFG.
+/// A `GeneratorStrategy` is a method to create a `GeneratorAutomaton` with respect to an LCFRS.
 pub trait GeneratorStrategy<T>
 where
     T: Clone + Hash + Eq
@@ -23,9 +23,9 @@ where
         T: 'a;
 }
 
-/// A `PushDownGenerator` is a `GeneratorStrtegy` that creates a `PushDownAutomaton`
-/// from an MCFG. In this implementation, it is the most specialized
-/// strategy. I.e. it produces the least amount of canidates.
+/// A `PushDownGenerator` is a `GeneratorStrategy` that creates a `PushDownAutomaton`
+/// from an LCFRS. In this implementation, it is the most specialized
+/// strategy. I.e. it produces the least amount of candidates.
 pub struct PushDownGenerator;
 impl<T> GeneratorStrategy<T> for PushDownGenerator
 where
@@ -69,7 +69,7 @@ where
 }
 
 /// The `NaiveGenerator` is the least specialied strategy.
-/// The `FiniteAutomaton` produced with respect to an MCFG will
+/// The `FiniteAutomaton` produced with respect to an LCFRS will
 /// recognize the most bracket word candidates from the three implemented strategies.
 pub struct NaiveGenerator;
 impl<T> GeneratorStrategy<T> for NaiveGenerator

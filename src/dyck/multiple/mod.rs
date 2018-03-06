@@ -11,11 +11,13 @@ pub struct MultipleDyckLanguage<T: Ord + Clone>(MultipleDyckAutomaton<T>);
 
 impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
     /// Represents a multiple Dyck language with respect to
-    /// a partition Π = {π₁, …, πₙ} of an implicit alphabet Σ = π₁ ∪ … ∪ πₙ.
+    /// a partition `p` = {p_1, ..., p_k} of an implicit alphabet p1 + ... + pk.
     pub fn new(p: Partition<T>) -> Self {
         MultipleDyckLanguage(MultipleDyckAutomaton::new(p))
     }
 
+    /// Represents a sorted multiple Dyck language with respect to a
+    /// partition `p` = {p_1, ..., p_k} of an implicit sorted alphabet (p1 + ... + pk, `sort`).
     pub fn sorted<F>(p: Partition<T>, sort: F) -> Self
     where
         F: Fn(&T) -> usize,
@@ -23,9 +25,8 @@ impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
         MultipleDyckLanguage(MultipleDyckAutomaton::sorted(p, sort))
     }
 
-    /// Unweightedly recognizes an element w ∈ Σ* of a multiple Dyck language with respect to
-    /// Σ and a partition of Σ.
-    pub fn recognize(&self, word: &[Bracket<T>]) -> Option<Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>> {
+    /// Returns true iff `word` is a member of the multiple Dyck language.
+    pub fn recognize(&self, word: &[Bracket<T>]) -> bool {
         let &MultipleDyckLanguage(ref mda) = self;
         let word_ = word.to_owned();
         let mut b = recognise(mda, word_);

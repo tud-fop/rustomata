@@ -4,7 +4,6 @@ use dyck::multiple::MultipleDyckLanguage;
 use pmcfg::PMCFGRule;
 use integeriser::Integeriser;
 use super::BracketContent;
-use std::collections::BTreeSet;
 use VarT;
 
 /// Construction of a sorted `MultipleDycklanguage` for the CS characterization of an LCFRS. 

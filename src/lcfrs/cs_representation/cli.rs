@@ -169,7 +169,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             match (strategy, filter) {
                 (Strat::Keller, Filter::Inside) => {
                     let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for (sentence_id, sentence) in word_strings.lines().enumerate() {
+                    for sentence in word_strings.lines() {
                         let words: Vec<String> = sentence.split_whitespace().map(|s| s.to_string()).collect();
 
                         if params.is_present("debugmode") {

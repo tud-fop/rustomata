@@ -144,14 +144,7 @@ where
                     for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
                         if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
                             successors.push(
-                                (
-                                    sto,
-                                    oto,
-                                    *label,
-                                    to,
-                                    to_,
-                                    weight
-                                )
+                                (sto, oto, *label, to, to_, weight)
                             );
                         }
                 }
