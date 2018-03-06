@@ -54,7 +54,7 @@ impl<A> Pushdown<A> {
         }
     }
 
-    /// Applies a function `FnMut(&A) -> B`to every node in a `Pushdown<A>`.
+    /// Applies a function `FnMut(&A) -> B` to every node in a `Pushdown<A>`.
     pub fn map<F, B>(&self, f: &mut F) -> Pushdown<B>
         where F: FnMut(&A) -> B,
     {

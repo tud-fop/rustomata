@@ -334,7 +334,7 @@ impl<A> PushDown<A>
 {
     /// Operations for Instructions:
     /// Replaces the uppermost elements with the given elements.
-    /// TODO cur_sym ist given in reverse order.
+    /// TODO cur_sym is given in reverse order.
     pub fn replace(mut self, cur_sym: &[A],  new_sym: &[A]) -> Result<Self, Self> {
         let mut new_cur_sym = cur_sym.to_vec(); //
         new_cur_sym.reverse();                  // TODO remove this
