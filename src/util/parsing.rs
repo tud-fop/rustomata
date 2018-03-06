@@ -1,6 +1,6 @@
+use nom::{IResult, anychar, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
-use nom::{IResult, anychar, is_space};
 
 /// Parses a token (i.e. a terminal symbol or a non-terminal symbol).
 /// A *token* can be of one of the following two forms:
@@ -63,4 +63,162 @@ pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
             result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
             (result)
     )
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_token_legal_input() {
+        let legal_inputs = vec![
+            ("\"a\"xyz", "xyz", String::from("a")),
+            ("\"a\\\\b\\\"c\"xyz", "xyz", String::from("a\\\\b\\\"c")),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_token::<String>(legal_input.as_bytes()).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_token_illegal_input() {
+        let illegal_inputs = vec![
+            "\'a\'",
+            "\"\"\"",
+            "\" \"",
+            "\"-\"",
+            "\"→\"",
+            "\",\"",
+            "\";\"",
+            "\")\"",
+            "\"]\"",
+            "\"\\\"",
+            " \"a\"",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match parse_token::<String>(illegal_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_token_incomplete_input() {
+        let incomplete_inputs = vec![
+            "\"a",
+        ];
+
+        for incomplete_input in incomplete_inputs {
+            match parse_token::<String>(incomplete_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Error(_) =>
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Incomplete(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_vec_legal_input() {
+        let legal_inputs = vec![
+            ("[]xyz", "xyz", vec![]),
+            ("[\"a\",\"bc\",\"d\"]xyz", "xyz",
+                vec![String::from("a"), String::from("bc"), String::from("d")]),
+            ("[  \"a\", \"b\" ,\"c\"]xyz", "xyz",
+                vec![String::from("a"), String::from("b"), String::from("c")]),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_vec(legal_input.as_bytes(), parse_token, "[", "]", ",").unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_vec_illegal_input() {
+        let illegal_inputs = vec![
+            "(\"a\")xyz",
+            "[\"a\"]xyz",
+            "[\"a\",\"b\";\"c\")xyz",
+            " []xyz",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match parse_vec::<String, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_vec_incomplete_input() {
+        let incomplete_inputs = vec![
+            "[\"a\"",
+        ];
+
+        for incomplete_input in incomplete_inputs {
+            match parse_vec::<String, _>(incomplete_input.as_bytes(), parse_token, "[", "]", ",") {
+                IResult::Done(_, _) | IResult::Error(_) =>
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Incomplete(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_initials_legal_input() {
+        let legal_inputs = vec![
+            ("initial: [\"a\"]xyz", "xyz", vec![String::from("a")]),
+            ("initial:  []xyz", "xyz", vec![]),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_initials(legal_input.as_bytes()).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_initials_illegal_input() {
+        let illegal_inputs = vec![
+            "initials: []xyz",
+            " initial: []xyz",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match parse_initials::<String>(illegal_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_initials_incomplete_input() {
+        let incomplete_inputs = vec![
+            "init",
+            "initial: [",
+        ];
+
+        for incomplete_input in incomplete_inputs {
+            match parse_initials::<String>(incomplete_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Error(_) =>
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Incomplete(_) => (),
+            }
+        }
+    }
 }
