@@ -182,3 +182,84 @@ fn parse_heap<A>(input: &[u8]) -> IResult<&[u8], HashSet<A>>
         IResult::Error(error) => IResult::Error(error),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_equivalence_relation_project() {
+        let rel: EquivalenceRelation<u8, u8> = String::from("0 [0, 1]\n1 [2, 4]\n2 *").parse().unwrap();
+        assert_eq!(0, rel.project(&1));
+        assert_eq!(1, rel.project(&2));
+        assert_eq!(2, rel.project(&3));
+        assert_eq!(1, rel.project(&4));
+    }
+
+    #[test]
+    fn test_equivalence_class_from_str_legal_input() {
+        let legal_inputs = vec![
+            ("0 [0, 1]", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0  [1, 0]", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0  [0, 1, 1]", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0 *", EquivalenceClass::from((0, None))),
+        ];
+
+        for (legal_input, correct_class) in legal_inputs {
+            assert_eq!(correct_class,
+                       EquivalenceClass::from_str(legal_input).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_equivalence_class_from_str_illegal_input() {
+        let illegal_inputs = vec![
+            " 0 [0, 1]",
+            "[0, 1]",
+            "*",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match EquivalenceClass::<u8, u8>::from_str(illegal_input) {
+                Ok(parsed) =>
+                    panic!("Was able to parse the illegal input \'{}\' as \'{:?}\'",
+                           illegal_input, parsed),
+                Err(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_equivalence_relation_from_str_legal_input() {
+        let legal_inputs = vec![
+            ("0 [0, 1]\n1 [2, 3]\n2 *", EquivalenceRelation::from(vec![
+                EquivalenceClass::from((0, Some(vec![0, 1]))),
+                EquivalenceClass::from((1, Some(vec![2, 3]))),
+                EquivalenceClass::from((2, None)),
+            ])),
+        ];
+
+        for (legal_input, correct_relation) in legal_inputs {
+            assert_eq!(correct_relation,
+                       EquivalenceRelation::from_str(legal_input).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_equivalence_relation_from_str_illegal_input() {
+        let illegal_inputs = vec![
+            " 0 [0, 1]\n1 [2, 3]\n2 *",
+            "0 [0, 1]1 [2, 3]2 *",
+            "0 [0, 1]\n1 [1, 2]\n2 *",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match EquivalenceRelation::<u8, u8>::from_str(illegal_input) {
+                Ok(parsed) =>
+                    panic!("Was able to parse the illegal input \'{}\' as \'{:?}\'",
+                           illegal_input, parsed),
+                Err(_) => (),
+            }
+        }
+    }
+}
