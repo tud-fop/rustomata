@@ -6,7 +6,7 @@ use nom::{IResult, anychar, is_space};
 /// A *token* can be of one of the following two forms:
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
-/// * It is delimited by the symbol `'"` on both sides and each occurrence of `'\\'` or `'"` inside the delimiters is escaped.
+/// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
 pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
     where A: FromStr,
           A::Err: Debug,

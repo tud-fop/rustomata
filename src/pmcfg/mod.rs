@@ -1,6 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::iter::Extend;
+use std::slice;
+use std::vec;
+
 use util::tree::GornTree;
 
 mod from_str;
@@ -24,6 +28,33 @@ pub struct Composition<T> {
 impl<T> From<Vec<Vec<VarT<T>>>> for Composition<T> {
     fn from(encapsulated_value: Vec<Vec<VarT<T>>>) -> Self {
         Composition { composition: encapsulated_value }
+    }
+}
+
+impl<T> IntoIterator for Composition<T> {
+    type Item = Vec<VarT<T>>;
+    type IntoIter = vec::IntoIter<Vec<VarT<T>>>;
+
+    fn into_iter(self) -> vec::IntoIter<Vec<VarT<T>>> {
+        self.composition.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Composition<T> {
+    type Item = &'a Vec<VarT<T>>;
+    type IntoIter = slice::Iter<'a, Vec<VarT<T>>>;
+
+    fn into_iter(self) -> slice::Iter<'a, Vec<VarT<T>>> {
+        (&self.composition).into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut Composition<T> {
+    type Item = &'a mut Vec<VarT<T>>;
+    type IntoIter = slice::IterMut<'a, Vec<VarT<T>>>;
+
+    fn into_iter(self) -> slice::IterMut<'a, Vec<VarT<T>>> {
+        (&mut self.composition).into_iter()
     }
 }
 
@@ -159,17 +190,18 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for PMCFG<N
     }
 }
 
-pub fn evaluate<T: Clone + fmt::Debug>(term_map: &GornTree<Composition<T>>)
+pub fn evaluate<T>(term_map: &GornTree<Composition<T>>)
         -> Composition<T>
+    where T: Clone + fmt::Display,
 {
     evaluate_pos(term_map, vec![])
 }
 
 pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
         -> Composition<T>
-    where T: Clone + fmt::Debug,
+    where T: Clone + fmt::Display,
 {
-    let unexpanded_composition = &term_map.get(&address).unwrap().composition;
+    let unexpanded_composition = term_map.get(&address).unwrap();
     let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
     let mut expanded_composition = Vec::new();
 
@@ -193,10 +225,9 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
                             expanded_component.push(terminal.clone());
                         }
                     } else {
-                        panic!("{:?}: use of {}-th component of nonterminal {} that has only {} components!",
+                        panic!("{}: use of {}-th component of nonterminal {} that has only {} components!",
                                unexpanded_composition, num_compon, num_nonter, nonter_compos.len());
                     }
-
                 },
                 &VarT::T(ref terminal) => {
                     expanded_component.push(VarT::T(terminal.clone()));
@@ -212,7 +243,8 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
 
 pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> (GornTree<Composition<T>>, GornTree<H>)
-    where H: Clone, T: Clone,
+    where H: Clone,
+          T: Clone,
 {
     let mut term_map = GornTree::new();
     let mut head_map = GornTree::new();
@@ -225,13 +257,104 @@ pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     (term_map, head_map)
 }
 
+pub fn separate_terminal_rules<HT, W>(tree_map: &GornTree<PMCFGRule<HT, HT, W>>)
+        -> GornTree<PMCFGRule<HT, HT, W>>
+    where HT: Clone + Eq + Extend<HT> + Hash,
+          W: Clone,
+{
+    let mut new_tree = GornTree::new();
+    let mut old_heads = Vec::new();
+
+    for (_, &PMCFGRule { ref head, tail: _, composition: _, weight: _ }) in tree_map {
+        old_heads.push(head.clone());
+    }
+
+    for (address, &PMCFGRule { ref head, ref tail, ref composition, ref weight }) in tree_map {
+        let mut next_child_num = tail.len()..;
+        let mut terminal_child_num = HashMap::new();
+        let mut terminal_children = Vec::new();
+        let mut new_composition = Vec::new();
+        let mut first_variable = true;
+        let mut contains_only_one_terminal = false;
+
+        for component in composition {
+            let mut new_component = Vec::new();
+
+            for variable in component {
+                match variable {
+                    &VarT::Var(num_nonter, num_compon) => {
+                        new_component.push(VarT::Var(num_nonter, num_compon));
+                    },
+                    &VarT::T(ref terminal) => {
+                        contains_only_one_terminal = first_variable;
+
+                        let child_num = if terminal_child_num.contains_key(terminal) {
+                            *terminal_child_num.get(terminal).unwrap()
+                        } else {
+                            let number = next_child_num.next().unwrap();
+                            terminal_child_num.insert(terminal.clone(), number);
+                            terminal_children.push(terminal.clone());
+                            number
+                        };
+
+                        new_component.push(VarT::Var(child_num, 0));
+                    },
+                }
+
+                first_variable = false;
+            }
+
+            new_composition.push(new_component);
+        }
+
+        let new_rule = if contains_only_one_terminal {
+            PMCFGRule {
+                head: head.clone(), tail: tail.clone(), composition: composition.clone(),
+                weight: weight.clone()
+            }
+        } else {
+            let mut unique_terminal_children = Vec::new();
+
+            for mut terminal in terminal_children {
+                let original_terminal = terminal.clone();
+
+                while old_heads.contains(&terminal) {
+                    terminal.extend(vec![original_terminal.clone()]);
+                }
+
+                unique_terminal_children.push(terminal.clone());
+
+                let mut child_address = address.clone();
+                child_address.push(*terminal_child_num.get(&original_terminal).unwrap());
+                new_tree.insert(child_address, PMCFGRule {
+                    head: terminal, tail: Vec::new(), composition: Composition::from(vec![
+                        vec![VarT::T(original_terminal)]
+                    ]), weight: weight.clone()
+                });
+            }
+
+            let mut new_tail = tail.clone();
+            new_tail.append(&mut unique_terminal_children);
+
+            PMCFGRule {
+                head: head.clone(), tail: new_tail, composition: Composition::from(new_composition),
+                weight: weight.clone()
+            }
+        };
+
+        new_tree.insert(address.clone(), new_rule);
+    }
+
+    new_tree
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use self::VarT::{Var, T};
     use std::str::FromStr;
 
-    pub fn example_tree_map() -> GornTree<PMCFGRule<String, char, usize>> {
+    pub fn example_tree_map() -> GornTree<PMCFGRule<String, String, usize>> {
         let mut tree_map = GornTree::new();
 
         tree_map.insert(vec![], PMCFGRule::from_str(
@@ -284,7 +407,8 @@ mod tests {
         }
 
         let expanded_compos = Composition::from(vec![
-            vec![T('a'), T('a'), T('b'), T('c'), T('c'), T('d')]
+            vec![T(String::from("a")), T(String::from("a")), T(String::from("b")),
+                 T(String::from("c")), T(String::from("c")), T(String::from("d"))]
         ]);
 
         assert_eq!(expanded_compos, evaluate(&term_map));
@@ -292,7 +416,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected =
-        "[[Var(0, 0), Var(0, 1)]]: use of 1-th component of nonterminal 0 that has only 1 components!"
+        "[[Var 0 0, Var 0 1]]: use of 1-th component of nonterminal 0 that has only 1 components!"
     )]
     fn test_evaluate_invalid_composition() {
         let mut term_map = GornTree::new();
@@ -361,6 +485,101 @@ mod tests {
                 reconstructed_tree_map.get(&address).unwrap();
             assert_eq!(orig_head, head);
             assert_eq!(orig_composition, composition);
+        }
+    }
+
+    #[test]
+    fn test_separate_terminal_rules() {
+        let mut tree_map: GornTree<PMCFGRule<String, String, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, T b, Var 1 0, T d]] (A, B) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 0 0], [T x]] (C) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "C -> [[T a]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[T c]] () # 1"
+        ).unwrap());
+
+        let mut separated_control_map = GornTree::new();
+        separated_control_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 2 0, Var 1 0, Var 3 0]] (A, B, b, d) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0], PMCFGRule::from_str(
+            "A -> [[Var 0 0], [Var 1 0]] (C, x) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0, 0], PMCFGRule::from_str(
+            "C -> [[T a]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0, 1], PMCFGRule::from_str(
+            "x -> [[T x]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1], PMCFGRule::from_str(
+            "B -> [[T c]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![2], PMCFGRule::from_str(
+            "b -> [[T b]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![3], PMCFGRule::from_str(
+            "d -> [[T d]] () # 1"
+        ).unwrap());
+
+        for (ref address, ref rule) in separate_terminal_rules(&tree_map) {
+            assert_eq!((address, separated_control_map.get(address).unwrap()), (address, rule));
+        }
+    }
+
+    #[test]
+    fn test_separate_terminal_rules_idempotence() {
+        let tree_map = example_tree_map();
+
+        let separated_tree_map1 = separate_terminal_rules(&tree_map);
+        assert_eq!(&tree_map, &separated_tree_map1);
+        let separated_tree_map2 = separate_terminal_rules(&separated_tree_map1);
+        assert_eq!(&tree_map, &separated_tree_map2);
+    }
+
+    #[test]
+    fn test_separate_terminal_rules_conflicting_names() {
+        let mut tree_map: GornTree<PMCFGRule<String, String, usize>> = GornTree::new();
+        tree_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, T a, Var 1 0, T b]] (a, b) # 1"
+        ).unwrap());
+        tree_map.insert(vec![0], PMCFGRule::from_str(
+            "a -> [[T b]] () # 1"
+        ).unwrap());
+        tree_map.insert(vec![1], PMCFGRule::from_str(
+            "b -> [[Var 0 0]] (bb) # 1"
+        ).unwrap());
+        tree_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "bb -> [[T c]] () # 1"
+        ).unwrap());
+
+        let mut separated_control_map = GornTree::new();
+        separated_control_map.insert(vec![], PMCFGRule::from_str(
+            "S -> [[Var 0 0, Var 2 0, Var 1 0, Var 3 0]] (a, b, aa, bbb) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![0], PMCFGRule::from_str(
+            "a -> [[T b]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1], PMCFGRule::from_str(
+            "b -> [[Var 0 0]] (bb) # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![1, 0], PMCFGRule::from_str(
+            "bb -> [[T c]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![2], PMCFGRule::from_str(
+            "aa -> [[T a]] () # 1"
+        ).unwrap());
+        separated_control_map.insert(vec![3], PMCFGRule::from_str(
+            "bbb -> [[T b]] () # 1"
+        ).unwrap());
+
+        for (ref address, ref rule) in separate_terminal_rules(&tree_map) {
+            assert_eq!((address, separated_control_map.get(address).unwrap()), (address, rule));
         }
     }
 }

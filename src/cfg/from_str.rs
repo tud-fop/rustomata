@@ -37,14 +37,14 @@ impl<N, T, W> FromStr for CFG<N, T, W>
 
         for l in s.lines() {
             if !l.is_empty() && !l.starts_with("initial: ") {
-                rules.push(try!(l.trim().parse()));
+                rules.push(l.trim().parse()?);
             }
         }
 
         Ok(CFG {
             _dummy: PhantomData,
-            initial: initial,
-            rules: rules,
+            initial,
+            rules,
         })
 
     }
@@ -224,3 +224,15 @@ fn test_from_str_cfg() {
     assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
 }
 
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cfg_from_str_leading_comments() {
+        let grammar = "% leading comment\n\
+                       initial: [S]\n\n\
+                       S → [T a]";
+        let _: CFG<char, char, usize> = grammar.parse().unwrap();
+    }
+}

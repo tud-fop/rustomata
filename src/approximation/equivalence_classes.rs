@@ -46,7 +46,7 @@ impl<A: Eq + Hash, B: Clone + Eq + Hash> EquivalenceRelation<A, B> {
         }
         EquivalenceRelation {
             map: rmap,
-            default: default,
+            default,
         }
     }
 

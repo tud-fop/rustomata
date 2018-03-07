@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
 use std::hash::Hash;
-use util::integerisable::Integerisable1;
+
 use integeriser::{HashIntegeriser, Integeriser};
+use util::integerisable::Integerisable1;
+use util::tree::GornTree;
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
 #[derive(Clone, Debug)]
@@ -134,8 +135,8 @@ impl<A: Clone> TreeStack<A> {
         }
     }
 
-    pub fn to_tree(&self) -> (BTreeMap<Vec<usize>, A>, Vec<usize>) {
-        let mut tree_map = BTreeMap::new();
+    pub fn to_tree(&self) -> (GornTree<A>, Vec<usize>) {
+        let mut tree_map = GornTree::new();
         let mut curr_path = Vec::new();
 
         if let Some((num, ref parent)) = self.parent {
@@ -143,8 +144,8 @@ impl<A: Clone> TreeStack<A> {
             curr_path = parent_path;
             curr_path.push(num);
 
-            for (path, value) in parent_map.iter() {
-                tree_map.insert(path.clone(), value.clone());
+            for (path, value) in parent_map {
+                tree_map.insert(path, value);
             }
         }
 
@@ -158,7 +159,7 @@ impl<A: Clone> TreeStack<A> {
                     let mut new_path = curr_path.clone();
                     new_path.push(num);
                     new_path.append(&mut path.clone());
-                    tree_map.insert(new_path, value.clone());
+                    tree_map.insert(new_path, value);
                 }
             }
         }
@@ -222,34 +223,62 @@ impl<A: Ord> Ord for TreeStack<A> {
     }
 }
 
-#[test]
-fn test_tree_stack() {
-    let mut ts: TreeStack<u8> = TreeStack::new(0);
-    assert_eq!(&0, ts.current_symbol());
+#[cfg(test)]
+pub mod tests {
+    use super::*;
 
-    ts = ts.push(1, 1).unwrap();
-    assert_eq!(&1, ts.current_symbol());
+    #[test]
+    fn test_tree_stack() {
+        let mut ts: TreeStack<u8> = TreeStack::new(0);
+        assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.down().unwrap();
-    assert_eq!(&0, ts.current_symbol());
+        ts = ts.push(1, 1).unwrap();
+        assert_eq!(&1, ts.current_symbol());
 
-    ts = ts.push(2, 2).unwrap();
-    assert_eq!(&2, ts.current_symbol());
+        ts = ts.down().unwrap();
+        assert_eq!(&0, ts.current_symbol());
 
-    ts = ts.down().unwrap();
-    ts = ts.up(1).unwrap();
-    assert_eq!(&1, ts.current_symbol());
+        ts = ts.push(2, 2).unwrap();
+        assert_eq!(&2, ts.current_symbol());
 
-    ts = ts.push(1, 11).unwrap();
-    assert_eq!(&11, ts.current_symbol());
+        ts = ts.down().unwrap();
+        ts = ts.up(1).unwrap();
+        assert_eq!(&1, ts.current_symbol());
 
-    ts = ts.down().unwrap();
-    ts = ts.down().unwrap();
-    ts = ts.up(2).unwrap();
-    ts = ts.push(1, 21).unwrap();
-    assert_eq!(&21, ts.current_symbol());
+        ts = ts.push(1, 11).unwrap();
+        assert_eq!(&11, ts.current_symbol());
 
-    ts = ts.down().unwrap();
-    ts = ts.down().unwrap();
-    assert_eq!(&0, ts.current_symbol());
+        ts = ts.down().unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.up(2).unwrap();
+        ts = ts.push(1, 21).unwrap();
+        assert_eq!(&21, ts.current_symbol());
+
+        ts = ts.down().unwrap();
+        ts = ts.down().unwrap();
+        assert_eq!(&0, ts.current_symbol());
+    }
+
+    #[test]
+    fn test_to_tree() {
+        let mut ts: TreeStack<char> = TreeStack::new('@');
+        ts = ts.push(0, 'a').unwrap();
+        ts = ts.push(0, 'b').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(1, 'c').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(3, 'd').unwrap();
+        ts = ts.push(1, 'e').unwrap();
+
+        let mut tree_map = GornTree::new();
+        tree_map.insert(vec![], '@');
+        tree_map.insert(vec![0], 'a');
+        tree_map.insert(vec![0, 0], 'b');
+        tree_map.insert(vec![1], 'c');
+        tree_map.insert(vec![3], 'd');
+        tree_map.insert(vec![3, 1], 'e');
+
+        assert_eq!((tree_map, vec![3, 1]), ts.to_tree());
+    }
 }

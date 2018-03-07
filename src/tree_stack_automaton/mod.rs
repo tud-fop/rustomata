@@ -136,19 +136,23 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
           T: Clone + Eq + Hash + Ord,
           W: Clone + Copy + Eq + Mul<Output=W> + MulAssign + One + Ord,
 {
+    type Key = usize;
     type I = TreeStackInstruction<A>;
     type IInt = TreeStackInstruction<usize>;
     type TInt = usize;
-    type Key = usize;
 
-    fn extract_key(c: &Configuration<TreeStack<usize>, usize, W>) -> &usize {
-        match *c {
-            Configuration { ref storage, .. } => storage.current_symbol(),
-        }
+    fn from_transitions<It>(transitions: It, initial: TreeStack<A>) -> Self
+        where It: IntoIterator<Item=Transition<TreeStackInstruction<A>, T, W>>
+    {
+        TreeStackAutomaton::new(transitions, initial)
     }
 
-    fn is_terminal(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
-        c.word.is_empty() && c.storage.is_at_bottom()
+    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<TreeStackInstruction<A>, T, W>> + 'a> {
+        self.list_transitions()
+    }
+
+    fn initial(&self) -> TreeStack<A> {
+        self.initial.map(&mut |i| self.a_integeriser.find_value(*i).unwrap().clone())
     }
 
     fn item_map(&self, i: &Item<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>)
@@ -170,7 +174,7 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
                             .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())
                             .collect(),
                         storage: Integerisable1::un_integerise(storage, &self.a_integeriser),
-                        weight: weight,
+                        weight,
                     },
                     Pushdown::from(pd_unint.as_slice())
                 )
@@ -178,18 +182,18 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         }
     }
 
-    fn from_transitions<It>(transitions: It, initial: TreeStack<A>) -> Self
-        where It: IntoIterator<Item=Transition<TreeStackInstruction<A>, T, W>>
-    {
-        TreeStackAutomaton::new(transitions, initial)
+    fn terminal_to_int(&self, t: &T) -> usize {
+        self.t_integeriser.find_key(t).unwrap()
     }
 
-    fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<TreeStackInstruction<A>, T, W>> + 'a> {
-        self.list_transitions()
+    fn extract_key(c: &Configuration<TreeStack<usize>, usize, W>) -> &usize {
+        match *c {
+            Configuration { ref storage, .. } => storage.current_symbol(),
+        }
     }
 
-    fn initial(&self) -> TreeStack<A> {
-        self.initial.map(&mut |i| self.a_integeriser.find_value(*i).unwrap().clone())
+    fn is_terminal(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
+        c.word.is_empty() && c.storage.is_at_bottom()
     }
 
     fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {
@@ -198,10 +202,6 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
 
     fn initial_int(&self) -> TreeStack<usize> {
         self.initial.clone()
-    }
-
-    fn terminal_to_int(&self, t: &T) -> usize {
-        self.t_integeriser.find_key(t).unwrap()
     }
 }
 

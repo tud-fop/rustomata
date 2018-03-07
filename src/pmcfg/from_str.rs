@@ -36,12 +36,12 @@ impl<N, T, W> FromStr for PMCFG<N, T, W>
 
         for l in s.lines() {
             if !l.is_empty() && !l.starts_with("initial: ") && !l.trim_left().starts_with("%") {
-                rules.push(try!(l.trim().parse()));
+                rules.push(l.trim().parse()?);
             }
         }
         Ok(PMCFG {
-            initial: initial,
-            rules: rules,
+            initial,
+            rules,
         })
 
     }
@@ -260,4 +260,17 @@ fn test_from_str_pmcfg() {
     let a = TreeStackAutomaton::from(g);
 
     assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mcfg_from_str_leading_comments() {
+        let grammar = "% leading comment\n\
+                       initial: [S]\n\n\
+                       S → [[T a]]";
+        let _: PMCFG<char, char, usize> = grammar.parse().unwrap();
+    }
 }

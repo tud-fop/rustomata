@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::{BTreeMap, VecDeque};
+use std::fmt;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TermId {
@@ -13,6 +14,12 @@ impl From<(Vec<usize>, usize)> for TermId {
     }
 }
 
+impl fmt::Display for TermId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({:?}, {})", self.address, self.compos_var_pos)
+    }
+}
+
 pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
         -> (GornTree<Composition<TermId>>, BTreeMap<TermId, A>)
     where A: Clone,
@@ -21,7 +28,7 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
     let mut terminal_map = BTreeMap::new();
 
     for (address, composition) in tree_map {
-        let vec_compos = &composition.composition;
+        let vec_compos = composition;
         let mut identified_compos = Vec::new();
         let mut compos_var_pos = 0;
 
@@ -73,7 +80,7 @@ pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: u
     output
 }
 
-pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> bool
 {
     for (_address, rule) in tree_map {
@@ -81,7 +88,7 @@ pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         let mut contains_nonterminal = false;
         let mut contains_terminal = false;
 
-        for component in &composition.composition {
+        for component in composition {
             for variable in component {
                 match variable {
                     &VarT::Var(_, _) => {
@@ -106,7 +113,7 @@ pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     true
 }
 
-pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> Vec<(String, String, usize)>
     where H: Clone + ToString,
           T: Clone + ToString,
@@ -120,7 +127,7 @@ pub fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     let mut rule_number_map = GornTree::new();
     let mut rule_counter = 1;
 
-    for component in evaluated_compos.composition {
+    for component in evaluated_compos {
         for variable in component {
             match variable {
                 VarT::Var(_, _) => {
@@ -227,7 +234,7 @@ mod tests {
             let mut unidentified_compos = Vec::new();
 
             for component in composition.composition {
-                let mut unidentified_compon: Vec<VarT<char>> = Vec::new();
+                let mut unidentified_compon = Vec::new();
 
                 for variable in component {
                     match variable {

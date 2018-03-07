@@ -1,15 +1,16 @@
 extern crate num_traits;
 
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, BTreeMap};
 use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
+
 use self::num_traits::One;
-use recognisable::Transition;
 use pmcfg::{PMCFG, PMCFGRule, VarT};
+use recognisable::Transition;
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use util::tree::GornTree;
 
 // types for analysis of derivation trees of PMCFGs
 pub type RuleCallerMap<N, T, W> = BTreeMap<PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>;
@@ -226,8 +227,8 @@ impl<N: Clone + Ord + PartialEq + Hash,
     }
 }
 
-pub fn to_abstract_syntax_tree<A>((tree_map, _): (BTreeMap<Vec<usize>, PosState<A>>, Vec<usize>)) -> BTreeMap<Vec<usize>, A> {
-    let mut abstract_syntax_tree = BTreeMap::new();
+pub fn to_abstract_syntax_tree<A>((tree_map, _): (GornTree<PosState<A>>, Vec<usize>)) -> GornTree<A> {
+    let mut abstract_syntax_tree = GornTree::new();
 
     for (address, pos_state) in tree_map {
         let (curr_root_child, relative_address) = if let Some((first, rest)) = address.split_first() {
@@ -256,14 +257,14 @@ pub mod tests {
 
     #[test]
     fn test_to_abstract_syntax_tree() {
-        let mut tree_map = BTreeMap::new();
+        let mut tree_map = GornTree::new();
         tree_map.insert(vec![], PosState::Initial);
         tree_map.insert(vec![0], PosState::Position('a', 0, 0));
         tree_map.insert(vec![0, 0], PosState::Position('b', 0, 0));
         tree_map.insert(vec![0, 2], PosState::Position('c', 0, 0));
         tree_map.insert(vec![2], PosState::Position('d', 0, 0));
 
-        let mut abstract_syntax_tree = BTreeMap::new();
+        let mut abstract_syntax_tree = GornTree::new();
         abstract_syntax_tree.insert(vec![], 'a');
         abstract_syntax_tree.insert(vec![0], 'b');
         abstract_syntax_tree.insert(vec![2], 'c');
@@ -273,8 +274,8 @@ pub mod tests {
 
     #[test]
     fn test_to_abstract_syntax_tree_empty_tree() {
-        let tree_map: BTreeMap<_, PosState<u8>> = BTreeMap::new();
-        assert_eq!(BTreeMap::new(), to_abstract_syntax_tree((tree_map, vec![])));
+        let tree_map: GornTree<PosState<u8>> = GornTree::new();
+        assert_eq!(GornTree::new(), to_abstract_syntax_tree((tree_map, vec![])));
     }
 
     #[test]
@@ -282,7 +283,7 @@ pub mod tests {
         expected="The given tree map contains 'designated' or 'initial' nodes that are not the root!"
     )]
     fn test_to_abstract_syntax_tree_invalid_tree() {
-        let mut tree_map: BTreeMap<_, PosState<u8>> = BTreeMap::new();
+        let mut tree_map: GornTree<PosState<u8>> = GornTree::new();
         tree_map.insert(vec![], PosState::Initial);
         tree_map.insert(vec![0], PosState::Initial);
 

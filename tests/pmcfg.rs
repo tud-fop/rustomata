@@ -1,15 +1,58 @@
-use recognisable::*;
-use pmcfg::*;
-use cfg::*;
-use approximation::ApproximationStrategy;
-use approximation::equivalence_classes::EquivalenceRelation;
-use approximation::relabel::RlbElement;
-use approximation::tts::TTSElement;
-use push_down_automaton::*;
-use tree_stack_automaton::*;
+extern crate log_domain;
+extern crate rustomata;
 
 use log_domain::LogDomain;
+use std::fs::File;
+use std::io::Read;
 
+use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::tts::TTSElement;
+use rustomata::pmcfg::*;
+use rustomata::pmcfg::negra::to_negra;
+use rustomata::recognisable::*;
+use rustomata::tree_stack_automaton::*;
+
+fn example_tree_stack_automaton()
+        -> TreeStackAutomaton<PosState<PMCFGRule<String, String, LogDomain<f64>>>, String, LogDomain<f64>>
+{
+    let mut grammar_file = File::open("examples/example.mcfg").unwrap();
+    let mut grammar_string = String::new();
+    let _ = grammar_file.read_to_string(&mut grammar_string);
+    let grammar: PMCFG<String, String, _> = grammar_string.parse().unwrap();
+
+    let automaton = TreeStackAutomaton::from(grammar);
+    automaton
+}
+
+#[test]
+fn test_example_mcfg_to_negra() {
+    let automaton = example_tree_stack_automaton();
+    let tree_stack = automaton.recognise(vec![
+        String::from("a"), String::from("a"), String::from("b"),
+        String::from("c"), String::from("c"), String::from("d")
+    ]).next().unwrap().0;
+
+    let syntax_tree = to_abstract_syntax_tree(tree_stack.storage.to_tree());
+    let separated_syntax_tree = separate_terminal_rules(&syntax_tree);
+
+    let negra_string = to_negra(&separated_syntax_tree, 0);
+    let negra_control_string = String::from(
+        "#BOS 0\n\
+         a\ta\t--\t--\t1\n\
+         a\ta\t--\t--\t2\n\
+         b\tb\t--\t--\t3\n\
+         c\tc\t--\t--\t1\n\
+         c\tc\t--\t--\t2\n\
+         d\td\t--\t--\t3\n\
+         #1\tA\t--\t--\t4\n\
+         #2\tA\t--\t--\t1\n\
+         #3\tB\t--\t--\t4\n\
+         #4\tS\t--\t--\t0\n\
+         #EOS 0"
+    );
+
+    assert_eq!(negra_control_string, negra_string);
+}
 
 #[test]
 fn test_from_str_automaton() {
@@ -102,56 +145,8 @@ fn test_from_str_automaton() {
     );
 }
 
-
-#[test]
-fn test_relabel_pushdown() {
-
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B  ] # 0.6";
-    let r2_string = "A → [T a              ] # 0.4";
-    let r3_string = "B → [T b, Nt B, Nt A  ] # 0.3";
-    let r4_string = "B → [T b              ] # 0.7";
-
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
-
-    let a = PushDownAutomaton::from(g);
-
-    let mut e_string = String::from("S [S]\n");
-    e_string.push_str("N [A, B]\n");
-    e_string.push_str("R [*]\n");
-
-    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
-
-    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-    let rlb = RlbElement::new(&f);
-
-    let (b, _) = rlb.approximate_automaton(&a);
-
-    assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
-    assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string(), "b".to_string(), "a".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string() ]).next());
-
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
-
-}
-
-
 #[test]
 fn test_tts() {
-
     //create (and test) initial push down automata
     let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
     let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
@@ -184,46 +179,4 @@ fn test_tts() {
     assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
     assert_eq!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
-}
-
-
-#[test]
-fn test_relabel_check() {
-
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B  ] # 0.6";
-    let r2_string = "A → [T a              ] # 0.4";
-    let r3_string = "B → [T b, Nt B, Nt A  ] # 0.3";
-    let r4_string = "B → [T b              ] # 0.7";
-
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
-
-    let a = PushDownAutomaton::from(g);
-
-    let mut e_string = String::from("S [S]\n");
-    e_string.push_str("N [A, B]\n");
-    e_string.push_str("R *\n");
-
-    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
-
-    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-    let rlb = RlbElement::new(&f);
-
-    let (b, _) = rlb.approximate_automaton(&a);
-
-    let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next();
-    assert_ne!(None, itemb);
-
 }

@@ -42,7 +42,7 @@ impl<A> Pushdown<A> {
     pub fn set(self, a: A) -> Result<Self, Self> {
         match self {
             Pushdown::Empty => Err(Pushdown::Empty),
-            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below: below }),
+            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below }),
         }
     }
 
@@ -54,7 +54,7 @@ impl<A> Pushdown<A> {
         }
     }
 
-    /// Applies a function `FnMut(&A) -> B`to every node in a `Pushdown<A>`.
+    /// Applies a function `FnMut(&A) -> B` to every node in a `Pushdown<A>`.
     pub fn map<F, B>(&self, f: &mut F) -> Pushdown<B>
         where F: FnMut(&A) -> B,
     {

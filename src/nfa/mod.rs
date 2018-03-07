@@ -39,9 +39,9 @@ impl<S: Eq + Hash + Ord + Clone, T: Eq + Hash + Clone + Ord, W: Eq + Ord + One +
     pub fn new(/*states: HashSet<S>,*/ transitions: HashMap<S, BinaryHeap<NFATransition<S, T, W>>>, initial_states: HashSet<S>, final_states: HashSet<S>)-> NFA<S, T, W>{
         NFA{
             //states: states,
-            transitions: transitions,
-            initial_states: initial_states,
-            final_states: final_states,
+            transitions,
+            initial_states,
+            final_states,
         }
     }
 
@@ -69,8 +69,8 @@ impl<S: Eq + Clone + Hash, T: Eq + Clone + Hash, W: Ord + Eq + Clone + Mul<Outpu
         NFATransition{
             from_state: from,
             to_state: to,
-            word: word,
-            weight: weight,
+            word,
+            weight,
         }
     }
 
@@ -121,7 +121,7 @@ impl<S: Eq + Hash, T: Eq + Hash, W: Ord + Eq> Eq for NFATransition<S, T, W> {}
 impl<I: Instruction + Clone, T: Eq + Hash + Clone, W: Eq + Clone + Ord> Dict<I, T, W> {
     pub fn new(map: HashMap<NFATransition<usize, T, W>, Transition<I, T, W>>)->Self {
         Dict{
-            map: map,
+            map,
         }
     }
 
