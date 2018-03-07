@@ -1,15 +1,20 @@
 extern crate log_domain;
+#[macro_use]
 extern crate rustomata;
 
 use log_domain::LogDomain;
 use std::fs::File;
 use std::io::Read;
+use std::rc::Rc;
 
 use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::equivalence_classes::EquivalenceRelation;
+use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::pmcfg::*;
 use rustomata::pmcfg::negra::to_negra;
 use rustomata::recognisable::*;
+use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use rustomata::tree_stack_automaton::*;
 
 fn example_tree_stack_automaton()
@@ -27,10 +32,9 @@ fn example_tree_stack_automaton()
 #[test]
 fn test_example_mcfg_to_negra() {
     let automaton = example_tree_stack_automaton();
-    let tree_stack = automaton.recognise(vec![
-        String::from("a"), String::from("a"), String::from("b"),
-        String::from("c"), String::from("c"), String::from("d")
-    ]).next().unwrap().0;
+    let tree_stack = automaton.recognise(
+        String::from("aabccd").chars().map(|x| x.to_string()).collect()
+    ).next().unwrap().0;
 
     let syntax_tree = to_abstract_syntax_tree(tree_stack.storage.to_tree());
     let separated_syntax_tree = separate_terminal_rules(&syntax_tree);
@@ -143,6 +147,24 @@ fn test_from_str_automaton() {
         automaton.initial(),
         automaton_parse.initial()
     );
+}
+
+#[test]
+fn test_coarse_to_fine_recogniser_correctness() {
+    let automaton = example_tree_stack_automaton();
+    let input: Vec<_> = String::from("aabccd").chars().map(|x| x.to_string()).collect();
+    let control_tree_stack = automaton.recognise(input.clone()).next().unwrap().0;
+
+    let tts = TTSElement::new();
+    let e: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
+    let f = |ps: &PosState<_>| ps
+        .map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| e.project(nt)));
+    let rlb = RlbElement::new(&f);
+
+    let recogniser = coarse_to_fine_recogniser!(automaton; tts, rlb);
+    let coarse_to_fine_tree_stack = recogniser.recognise(input.clone()).next().unwrap().0;
+
+    assert_eq!(control_tree_stack, coarse_to_fine_tree_stack);
 }
 
 #[test]
