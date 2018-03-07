@@ -267,7 +267,7 @@ pub mod tests {
     use super::*;
 
     #[test]
-    fn test_mcfg_from_str_leading_comments() {
+    fn test_pmcfg_from_str_leading_comments() {
         let grammar = "% leading comment\n\
                        initial: [S]\n\n\
                        S → [[T a]]";

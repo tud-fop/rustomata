@@ -30,7 +30,7 @@ fn example_tree_stack_automaton()
 }
 
 #[test]
-fn test_example_mcfg_to_negra() {
+fn test_example_pmcfg_to_negra() {
     let automaton = example_tree_stack_automaton();
     let tree_stack = automaton.recognise(
         String::from("aabccd").chars().map(|x| x.to_string()).collect()
