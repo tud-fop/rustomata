@@ -76,6 +76,28 @@ impl<A, B> EquivalenceRelation<A, B>
     }
 }
 
+impl<A, B> From<Vec<EquivalenceClass<A, B>>> for EquivalenceRelation<A, B>
+    where A: Eq + Hash,
+          B: Clone + Eq + Hash,
+{
+    fn from(classes: Vec<EquivalenceClass<A, B>>) -> EquivalenceRelation<A, B> {
+        let mut map = HashMap::new();
+        let mut default = None;
+
+        for EquivalenceClass { label, set } in classes {
+            if let Some(elements) = set {
+                for element in elements {
+                    map.insert(element, label.clone());
+                }
+            } else {
+                default = Some(label);
+            }
+        }
+
+        EquivalenceRelation { map, default: default.unwrap() }
+    }
+}
+
 impl<A, B> FromStr for EquivalenceRelation<A, B>
     where A: Clone + Eq + Hash + FromStr,
           A::Err: Debug,
