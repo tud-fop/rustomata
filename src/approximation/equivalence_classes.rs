@@ -17,6 +17,17 @@ pub struct EquivalenceClass<A, B>
     set: Option<HashSet<A>>,
 }
 
+impl<A, B> From<(B, Option<Vec<A>>)> for EquivalenceClass<A, B>
+    where A: Eq + Hash,
+{
+    fn from((label, set): (B, Option<Vec<A>>)) -> EquivalenceClass<A, B> {
+        EquivalenceClass {
+            label,
+            set: set.and_then(|elements| Some(HashSet::from_iter(elements))),
+        }
+    }
+}
+
 /// A struct containing a remapping of elements of type `A` into their respective equivalence classes of type `B`.
 #[derive(Clone, Debug)]
 pub struct EquivalenceRelation<A, B>
