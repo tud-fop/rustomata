@@ -51,20 +51,36 @@ impl<A, B> EquivalenceRelation<A, B>
           B: Clone + Eq + Hash,
 {
     pub fn new(map: HashMap<B, HashSet<A>>, default: B) -> Self {
-        let mut rmap = HashMap::new();
+        match Self::new_safe(map, default) {
+            Ok(relation) => relation,
+            Err(error) => panic!(error),
+        }
+    }
+
+    pub fn new_safe(map: HashMap<B, HashSet<A>>, default: B) -> Result<Self, String> {
+        let mut relation_map = HashMap::new();
         for (class_name, members) in map {
+            if class_name == default {
+                return Err(String::from(
+                    "There can only be one default class in the equivalence relation!"
+                ));
+            }
+
             for value in members {
-                match rmap.entry(value) {
-                    Entry::Vacant(v) => { v.insert(class_name.clone()); },
-                    Entry::Occupied(_) => panic!("The same value occurs in two equivalence classes!"),
+                match relation_map.entry(value) {
+                    Entry::Vacant(v) => {
+                        v.insert(class_name.clone());
+                    },
+                    Entry::Occupied(_) => {
+                        return Err(String::from(
+                            "All classes of the equivalence relation must be disjoint!"
+                        ));
+                    },
                 }
             }
         }
 
-        EquivalenceRelation {
-            map: rmap,
-            default,
-        }
+        Ok(EquivalenceRelation { map: relation_map, default })
     }
 
     // returns the equivalence class of a given value
