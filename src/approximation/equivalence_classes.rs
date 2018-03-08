@@ -221,7 +221,6 @@ mod tests {
         }
     }
 
-    // FIXME: The parsing fails (as expected), but results in a panic rather than in an Err value!
     #[test]
     fn test_equivalence_class_from_str_illegal_input() {
         let illegal_inputs = vec![

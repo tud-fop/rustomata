@@ -1,4 +1,4 @@
-use nom::{IResult, anychar, is_space};
+use nom::{ErrorKind, IResult, anychar, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
@@ -26,7 +26,16 @@ pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
         )
     );
 
-    parse_token_s(input).map(|x| x.parse().unwrap())
+    match parse_token_s(input) {
+        IResult::Done(rest, output) => {
+            match output.parse() {
+                Ok(parsed) => IResult::Done(rest, parsed),
+                Err(_) => IResult::Error(ErrorKind::Verify),
+            }
+        },
+        IResult::Error(error) => IResult::Error(error),
+        IResult::Incomplete(needed) => IResult::Incomplete(needed),
+    }
 }
 
 /// Parses the `input` into a `Vec<A>` given an `inner_parser` for type `A`, an `opening` delimiter, a `closing` delimiter, and a `separator`.
