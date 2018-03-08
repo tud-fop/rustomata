@@ -124,10 +124,8 @@ impl<A, B> FromStr for EquivalenceRelation<A, B>
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut map = HashMap::new();
-        let mut default = match parse_token(s.as_bytes()) {
-            IResult::Done(_, result) => result,
-            _                        => return Err(format!("Could not parse {}", s)),
-        };
+        let mut default = None;
+
         for l in s.lines() {
             if !l.is_empty() {
                 match l.trim().parse()? {
@@ -135,14 +133,19 @@ impl<A, B> FromStr for EquivalenceRelation<A, B>
                         map.insert(label, elements);
                     },
                     EquivalenceClass { label, set: None } => {
-                        default = label;
+                        default = Some(label);
                     },
                 }
             }
         }
 
-        Ok(EquivalenceRelation::new(map, default))
+        if let Some(label) = default {
+            if let Ok(relation) = EquivalenceRelation::new_safe(map, label) {
+                return Ok(relation);
+            }
+        }
 
+        Err(format!("Could not parse {}", s))
     }
 }
 
