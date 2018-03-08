@@ -207,22 +207,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_equivalence_class_from_str_legal_input() {
+    fn test_parse_class_legal_input() {
         let legal_inputs = vec![
-            ("0 [0, 1]", EquivalenceClass::from((0, Some(vec![0, 1])))),
-            ("0  [1, 0]", EquivalenceClass::from((0, Some(vec![0, 1])))),
-            ("0  [0, 1, 1]", EquivalenceClass::from((0, Some(vec![0, 1])))),
-            ("0 *", EquivalenceClass::from((0, None))),
+            ("0 [0, 1]xyz", "xyz", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0  [1, 0]1 [2, 3]", "1 [2, 3]", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0  [0, 1, 1]\nxyz", "\nxyz", EquivalenceClass::from((0, Some(vec![0, 1])))),
+            ("0 *xyz", "xyz", EquivalenceClass::from((0, None))),
         ];
 
-        for (legal_input, correct_class) in legal_inputs {
-            assert_eq!(correct_class,
-                       EquivalenceClass::from_str(legal_input).unwrap());
+        for (legal_input, control_rest, control_class) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_class),
+                parse_class(legal_input.as_bytes()).unwrap()
+            );
         }
     }
 
     #[test]
-    fn test_equivalence_class_from_str_illegal_input() {
+    fn test_parse_class_incomplete_input() {
+        let incomplete_inputs = vec![
+            "0",
+            "0 [0,",
+            "0 [0, 1",
+        ];
+
+        for incomplete_input in incomplete_inputs {
+            match parse_class::<u8, u8>(incomplete_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Error(_) =>
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Incomplete(_) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_illegal_input() {
         let illegal_inputs = vec![
             " 0 [0, 1]",
             "[0, 1]",
@@ -230,11 +249,10 @@ mod tests {
         ];
 
         for illegal_input in illegal_inputs {
-            match EquivalenceClass::<u8, u8>::from_str(illegal_input) {
-                Ok(parsed) =>
-                    panic!("Was able to parse the illegal input \'{}\' as \'{:?}\'",
-                           illegal_input, parsed),
-                Err(_) => (),
+            match parse_class::<u8, u8>(illegal_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
             }
         }
     }
@@ -299,9 +317,11 @@ mod tests {
             ])),
         ];
 
-        for (legal_input, correct_relation) in legal_inputs {
-            assert_eq!(correct_relation,
-                       EquivalenceRelation::from_str(legal_input).unwrap());
+        for (legal_input, control_relation) in legal_inputs {
+            assert_eq!(
+                control_relation,
+                EquivalenceRelation::from_str(legal_input).unwrap()
+            );
         }
     }
 
