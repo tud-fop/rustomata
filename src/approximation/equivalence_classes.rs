@@ -158,14 +158,14 @@ impl <A, B> FromStr for EquivalenceClass<A, B>
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match parse_set(s.as_bytes()) {
+        match parse_class(s.as_bytes()) {
             IResult::Done(_, result) => Ok(result),
             _                        => Err(format!("Could not parse {}", s))
         }
     }
 }
 
-fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceClass<A, B>>
+fn parse_class<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceClass<A, B>>
     where A: Eq + FromStr + Hash,
           A::Err: Debug,
           B: FromStr,
@@ -181,7 +181,7 @@ fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceClass<A, B>>
                 )
                     |
                 do_parse!(
-                    the_set: parse_heap >> (Some(the_set))
+                    the_set: parse_set >> (Some(the_set))
                 )
             ) >>
             (EquivalenceClass {
@@ -191,7 +191,7 @@ fn parse_set<A, B>(input: &[u8]) -> IResult<&[u8], EquivalenceClass<A, B>>
     )
 }
 
-fn parse_heap<A>(input: &[u8]) -> IResult<&[u8], HashSet<A>>
+fn parse_set<A>(input: &[u8]) -> IResult<&[u8], HashSet<A>>
     where A: Eq + FromStr + Hash,
           A::Err: Debug,
 {
