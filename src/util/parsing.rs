@@ -72,7 +72,8 @@ pub mod tests {
     #[test]
     fn test_parse_token_legal_input() {
         let legal_inputs = vec![
-            ("\"a\"xyz", "xyz", String::from("a")),
+            ("abcxyz", "", String::from("abcxyz")),
+            ("\"abc\"xyz", "xyz", String::from("abc")),
             ("\"a\\\\b\\\"c\"xyz", "xyz", String::from("a\\\\b\\\"c")),
         ];
 
@@ -87,21 +88,33 @@ pub mod tests {
     #[test]
     fn test_parse_token_illegal_input() {
         let illegal_inputs = vec![
-            "\'a\'",
-            "\"\"\"",
-            "\" \"",
-            "\"-\"",
-            "\"→\"",
-            "\",\"",
-            "\";\"",
-            "\")\"",
-            "\"]\"",
+            " xyz",
+            "-xyz",
+            "→xyz",
+            ",xyz",
+            ";xyz",
+            ")xyz",
+            "]xyz",
             "\"\\\"",
+            "\"\"\"",
             " \"a\"",
         ];
 
         for illegal_input in illegal_inputs {
             match parse_token::<String>(illegal_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
+            }
+        }
+
+        let illegal_inputs = vec![
+            "a",
+            "\"a\"",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match parse_token::<u8>(illegal_input.as_bytes()) {
                 IResult::Done(_, _) | IResult::Incomplete(_) =>
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input),
                 IResult::Error(_) => (),
