@@ -221,6 +221,7 @@ mod tests {
         }
     }
 
+    // FIXME: The parsing fails (as expected), but results in a panic rather than in an Err value!
     #[test]
     fn test_equivalence_class_from_str_illegal_input() {
         let illegal_inputs = vec![
@@ -292,6 +293,11 @@ mod tests {
                 EquivalenceClass::from((1, Some(vec![2, 3]))),
                 EquivalenceClass::from((2, None)),
             ])),
+            (" 0 [0, 1]\n 1 [2, 3]  \n2 *  ", EquivalenceRelation::from(vec![
+                EquivalenceClass::from((0, Some(vec![0, 1]))),
+                EquivalenceClass::from((1, Some(vec![2, 3]))),
+                EquivalenceClass::from((2, None))
+            ])),
         ];
 
         for (legal_input, correct_relation) in legal_inputs {
@@ -303,9 +309,9 @@ mod tests {
     #[test]
     fn test_equivalence_relation_from_str_illegal_input() {
         let illegal_inputs = vec![
-            " 0 [0, 1]\n1 [2, 3]\n2 *",
             "0 [0, 1]1 [2, 3]2 *",
             "0 [0, 1]\n1 [1, 2]\n2 *",
+            "0 [0, 1]\n1 [0, 1]\n2 *",
         ];
 
         for illegal_input in illegal_inputs {
