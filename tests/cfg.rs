@@ -36,7 +36,7 @@ fn test_relabel_pushdown() {
 
     let mut e_string = String::from("S [S]\n");
     e_string.push_str("N [A, B]\n");
-    e_string.push_str("R [*]\n");
+    e_string.push_str("R *\n");
 
     let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
 
