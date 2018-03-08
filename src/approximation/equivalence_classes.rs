@@ -207,15 +207,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_equivalence_relation_project() {
-        let rel: EquivalenceRelation<u8, u8> = String::from("0 [0, 1]\n1 [2, 4]\n2 *").parse().unwrap();
-        assert_eq!(0, rel.project(&1));
-        assert_eq!(1, rel.project(&2));
-        assert_eq!(2, rel.project(&3));
-        assert_eq!(1, rel.project(&4));
-    }
-
-    #[test]
     fn test_equivalence_class_from_str_legal_input() {
         let legal_inputs = vec![
             ("0 [0, 1]", EquivalenceClass::from((0, Some(vec![0, 1])))),
@@ -246,6 +237,51 @@ mod tests {
                 Err(_) => (),
             }
         }
+    }
+
+    #[test]
+    fn test_equivalence_relation_project() {
+        let rel: EquivalenceRelation<u8, u8> = String::from("0 [0, 1]\n1 [2, 4]\n2 *").parse().unwrap();
+        assert_eq!(0, rel.project(&1));
+        assert_eq!(1, rel.project(&2));
+        assert_eq!(2, rel.project(&3));
+        assert_eq!(1, rel.project(&4));
+    }
+
+    #[test]
+    #[should_panic(
+        expected="There can only be one default class in the equivalence relation!"
+    )]
+    fn test_equivalence_relation_new_colliding_default() {
+        let mut map = HashMap::new();
+        let classes = vec![
+            (0, HashSet::from_iter(vec![0, 1])),
+            (1, HashSet::from_iter(vec![2, 3])),
+        ];
+
+        for (label, elements) in classes {
+            map.insert(label, elements);
+        }
+
+        EquivalenceRelation::new(map, 1);
+    }
+
+    #[test]
+    #[should_panic(
+        expected="All classes of the equivalence relation must be disjoint!"
+    )]
+    fn test_equivalence_relation_new_intersecting_classes() {
+        let mut map = HashMap::new();
+        let classes = vec![
+            (0, HashSet::from_iter(vec![0, 1])),
+            (1, HashSet::from_iter(vec![1, 2])),
+        ];
+
+        for (label, elements) in classes {
+            map.insert(label, elements);
+        }
+
+        EquivalenceRelation::new(map, 2);
     }
 
     #[test]
