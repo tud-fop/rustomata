@@ -4,6 +4,8 @@ extern crate rustomata;
 
 use log_domain::LogDomain;
 use num_traits::identities::One;
+use std::fs::File;
+use std::io::Read;
 use std::marker::PhantomData;
 
 use rustomata::approximation::ApproximationStrategy;
@@ -12,6 +14,25 @@ use rustomata::approximation::relabel::RlbElement;
 use rustomata::cfg::*;
 use rustomata::push_down_automaton::*;
 use rustomata::recognisable::*;
+
+fn example_pushdown_automaton()
+    -> PushDownAutomaton<PushState<String, String>, String, LogDomain<f64>>
+{
+    let mut grammar_file = File::open("examples/example2.cfg").unwrap();
+    let mut grammar_string = String::new();
+    let _ = grammar_file.read_to_string(&mut grammar_string);
+    let grammar: CFG<String, String, _> = grammar_string.parse().unwrap();
+
+    PushDownAutomaton::from(grammar)
+}
+
+fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
+    let mut relation_file = File::open("examples/example.classes").unwrap();
+    let mut relation_string = String::new();
+    let _ = relation_file.read_to_string(&mut relation_string);
+
+    relation_string.parse().unwrap()
+}
 
 #[test]
 fn test_relabel_pushdown() {
