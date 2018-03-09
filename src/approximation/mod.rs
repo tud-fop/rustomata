@@ -1,16 +1,14 @@
-use std::collections::{BinaryHeap, BTreeMap};
-use std::hash::Hash;
-use std::ops::MulAssign;
 use num_traits::One;
+use std::collections::{BinaryHeap, BTreeMap};
+use std::ops::MulAssign;
+
+use recognisable::{Instruction, Transition};
+use recognisable::automaton::Automaton;
 use util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
 pub mod tts;
-
-use recognisable::{Instruction, Transition};
-use recognisable::automaton::Automaton;
-
 
 /// Object defining the strategies used for `approximation`
 pub trait ApproximationStrategy<T, W>: Sized

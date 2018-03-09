@@ -1,10 +1,11 @@
 use num_traits::Zero;
+use std::hash::Hash;
 use std::marker::PhantomData;
-use std::ops::AddAssign;
+use std::ops::{AddAssign, MulAssign};
 
 use approximation::*;
-use tree_stack_automaton::*;
 use push_down_automaton::*;
+use tree_stack_automaton::*;
 
 /// `ApproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]
