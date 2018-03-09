@@ -63,5 +63,50 @@ impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
             },
         }
     }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_approximate_storage() {
+        let mut ts = TreeStack::new('@');
+        ts = ts.push(1, '1').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(2, '2').unwrap();
+        ts = ts.push(2, '3').unwrap();
+        ts = ts.down().unwrap();
+        ts = ts.push(7, '4').unwrap();
+
+        let tts = TTSElement::new();
+        let control_pushdown = PushDown::from_vec(vec![
+            '@', '2', '4',
+        ]);
+
+        assert_eq!(
+            control_pushdown,
+            <TTSElement<_> as ApproximationStrategy<char, u8>>::approximate_storage(&tts, ts)
+        );
+    }
+
+    #[test]
+    fn test_approximate_instruction() {
+        let tts = TTSElement::new();
+        let inputs = vec![
+            (TreeStackInstruction::Up { n: 2, current_val: '@', old_val: '2', new_val: '3' },
+                PushDownInstruction::Replace { current_val: vec!['@'] , new_val: vec!['@', '3'] }),
+            (TreeStackInstruction::Down { current_val: '4', old_val: '2', new_val: '3' },
+                PushDownInstruction::Replace { current_val: vec!['4', '2'], new_val: vec!['3'] }),
+            (TreeStackInstruction::Push { n: 2, current_val: '2', new_val: '3' },
+                PushDownInstruction::Replace { current_val: vec!['2'], new_val: vec!['2', '3'] }),
+        ];
+
+        for (ts_instruction, pd_control_instruction) in inputs {
+            assert_eq!(
+                pd_control_instruction,
+                <TTSElement<_> as ApproximationStrategy<char, u8>>::approximate_instruction(&tts, &ts_instruction)
+            );
+        }
+    }
 }
