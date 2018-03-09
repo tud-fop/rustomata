@@ -151,19 +151,27 @@ fn test_from_str_automaton() {
 #[test]
 fn test_coarse_to_fine_recogniser_correctness() {
     let automaton = example_tree_stack_automaton();
-    let input: Vec<_> = String::from("aabccd").chars().map(|x| x.to_string()).collect();
-    let control_tree_stack = automaton.recognise(input.clone()).next().unwrap().0;
-
     let tts = TTSElement::new();
-    let e: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
-    let f = |ps: &PosState<_>| ps
-        .map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| e.project(nt)));
-    let rlb = RlbElement::new(&f);
+    let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
+    let mapping = |ps: &PosState<_>| ps
+        .map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| rel.project(nt)));
+    let rlb = RlbElement::new(&mapping);
+    let recogniser = coarse_to_fine_recogniser!(automaton.clone(); tts, rlb);
 
-    let recogniser = coarse_to_fine_recogniser!(automaton; tts, rlb);
-    let coarse_to_fine_tree_stack = recogniser.recognise(input.clone()).next().unwrap().0;
+    let words = vec![
+        "aabccd",
+        "aaabcccd",
+        "abccd",
+        "abbcd",
+    ];
 
-    assert_eq!(control_tree_stack, coarse_to_fine_tree_stack);
+    for word in words {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            automaton.recognise(input.clone()).next(),
+            recogniser.recognise(input).next()
+        );
+    }
 }
 
 #[test]
