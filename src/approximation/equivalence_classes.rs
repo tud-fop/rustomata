@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 use util::parsing::*;
 
-/// Structure containing the elements of type `A` in a equivalence class of type `B`
+/// Structure containing the elements of type `A` in an equivalence class of type `B`
 #[derive(Debug, Eq, PartialEq)]
 pub struct EquivalenceClass<A, B>
     where A: Eq + Hash,
