@@ -175,39 +175,38 @@ fn test_coarse_to_fine_recogniser_correctness() {
 }
 
 #[test]
-fn test_tts() {
-    //create (and test) initial push down automata
-    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
-    let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
-    let r2_string = "A → [[],  []                             ] (    )   # 0.5";
-    let r3_string = "B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5";
-    let r4_string = "B → [[],  []                             ] (    )   # 0.5";
-
-    let mut g_string = String::from("initial: [S]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    let g: PMCFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
-
-    let a = TreeStackAutomaton::from(g);
-
+fn test_tts_correctness() {
+    let automaton = example_tree_stack_automaton();
     let tts = TTSElement::new();
+    let (tts_ed_automaton, _) = tts.approximate_automaton(&automaton);
 
-    let (b, _) = tts.approximate_automaton(&a);
+    let true_positives_and_true_negatives = vec![
+        "",
+        "abcd",
+        "aabccd",
+        "aaabcccd",
+    ];
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_eq!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
+    for word in true_positives_and_true_negatives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            automaton.recognise(input.clone()).next().is_some(),
+            tts_ed_automaton.recognise(input).next().is_some()
+        );
+    }
+
+    let false_positives = vec![
+        "aabcd",
+        "aabbcd",
+        "abbcccdddd",
+        "abbbccdddd",
+    ];
+
+    for word in false_positives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(false, automaton.recognise(input.clone()).next().is_some());
+        assert_eq!(true, tts_ed_automaton.recognise(input).next().is_some());
+    }
 }
 
 #[test]
