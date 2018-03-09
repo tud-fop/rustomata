@@ -35,85 +35,44 @@ fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
 }
 
 #[test]
-fn test_relabel_pushdown() {
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B  ] # 0.6";
-    let r2_string = "A → [T a              ] # 0.4";
-    let r3_string = "B → [T b, Nt B, Nt A  ] # 0.3";
-    let r4_string = "B → [T b              ] # 0.7";
+fn test_relabel_pushdown_correctness() {
+    let automaton = example_pushdown_automaton();
+    let rel = example_equivalence_relation();
+    let mapping = |ps: &PushState<_, _>| ps.map(|nt| rel.project(nt));
+    let rlb = RlbElement::new(&mapping);
+    let (relabelled_automaton, _) = rlb.approximate_automaton(&automaton);
 
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
+    let true_positives_and_true_negatives = vec![
+        "aab",
+        "bba",
+        "aaabb",
+        "aabba",
+        "",
+        "aa",
+        "aaab",
+        "bbbbbb",
+    ];
 
-    let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
+    for word in true_positives_and_true_negatives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            automaton.recognise(input.clone()).next().is_some(),
+            relabelled_automaton.recognise(input).next().is_some()
+        );
+    }
 
-    let a = PushDownAutomaton::from(g);
+    let false_positives = vec![
+        "aaa",
+        "bbb",
+        "aabaa",
+        "abaaa",
+    ];
 
-    let mut e_string = String::from("S [S]\n");
-    e_string.push_str("N [A, B]\n");
-    e_string.push_str("R *\n");
-
-    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
-
-    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-    let rlb = RlbElement::new(&f);
-
-    let (b, _) = rlb.approximate_automaton(&a);
-
-    assert_ne!(None, b.recognise(vec!["a".to_string() ]).next());
-    assert_eq!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string(), "b".to_string(), "a".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string() ]).next());
-
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next());
-}
-
-#[test]
-fn test_relabel_check() {
-    //create (and test) initial push down automata
-    let r0_string = "S → [Nt A] # 1";
-    let r1_string = "A → [T a, Nt A, Nt B  ] # 0.6";
-    let r2_string = "A → [T a              ] # 0.4";
-    let r3_string = "B → [T b, Nt B, Nt A  ] # 0.3";
-    let r4_string = "B → [T b              ] # 0.7";
-
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    let g: CFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
-
-    let a = PushDownAutomaton::from(g);
-
-    let mut e_string = String::from("S [S]\n");
-    e_string.push_str("N [A, B]\n");
-    e_string.push_str("R *\n");
-
-    let e: EquivalenceRelation<String, String> = e_string.parse().unwrap();
-
-    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-    let rlb = RlbElement::new(&f);
-
-    let (b, _) = rlb.approximate_automaton(&a);
-
-    let itemb = b.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "a".to_string(), "a".to_string() ]).next();
-    assert_ne!(None, itemb);
+    for word in false_positives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(false, automaton.recognise(input.clone()).next().is_some());
+        assert_eq!(true, relabelled_automaton.recognise(input).next().is_some());
+    }
 }
 
 #[test]
