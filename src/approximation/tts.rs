@@ -31,16 +31,15 @@ impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
     type A1 = TreeStackAutomaton<A, T, W>;
     type A2 = PushDownAutomaton<A, T, W>;
 
-    fn approximate_storage(&self, a: TreeStack<A>)-> PushDown<A> {
+    fn approximate_storage(&self, mut ts: TreeStack<A>)-> PushDown<A> {
         let mut pd = Vec::new();
-        pd.push(a.current_symbol().clone());
-        loop {
-            if let Ok(a) = a.clone().down() {
-                pd.push(a.current_symbol().clone());
-            } else {
-                break;
-            }
+        pd.push(ts.current_symbol().clone());
+
+        while let Ok(smaller) = ts.down() {
+            pd.push(smaller.current_symbol().clone());
+            ts = smaller;
         }
+
         pd.reverse();
         PushDown::from_vec(pd)
     }
