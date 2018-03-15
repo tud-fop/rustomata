@@ -129,3 +129,36 @@ impl<N: Clone + Ord + PartialEq + Hash,
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_push_state_map_correctness() {
+        let inputs = vec![
+            (PushState::Designated, PushState::Designated),
+            (PushState::Initial, PushState::Initial),
+            (PushState::Nt(1), PushState::Nt(2)),
+            (PushState::T('a'), PushState::T('a')),
+        ];
+
+        for (input, control_output) in inputs {
+            assert_eq!(
+                control_output,
+                input.map(&|x: &u8| x * 2)
+            );
+        }
+    }
+
+    #[test]
+    fn test_push_state_map_inverse() {
+        let state: PushState<u8, char> = PushState::Nt(1);
+        let mapped_state = state.map(&|x: &u8| x * 2);
+
+        assert_eq!(
+            state,
+            mapped_state.map(&|x: &u8| x / 2)
+        );
+    }
+}
