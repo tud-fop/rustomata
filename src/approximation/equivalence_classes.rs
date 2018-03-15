@@ -195,11 +195,11 @@ fn parse_set<A>(input: &[u8]) -> IResult<&[u8], HashSet<A>>
     where A: Eq + FromStr + Hash,
           A::Err: Debug,
 {
-    match parse_vec(input, parse_token, "[", "]", ",") {
-        IResult::Done(rest, parsed) => IResult::Done(rest, HashSet::from_iter(parsed)),
-        IResult::Incomplete(needed) => IResult::Incomplete(needed),
-        IResult::Error(error) => IResult::Error(error),
-    }
+    do_parse!(
+        input,
+        output: apply!(parse_vec, parse_token, "[", "]", ",") >>
+        (HashSet::from_iter(output))
+    )
 }
 
 #[cfg(test)]

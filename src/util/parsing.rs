@@ -1,4 +1,4 @@
-use nom::{ErrorKind, IResult, anychar, is_space};
+use nom::{IResult, anychar, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
@@ -26,16 +26,12 @@ pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
         )
     );
 
-    match parse_token_s(input) {
-        IResult::Done(rest, output) => {
-            match output.parse() {
-                Ok(parsed) => IResult::Done(rest, parsed),
-                Err(_) => IResult::Error(ErrorKind::Verify),
-            }
-        },
-        IResult::Error(error) => IResult::Error(error),
-        IResult::Incomplete(needed) => IResult::Incomplete(needed),
-    }
+    do_parse!(
+        input,
+        output: parse_token_s >>
+        token: expr_res!(output.parse()) >>
+        (token)
+    )
 }
 
 /// Parses the `input` into a `Vec<A>` given an `inner_parser` for type `A`, an `opening` delimiter, a `closing` delimiter, and a `separator`.
@@ -46,18 +42,18 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
     do_parse!(
         input,
         tag!(opening) >>
-            take_while!(is_space) >>
-            result: many0!(
-                do_parse!(
-                    opt!(tag!(separator)) >>
-                        take_while!(is_space) >>
-                        the_token: inner_parser >>
-                        take_while!(is_space) >>
-                        (the_token)
-                )
-            ) >>
-            tag!(closing) >>
-            (result)
+        take_while!(is_space) >>
+        result: many0!(
+            do_parse!(
+                opt!(tag!(separator)) >>
+                take_while!(is_space) >>
+                the_token: inner_parser >>
+                take_while!(is_space) >>
+                (the_token)
+            )
+        ) >>
+        tag!(closing) >>
+        (result)
     )
 }
 /// parses initials of the form `initials: [...]` into a vector of type `N`
