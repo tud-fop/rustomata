@@ -1,9 +1,6 @@
 extern crate num_traits;
 
-use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{One, Zero};
-use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
-use recognisable::automaton::Automaton;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -12,6 +9,10 @@ use std::ops::{AddAssign, Mul, MulAssign};
 use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
+
+use integeriser::{HashIntegeriser, Integeriser};
+use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::automaton::Automaton;
 use util::integerisable::{Integerisable1, Integerisable2};
 use util::push_down::Pushdown;
 
@@ -416,5 +417,175 @@ impl<A, T, W> Display for PushDownAutomaton<A, T, W>
                self.initial(),
                formatted_transitions
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pushdown_instruction_map_correctness() {
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![1, 2, 3], new_val: vec![1, 2, 3, 4]
+        };
+        let control_instruction = PushDownInstruction::Replace {
+            current_val: vec![2, 4, 6], new_val: vec![2, 4, 6, 8]
+        };
+
+        assert_eq!(
+            control_instruction,
+            instruction.map(&|x| x * 2)
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_map_inverse() {
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![1, 2, 3], new_val: vec![1, 2, 3, 4]
+        };
+        let mapped_instruction = instruction.map(&|x| x * 2);
+
+        assert_eq!(
+            instruction,
+            mapped_instruction.map(&|x| x / 2)
+        );
+    }
+
+    #[test]
+    fn test_map_vec_mut_correctness() {
+        let vector = vec![1, 2, 3, 4];
+        let mut modified = false;
+
+        assert_eq!(
+            vec![2, 4, 6, 8],
+            map_vec_mut(&vector, &mut |x| { modified = true; x * 2 })
+        );
+        assert_eq!(
+            true,
+            modified
+        );
+    }
+
+    #[test]
+    fn test_map_mut_vec_inverse() {
+        let vector = vec![1, 2, 3, 4];
+        let mut modified = false;
+        let mapped_vector = map_vec_mut(&vector, &mut |x| { modified = true; x * 2 });
+
+        assert_eq!(
+            vector,
+            map_vec_mut(&mapped_vector, &mut |x| { modified = false; x / 2 })
+        );
+        assert_eq!(
+            false,
+            modified
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_map_mut_correctness() {
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![1, 2, 3], new_val: vec![1, 2, 3, 4]
+        };
+        let control_instruction = PushDownInstruction::Replace {
+            current_val: vec![2, 4, 6], new_val: vec![2, 4, 6, 8]
+        };
+        let mut modified = false;
+
+        assert_eq!(
+            control_instruction,
+            instruction.map_mut(&mut |x| { modified = true; x * 2 })
+        );
+        assert_eq!(
+            true,
+            modified
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_map_mut_inverse() {
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![1, 2, 3], new_val: vec![1, 2, 3, 4]
+        };
+        let mut modified = false;
+        let mapped_instruction = instruction.map_mut(&mut |x| { modified = true; x * 2 });
+
+        assert_eq!(
+            instruction,
+            mapped_instruction.map_mut(&mut |x| { modified = false; x / 2 })
+        );
+        assert_eq!(
+            false,
+            modified
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_apply_correctness() {
+        let pushdown = PushDown::from_vec(vec![1, 2, 3, 4]);
+
+        let pop_instruction = PushDownInstruction::Replace {
+            current_val: vec![4, 3], new_val: vec![3]
+        };
+        assert_eq!(
+            vec![PushDown::from_vec(vec![1, 2, 3])],
+            pop_instruction.apply(pushdown.clone())
+        );
+
+        let push_instruction = PushDownInstruction::Replace {
+            current_val: vec![4], new_val: vec![4, 5]
+        };
+        assert_eq!(
+            vec![PushDown::from_vec(vec![1, 2, 3, 4, 5])],
+            push_instruction.apply(pushdown.clone())
+        );
+
+        let identity_instruction = PushDownInstruction::Replace {
+            current_val: vec![], new_val: vec![]
+        };
+        assert_eq!(
+            vec![pushdown.clone()],
+            identity_instruction.apply(pushdown.clone())
+        );
+
+        let invalid_instruction = PushDownInstruction::Replace {
+            current_val: vec![5], new_val: vec![],
+        };
+        assert_eq!(
+            Vec::<PushDown<_>>::new(),
+            invalid_instruction.apply(pushdown)
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_inverse() {
+        let pushdown = PushDown::from_vec(vec![1, 2, 3, 4]);
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![4, 3], new_val: vec![3]
+        };
+        let modified_pushdown = instruction.apply(pushdown.clone()).pop().unwrap();
+        let inverse_instruction = PushDownInstruction::Replace {
+            current_val: vec![3], new_val: vec![3, 4]
+        };
+
+        assert_eq!(
+            vec![pushdown],
+            inverse_instruction.apply(modified_pushdown)
+        );
+    }
+
+    #[test]
+    fn test_pushdown_instruction_integerise_inverse() {
+        let instruction = PushDownInstruction::Replace {
+            current_val: vec![1], new_val: vec![1, 2]
+        };
+        let mut integeriser = HashIntegeriser::new();
+        let integerised_instruction = instruction.integerise(&mut integeriser);
+
+        assert_eq!(
+            instruction,
+            PushDownInstruction::un_integerise(&integerised_instruction, &integeriser)
+        );
     }
 }

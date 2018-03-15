@@ -1,15 +1,20 @@
 extern crate log_domain;
+#[macro_use]
 extern crate rustomata;
 
 use log_domain::LogDomain;
 use std::fs::File;
 use std::io::Read;
+use std::rc::Rc;
 
 use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::equivalence_classes::EquivalenceRelation;
+use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::pmcfg::*;
 use rustomata::pmcfg::negra::to_negra;
 use rustomata::recognisable::*;
+use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use rustomata::tree_stack_automaton::*;
 
 fn example_tree_stack_automaton()
@@ -20,17 +25,15 @@ fn example_tree_stack_automaton()
     let _ = grammar_file.read_to_string(&mut grammar_string);
     let grammar: PMCFG<String, String, _> = grammar_string.parse().unwrap();
 
-    let automaton = TreeStackAutomaton::from(grammar);
-    automaton
+    TreeStackAutomaton::from(grammar)
 }
 
 #[test]
-fn test_example_mcfg_to_negra() {
+fn test_example_pmcfg_to_negra() {
     let automaton = example_tree_stack_automaton();
-    let tree_stack = automaton.recognise(vec![
-        String::from("a"), String::from("a"), String::from("b"),
-        String::from("c"), String::from("c"), String::from("d")
-    ]).next().unwrap().0;
+    let tree_stack = automaton.recognise(
+        String::from("aabccd").chars().map(|x| x.to_string()).collect()
+    ).next().unwrap().0;
 
     let syntax_tree = to_abstract_syntax_tree(tree_stack.storage.to_tree());
     let separated_syntax_tree = separate_terminal_rules(&syntax_tree);
@@ -146,13 +149,144 @@ fn test_from_str_automaton() {
 }
 
 #[test]
-fn test_tts() {
-    //create (and test) initial push down automata
-    let r0_string = "S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1";
-    let r1_string = "A → [[T a, Var 0 0, T e],  [T c, Var 0 1]] (A   )   # 0.5";
-    let r2_string = "A → [[],  []                             ] (    )   # 0.5";
-    let r3_string = "B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5";
-    let r4_string = "B → [[],  []                             ] (    )   # 0.5";
+fn test_coarse_to_fine_recogniser_correctness() {
+    let automaton = example_tree_stack_automaton();
+    let tts = TTSElement::new();
+    let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
+    let mapping = |ps: &PosState<_>| ps
+        .map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| rel.project(nt)));
+    let rlb = RlbElement::new(&mapping);
+    let recogniser = coarse_to_fine_recogniser!(automaton.clone(); tts, rlb);
+
+    let words = vec![
+        "aabccd",
+        "aaabcccd",
+        "abccd",
+        "abbcd",
+    ];
+
+    for word in words {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            automaton.recognise(input.clone()).next(),
+            recogniser.recognise(input).next()
+        );
+    }
+}
+
+#[test]
+fn test_tts_correctness() {
+    let automaton = example_tree_stack_automaton();
+    let tts = TTSElement::new();
+    let (tts_ed_automaton, _) = tts.approximate_automaton(&automaton);
+
+    let true_positives_and_true_negatives = vec![
+        "",
+        "abcd",
+        "aabccd",
+        "aaabcccd",
+    ];
+
+    for word in true_positives_and_true_negatives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            automaton.recognise(input.clone()).next().is_some(),
+            tts_ed_automaton.recognise(input).next().is_some()
+        );
+    }
+
+    let false_positives = vec![
+        "aabcd",
+        "aabbcd",
+        "abbcccdddd",
+        "abbbccdddd",
+    ];
+
+    for word in false_positives {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(false, automaton.recognise(input.clone()).next().is_some());
+        assert_eq!(true, tts_ed_automaton.recognise(input).next().is_some());
+    }
+}
+
+#[test]
+fn test_from_str_pmcfg() {
+    let c0: Composition<String> = Composition {
+        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)]],
+    };
+
+    let c1: Composition<String> = Composition { composition: vec![vec![], vec![]] };
+
+    let c2 = Composition {
+        composition: vec![vec![VarT::T("a".to_string()),
+                               VarT::Var(0, 0)],
+                          vec![VarT::T("c".to_string()),
+                               VarT::Var(0, 1)]],
+    };
+
+    let c3 = Composition {
+        composition: vec![vec![VarT::T("b".to_string()),
+                               VarT::Var(0, 0)],
+                          vec![VarT::T("d".to_string()),
+                               VarT::Var(0, 1)]],
+    };
+
+    let r0: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
+        head: "S".to_string(),
+        tail: vec!["A".to_string(), "B".to_string()],
+        composition: c0.clone(),
+        weight: LogDomain::new(1.0).unwrap(),
+    };
+
+    let r1: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
+        head: "A".to_string(),
+        tail: Vec::new(),
+        composition: c1.clone(),
+        weight: LogDomain::new(0.6).unwrap(),
+    };
+
+    let r2: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
+        head: "A".to_string(),
+        tail: vec!["A".to_string()],
+        composition: c2.clone(),
+        weight: LogDomain::new(0.4).unwrap(),
+    };
+
+    let r3: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
+        head: "B".to_string(),
+        tail: Vec::new(),
+        composition: c1.clone(),
+        weight: LogDomain::new(0.7).unwrap(),
+    };
+
+    let r4: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
+        head: "B".to_string(),
+        tail: vec!["B".to_string()],
+        composition: c3.clone(),
+        weight: LogDomain::new(0.3).unwrap(),
+    };
+
+    let r0_string = "\"S\" → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (\"A\", B)";
+    let r1_string = "A → [[],[]] ()  # 0.6 % this is a comment";
+    let r2_string = "A → [[T a, Var 0 0],[T c, Var 0 1]] (A)  # 0.4";
+    let r3_string = "B → [[],[]] ()  # 0.7";
+    let r4_string = "B → [[T b, Var 0 0],[T d, Var 0 1]] (B)  # 0.3";
+
+    assert_eq!(Ok(r0.clone()),
+               r0_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+    assert_eq!(Ok(r1.clone()),
+               r1_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+    assert_eq!(Ok(r2.clone()),
+               r2_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+    assert_eq!(Ok(r3.clone()),
+               r3_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+    assert_eq!(Ok(r4.clone()),
+               r4_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+
+    let g: PMCFG<String, String, LogDomain<f64>> = PMCFG {
+        initial: vec!["S".to_string()],
+        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
+    };
 
     let mut g_string = String::from("initial: [S]\n\n");
     g_string.push_str(r0_string.clone());
@@ -165,18 +299,9 @@ fn test_tts() {
     g_string.push_str("\n");
     g_string.push_str(r4_string.clone());
 
-    let g: PMCFG<String, String, LogDomain<f64>> = g_string.parse().unwrap();
+    assert_eq!(Ok(g.clone()), g_string.parse());
 
     let a = TreeStackAutomaton::from(g);
 
-    let tts = TTSElement::new();
-
-    let (b, _) = tts.approximate_automaton(&a);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_eq!(None, a.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_ne!(None, b.recognise(vec!["a".to_string(), "a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]).next());
-    assert_eq!(None, b.recognise(vec!["a".to_string(), "e".to_string(), "e".to_string(), "b".to_string(), "c".to_string(), "c".to_string(), "d".to_string() ]).next());
+    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
 }
