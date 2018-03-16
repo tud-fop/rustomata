@@ -345,4 +345,19 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_parse_set_legal_input() {
+        let legal_inputs = vec![
+            ("[]xyz", "xyz", HashSet::from_iter(vec![])),
+            ("[0, 1, 2]xyz", "xyz", HashSet::from_iter(vec![0, 1, 2])),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_set(legal_input.as_bytes()).unwrap()
+            );
+        }
+    }
 }

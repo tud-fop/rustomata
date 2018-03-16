@@ -78,6 +78,7 @@ pub mod tests {
     fn test_parse_token_legal_input() {
         let legal_inputs = vec![
             ("abcxyz", "", String::from("abcxyz")),
+            ("abc,xyz", ",xyz", String::from("abc")),
             ("\"abc\"xyz", "xyz", String::from("abc")),
             ("\"a\\\\b\\\"c\"xyz", "xyz", String::from("a\\\\b\\\"c")),
         ];
@@ -146,9 +147,9 @@ pub mod tests {
     fn test_parse_vec_legal_input() {
         let legal_inputs = vec![
             ("[]xyz", "xyz", vec![]),
-            ("[\"a\",\"bc\",\"d\"]xyz", "xyz",
+            ("[a, bc, d]xyz", "xyz",
                 vec![String::from("a"), String::from("bc"), String::from("d")]),
-            ("[  \"a\", \"b\" ,\"c\"]xyz", "xyz",
+            ("[  a, b ,c]xyz", "xyz",
                 vec![String::from("a"), String::from("b"), String::from("c")]),
         ];
 
@@ -163,14 +164,15 @@ pub mod tests {
     #[test]
     fn test_parse_vec_illegal_input() {
         let illegal_inputs = vec![
-            "(\"a\")xyz",
-            "[\"a\"]xyz",
-            "[\"a\",\"b\";\"c\")xyz",
-            " []xyz",
+            "(0)",
+            "[0]",
+            "[0, 1; 2)",
+            " []",
+            "[a)",
         ];
 
         for illegal_input in illegal_inputs {
-            match parse_vec::<String, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
+            match parse_vec::<u8, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
                 IResult::Done(_, _) | IResult::Incomplete(_) =>
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input),
                 IResult::Error(_) => (),
@@ -181,7 +183,8 @@ pub mod tests {
     #[test]
     fn test_parse_vec_incomplete_input() {
         let incomplete_inputs = vec![
-            "[\"a\"",
+            "[a",
+            "["
         ];
 
         for incomplete_input in incomplete_inputs {
@@ -196,7 +199,7 @@ pub mod tests {
     #[test]
     fn test_parse_initials_legal_input() {
         let legal_inputs = vec![
-            ("initial: [\"a\"]xyz", "xyz", vec![String::from("a")]),
+            ("initial: [a]xyz", "xyz", vec![String::from("a")]),
             ("initial:  []xyz", "xyz", vec![]),
         ];
 
