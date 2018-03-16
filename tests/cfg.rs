@@ -3,7 +3,6 @@ extern crate num_traits;
 extern crate rustomata;
 
 use log_domain::LogDomain;
-use num_traits::identities::One;
 use std::fs::File;
 use std::io::Read;
 use std::marker::PhantomData;
@@ -76,79 +75,49 @@ fn test_relabel_pushdown_correctness() {
 }
 
 #[test]
-fn test_from_str_cfg() {
-    let c0 : CFGComposition<String,String> = CFGComposition {
-        composition: vec![LetterT::Label("A".to_string())],
+fn test_cfg_from_str_correctness() {
+    let rule_s0 = CFGRule {
+        head: 'S',
+        composition: CFGComposition { composition: vec![
+            LetterT::Value('a'), LetterT::Label('S'), LetterT::Value('b'),
+        ] },
+        weight: LogDomain::new(0.4).unwrap()
     };
-
-    let c1 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("a".to_string()),LetterT::Label("A".to_string()),LetterT::Label("B".to_string())]
+    let rule_s1 = CFGRule {
+        head: 'S',
+        composition: CFGComposition { composition: vec![]},
+        weight: LogDomain::new(0.6).unwrap()
     };
-
-    let c2 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("a".to_string())],
-    };
-
-    let c3 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("b".to_string())],
-    };
-
-    let r0: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "S".to_string(),
-        composition: c0.clone(),
-        weight: LogDomain::one(),
-    };
-
-    let r1: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "A".to_string(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.6).unwrap(),
-    };
-
-    let r2: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "A".to_string(),
-        composition: c2.clone(),
-        weight: LogDomain::new(0.4).unwrap(),
-    };
-
-    let r3: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "B".to_string(),
-        composition: c3.clone(),
-        weight: LogDomain::one(),
-    };
-
-    let r0_string = "S → [Nt A]";
-    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
-    let r2_string = "A → [T a] # 0.4";
-    let r3_string = "B → [T b] # 1";
-
-    assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-
-    let g: CFG<String, String, LogDomain<f64>> = CFG {
+    let control_grammar = CFG {
         _dummy: PhantomData,
-        initial: vec!["S".to_string(),"B".to_string()],
-        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone()],
+        initial: vec!['S'],
+        rules: vec![rule_s0, rule_s1]
     };
 
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
+    let mut grammar_file = File::open("examples/example.cfg").unwrap();
+    let mut grammar_string = String::new();
+    let _ = grammar_file.read_to_string(&mut grammar_string);
+    let grammar: CFG<char, char, LogDomain<f64>> = grammar_string.parse().unwrap();
 
-    assert_eq!(Ok(g.clone()), g_string.parse());
+    assert_eq!(
+        control_grammar.clone(),
+        grammar.clone()
+    );
 
-    let a = PushDownAutomaton::from(g);
+    let control_automaton = PushDownAutomaton::from(control_grammar);
+    let automaton = PushDownAutomaton::from(grammar);
+    let words = vec![
+        "",
+        "aabb",
+        "abb",
+        "aab",
+    ];
 
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
+    for word in words {
+        let input: Vec<_> = String::from(word).chars().collect();
+        assert_eq!(
+            control_automaton.recognise(input.clone()).next().is_some(),
+            automaton.recognise(input).next().is_some()
+        );
+    }
 }
