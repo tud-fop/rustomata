@@ -28,14 +28,14 @@ impl<N, T, W> FromStr for CFG<N, T, W>
                     IResult::Done(_, result)
                         => initial = result,
                     _
-                        => return Err(format!("Malformed declaration of initial nonterminals: {}", l))
+                        => return Err(format!("Malformed declaration of initial nonterminals: \'{}\'", l))
                 }
             },
-            _ => return Err("Given string is empty.".to_string())
+            _ => return Err(String::from("Cannot parse an empty string as a CFG!"))
         }
 
-        for l in s.lines() {
-            if !l.is_empty() && !l.starts_with("initial: ") {
+        while let Some(l) = it.next() {
+            if !l.is_empty() {
                 rules.push(l.trim().parse()?);
             }
         }
@@ -45,7 +45,6 @@ impl<N, T, W> FromStr for CFG<N, T, W>
             initial,
             rules,
         })
-
     }
 }
 
@@ -62,7 +61,7 @@ impl<N, T, W> FromStr for CFGRule<N, T, W>
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match parse_cfg_rule(s.as_bytes()) {
             IResult::Done(_, result) => Ok(result),
-            _                        => Err(format!("Could not parse {}", s))
+            _                        => Err(format!("Could not parse \'{}\'", s))
         }
     }
 }
