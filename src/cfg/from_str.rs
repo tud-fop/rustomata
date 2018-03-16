@@ -35,7 +35,7 @@ impl<N, T, W> FromStr for CFG<N, T, W>
         }
 
         while let Some(l) = it.next() {
-            if !l.is_empty() {
+            if !l.is_empty() && !l.trim_left().starts_with("%") {
                 rules.push(l.trim().parse()?);
             }
         }
