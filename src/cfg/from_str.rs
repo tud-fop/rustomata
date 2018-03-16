@@ -79,29 +79,32 @@ fn parse_cfg_rule<N, T, W>(input: &[u8]) -> IResult<&[u8], CFGRule<N, T, W>>
     do_parse!(
         input,
         head: parse_token >>
-            take_while!(is_space) >>
-            alt!(tag!("→") | tag!("->") | tag!("=>")) >>
-            take_while!(is_space) >>
-            composition: parse_composition >>
-            take_while!(is_space) >>
-            weight_o: opt!(
-                complete!(
-                    do_parse!(
-                        tag!("#") >>
-                            take_while!(is_space) >>
-                            weight_s: map_res!(is_not!(" "), from_utf8) >>
-                            (weight_s.parse().unwrap())
-                    )
+        take_while!(is_space) >>
+        alt!(tag!("→") | tag!("->") | tag!("=>")) >>
+        take_while!(is_space) >>
+        composition: parse_composition >>
+        take_while!(is_space) >>
+        weight_o: opt!(
+            complete!(
+                do_parse!(
+                    tag!("#") >>
+                    take_while!(is_space) >>
+                    weight_s: map_res!(is_not!(" "), from_utf8) >>
+                    weight: expr_res!(weight_s.parse()) >>
+                    (weight)
                 )
-            ) >>
-            take_while!(is_space) >>
-            many0!(tag!("%")) >>
-            take_while!(|_| true) >>
-            (CFGRule {
-                head: head,
-                composition: CFGComposition { composition: composition },
-                weight: weight_o.unwrap_or(W::one()),
-            })
+            )
+        ) >>
+        take_while!(is_space) >>
+        alt!(
+            eof!() |
+            preceded!(tag!("%"), take_while!(|_| true))
+        ) >>
+        (CFGRule {
+            head: head,
+            composition: CFGComposition { composition: composition },
+            weight: weight_o.unwrap_or(W::one()),
+        })
     )
 }
 
@@ -116,18 +119,18 @@ fn parse_letter_t<N, T>(input: &[u8]) -> IResult<&[u8], LetterT<N,T>>
         result: alt!(
             do_parse!(
                 tag!("Nt") >>
-                    take_while!(is_space) >>
-                    token: parse_token >>
-                    (LetterT::Label(token))
+                take_while!(is_space) >>
+                token: parse_token >>
+                (LetterT::Label(token))
             ) |
             do_parse!(
                 tag!("T") >>
-                    take_while!(is_space) >>
-                    token: parse_token >>
-                    (LetterT::Value(token))
+                take_while!(is_space) >>
+                token: parse_token >>
+                (LetterT::Value(token))
             )
         ) >>
-            (result)
+        (result)
     )
 }
 
