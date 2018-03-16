@@ -282,4 +282,84 @@ pub mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_cfg_rule_from_str_legal_input() {
+        let control_rule = CFGRule {
+            head: 'S',
+            composition: CFGComposition { composition: vec![LetterT::Value('a')] },
+            weight: 1.0
+        };
+
+        assert_eq!(
+            Ok(control_rule),
+            CFGRule::from_str("S → [T a]")
+        );
+    }
+
+    #[test]
+    fn test_cfg_rule_from_str_illegal_input() {
+        let incomplete_or_illegal_inputs = vec![
+            "S → [T 1",
+            "S → [T a]",
+        ];
+
+        for input in incomplete_or_illegal_inputs {
+            assert_eq!(
+                Err(format!("Could not parse \'{}\'", &input)),
+                CFGRule::<u8, u8, f32>::from_str(input)
+            );
+        }
+    }
+
+    #[test]
+    fn test_cfg_from_str_legal_input() {
+        let input = "initial: [S]\n\n\
+                     S → [T a, Nt S, T b] # 0.4\n\
+                     S → []               # 0.6";
+
+        let rule_s0 = CFGRule {
+            head: 'S',
+            composition: CFGComposition { composition: vec![
+                LetterT::Value('a'), LetterT::Label('S'), LetterT::Value('b'),
+            ] },
+            weight: 0.4
+        };
+        let rule_s1 = CFGRule {
+            head: 'S',
+            composition: CFGComposition { composition: vec![]},
+            weight: 0.6
+        };
+        let control_grammar = CFG {
+            _dummy: PhantomData,
+            initial: vec!['S'],
+            rules: vec![rule_s0, rule_s1]
+        };
+
+        assert_eq!(
+            control_grammar,
+            CFG::from_str(input).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_cfg_from_str_illegal_input() {
+        assert_eq!(
+            Err(String::from("Cannot parse an empty string as a CFG!")),
+            CFG::<u8, u8, u8>::from_str("")
+        );
+
+        let malformed_initial = "initial: [a]";
+        assert_eq!(
+            Err(format!("Malformed declaration of initial nonterminals: \'{}\'", &malformed_initial)),
+            CFG::<u8, u8, u8>::from_str(malformed_initial)
+        );
+
+        let malformed_rule = "initial: [0]\n\n\
+                              S → [T a]";
+        assert_eq!(
+            Err(String::from("Could not parse \'S → [T a]\'")),
+            CFG::<u8, u8, u8>::from_str(malformed_rule)
+        );
+    }
 }
