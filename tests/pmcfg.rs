@@ -207,98 +207,76 @@ fn test_tts_correctness() {
 }
 
 #[test]
-fn test_from_str_pmcfg() {
-    let c0: Composition<String> = Composition {
-        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)]],
+fn test_pmcfg_from_str_correctness() {
+    let rule_s0 = PMCFGRule {
+        head: String::from("S"),
+        tail: vec![String::from("A"), String::from("B")],
+        composition: Composition { composition: vec![
+            vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)],
+        ] },
+        weight: LogDomain::new(1.0).unwrap()
+    };
+    let rule_a0 = PMCFGRule {
+        head: String::from("A"),
+        tail: vec![String::from("A")],
+        composition: Composition { composition: vec![
+            vec![VarT::T(String::from("a")), VarT::Var(0, 0)],
+            vec![VarT::T(String::from("c")), VarT::Var(0, 1)],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_a1 = PMCFGRule {
+        head: String::from("A"),
+        tail: vec![],
+        composition: Composition { composition: vec![
+            vec![],
+            vec![],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_b0 = PMCFGRule {
+        head: String::from("B"),
+        tail: vec![String::from("B")],
+        composition: Composition { composition: vec![
+            vec![VarT::T(String::from("b")), VarT::Var(0, 0)],
+            vec![VarT::T(String::from("d")), VarT::Var(0, 1)],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_b1 = PMCFGRule {
+        head: String::from("B"),
+        tail: vec![],
+        composition: Composition { composition: vec![
+            vec![],
+            vec![],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let control_grammar = PMCFG {
+        initial: vec![String::from("S")],
+        rules: vec![rule_s0, rule_a0, rule_a1, rule_b0, rule_b1]
     };
 
-    let c1: Composition<String> = Composition { composition: vec![vec![], vec![]] };
+    let grammar = pmcfg_from_file("examples/example.mcfg");
+    assert_eq!(
+        control_grammar.clone(),
+        grammar.clone()
+    );
 
-    let c2 = Composition {
-        composition: vec![vec![VarT::T("a".to_string()),
-                               VarT::Var(0, 0)],
-                          vec![VarT::T("c".to_string()),
-                               VarT::Var(0, 1)]],
-    };
+    let control_automaton = TreeStackAutomaton::from(control_grammar);
+    let automaton = TreeStackAutomaton::from(grammar);
+    let words = vec![
+        "",
+        "aabccd",
+        "aabbcd",
+        "aabccdd",
+    ];
 
-    let c3 = Composition {
-        composition: vec![vec![VarT::T("b".to_string()),
-                               VarT::Var(0, 0)],
-                          vec![VarT::T("d".to_string()),
-                               VarT::Var(0, 1)]],
-    };
-
-    let r0: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "S".to_string(),
-        tail: vec!["A".to_string(), "B".to_string()],
-        composition: c0.clone(),
-        weight: LogDomain::new(1.0).unwrap(),
-    };
-
-    let r1: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "A".to_string(),
-        tail: Vec::new(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.6).unwrap(),
-    };
-
-    let r2: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "A".to_string(),
-        tail: vec!["A".to_string()],
-        composition: c2.clone(),
-        weight: LogDomain::new(0.4).unwrap(),
-    };
-
-    let r3: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "B".to_string(),
-        tail: Vec::new(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.7).unwrap(),
-    };
-
-    let r4: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "B".to_string(),
-        tail: vec!["B".to_string()],
-        composition: c3.clone(),
-        weight: LogDomain::new(0.3).unwrap(),
-    };
-
-    let r0_string = "\"S\" → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (\"A\", B)";
-    let r1_string = "A → [[],[]] ()  # 0.6 % this is a comment";
-    let r2_string = "A → [[T a, Var 0 0],[T c, Var 0 1]] (A)  # 0.4";
-    let r3_string = "B → [[],[]] ()  # 0.7";
-    let r4_string = "B → [[T b, Var 0 0],[T d, Var 0 1]] (B)  # 0.3";
-
-    assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r4.clone()),
-               r4_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-
-    let g: PMCFG<String, String, LogDomain<f64>> = PMCFG {
-        initial: vec!["S".to_string()],
-        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
-    };
-
-    let mut g_string = String::from("initial: [S]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    assert_eq!(Ok(g.clone()), g_string.parse());
-
-    let a = TreeStackAutomaton::from(g);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
+    for word in words {
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_automaton.recognise(input.clone()).next().is_some(),
+            automaton.recognise(input).next().is_some()
+        );
+    }
 }
