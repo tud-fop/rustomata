@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::collections::btree_map;
-use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Eq)]
 pub struct GornTree<V> {
@@ -11,19 +10,61 @@ impl<V> GornTree<V> {
     pub fn new() -> GornTree<V> {
         GornTree { map: BTreeMap::new() }
     }
-}
 
-impl<V> Deref for GornTree<V> {
-    type Target = BTreeMap<Vec<usize>, V>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.map
+    pub fn clear(&mut self) {
+        self.map.clear()
     }
-}
 
-impl<V> DerefMut for GornTree<V> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.map
+    pub fn get(&self, key: &Vec<usize>) -> Option<&V> {
+        self.map.get(key)
+    }
+
+    pub fn contains_key(&self, key: &Vec<usize>) -> bool {
+        self.map.contains_key(key)
+    }
+
+    pub fn get_mut(&mut self, key: &Vec<usize>) -> Option<&mut V> {
+        self.map.get_mut(key)
+    }
+
+    pub fn insert(&mut self, key: Vec<usize>, value: V) -> Option<V> {
+        self.map.insert(key, value)
+    }
+
+    pub fn remove(&mut self, key: &Vec<usize>) -> Option<V> {
+        self.map.remove(key)
+    }
+
+    pub fn append(&mut self, other: &mut GornTree<V>) {
+        self.map.append(&mut other.map)
+    }
+
+    pub fn entry(&mut self, key: Vec<usize>) -> btree_map::Entry<Vec<usize>, V> {
+        self.map.entry(key)
+    }
+
+    pub fn split_off(&mut self, key: &Vec<usize>) -> GornTree<V> {
+        GornTree { map: self.map.split_off(key) }
+    }
+
+    pub fn keys<'a>(&'a self) -> btree_map::Keys<'a, Vec<usize>, V> {
+        self.map.keys()
+    }
+
+    pub fn values<'a>(&'a self) -> btree_map::Values<'a, Vec<usize>, V> {
+        self.map.values()
+    }
+
+    pub fn values_mut(&mut self) -> btree_map::ValuesMut<Vec<usize>, V> {
+        self.map.values_mut()
+    }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
     }
 }
 
