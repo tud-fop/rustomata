@@ -17,20 +17,17 @@ use rustomata::recognisable::*;
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use rustomata::tree_stack_automaton::*;
 
-fn example_tree_stack_automaton()
-        -> TreeStackAutomaton<PosState<PMCFGRule<String, String, LogDomain<f64>>>, String, LogDomain<f64>>
+fn pmcfg_from_file(grammar_file_path: &str) -> PMCFG<String, String, LogDomain<f64>>
 {
-    let mut grammar_file = File::open("examples/example.mcfg").unwrap();
+    let mut grammar_file = File::open(grammar_file_path).unwrap();
     let mut grammar_string = String::new();
     let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: PMCFG<String, String, _> = grammar_string.parse().unwrap();
-
-    TreeStackAutomaton::from(grammar)
+    grammar_string.parse().unwrap()
 }
 
 #[test]
 fn test_example_pmcfg_to_negra() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
     let tree_stack = automaton.recognise(
         String::from("aabccd").chars().map(|x| x.to_string()).collect()
     ).next().unwrap().0;
@@ -150,7 +147,7 @@ fn test_from_str_automaton() {
 
 #[test]
 fn test_coarse_to_fine_recogniser_correctness() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
     let tts = TTSElement::new();
     let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
     let mapping = |ps: &PosState<_>| ps
@@ -176,7 +173,7 @@ fn test_coarse_to_fine_recogniser_correctness() {
 
 #[test]
 fn test_tts_correctness() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
     let tts = TTSElement::new();
     let (tts_ed_automaton, _) = tts.approximate_automaton(&automaton);
 

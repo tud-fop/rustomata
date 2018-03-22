@@ -14,15 +14,12 @@ use rustomata::cfg::*;
 use rustomata::push_down_automaton::*;
 use rustomata::recognisable::*;
 
-fn example_pushdown_automaton()
-    -> PushDownAutomaton<PushState<String, String>, String, LogDomain<f64>>
+fn cfg_from_file(grammar_file_path: &str) -> CFG<String, String, LogDomain<f64>>
 {
-    let mut grammar_file = File::open("examples/example2.cfg").unwrap();
+    let mut grammar_file = File::open(grammar_file_path).unwrap();
     let mut grammar_string = String::new();
     let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: CFG<String, String, _> = grammar_string.parse().unwrap();
-
-    PushDownAutomaton::from(grammar)
+    grammar_string.parse().unwrap()
 }
 
 fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
@@ -35,7 +32,7 @@ fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
 
 #[test]
 fn test_relabel_pushdown_correctness() {
-    let automaton = example_pushdown_automaton();
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example2.cfg"));
     let rel = example_equivalence_relation();
     let mapping = |ps: &PushState<_, _>| ps.map(|nt| rel.project(nt));
     let rlb = RlbElement::new(&mapping);
@@ -77,28 +74,26 @@ fn test_relabel_pushdown_correctness() {
 #[test]
 fn test_cfg_from_str_correctness() {
     let rule_s0 = CFGRule {
-        head: 'S',
+        head: String::from("S"),
         composition: CFGComposition { composition: vec![
-            LetterT::Value('a'), LetterT::Label('S'), LetterT::Value('b'),
+            LetterT::Value(String::from("a")),
+            LetterT::Label(String::from("S")),
+            LetterT::Value(String::from("b")),
         ] },
         weight: LogDomain::new(0.4).unwrap()
     };
     let rule_s1 = CFGRule {
-        head: 'S',
+        head: String::from("S"),
         composition: CFGComposition { composition: vec![]},
         weight: LogDomain::new(0.6).unwrap()
     };
     let control_grammar = CFG {
         _dummy: PhantomData,
-        initial: vec!['S'],
+        initial: vec![String::from("S")],
         rules: vec![rule_s0, rule_s1]
     };
 
-    let mut grammar_file = File::open("examples/example.cfg").unwrap();
-    let mut grammar_string = String::new();
-    let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: CFG<char, char, LogDomain<f64>> = grammar_string.parse().unwrap();
-
+    let grammar = cfg_from_file("examples/example.cfg");
     assert_eq!(
         control_grammar.clone(),
         grammar.clone()
@@ -114,7 +109,7 @@ fn test_cfg_from_str_correctness() {
     ];
 
     for word in words {
-        let input: Vec<_> = String::from(word).chars().collect();
+        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
         assert_eq!(
             control_automaton.recognise(input.clone()).next().is_some(),
             automaton.recognise(input).next().is_some()
