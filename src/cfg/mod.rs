@@ -7,15 +7,21 @@ mod from_pmcfg;
 
 /// Variable or terminal symbol in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum LetterT<N,T> {
+pub enum LetterT<N, T> {
     Label(N),
     Value(T),
 }
 
 /// Composition function in an `CFG`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct CFGComposition<N,T> {
-    pub composition: Vec<LetterT<N,T>>,
+pub struct CFGComposition<N, T> {
+    pub composition: Vec<LetterT<N, T>>,
+}
+
+impl<N, T> From<Vec<LetterT<N, T>>> for CFGComposition<N, T> {
+    fn from(encapsulated_value: Vec<LetterT<N, T>>) -> Self {
+        CFGComposition { composition: encapsulated_value }
+    }
 }
 
 /// Rule of a weighted `CFG`.
