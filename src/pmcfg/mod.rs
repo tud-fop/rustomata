@@ -241,7 +241,7 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
     where T: Clone + fmt::Display,
 {
     let unexpanded_composition = term_map.get(&address).unwrap();
-    let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
+    let mut expanded_nonterminals = BTreeMap::new();
     let mut expanded_composition = Vec::new();
 
     for component in unexpanded_composition {
