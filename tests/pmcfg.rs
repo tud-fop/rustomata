@@ -27,7 +27,7 @@ fn pmcfg_from_file(grammar_file_path: &str) -> PMCFG<String, String, LogDomain<f
 
 #[test]
 fn test_example_pmcfg_to_negra() {
-    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tree_stack = automaton.recognise(
         String::from("aabccd").chars().map(|x| x.to_string()).collect()
     ).next().unwrap().0;
@@ -147,7 +147,7 @@ fn test_from_str_automaton() {
 
 #[test]
 fn test_coarse_to_fine_recogniser_correctness() {
-    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tts = TTSElement::new();
     let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
     let mapping = |ps: &PosState<_>| ps
@@ -173,7 +173,7 @@ fn test_coarse_to_fine_recogniser_correctness() {
 
 #[test]
 fn test_tts_correctness() {
-    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.mcfg"));
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tts = TTSElement::new();
     let (tts_ed_automaton, _) = tts.approximate_automaton(&automaton);
 
@@ -257,7 +257,7 @@ fn test_pmcfg_from_str_correctness() {
         rules: vec![rule_s0, rule_a0, rule_a1, rule_b0, rule_b1]
     };
 
-    let grammar = pmcfg_from_file("examples/example.mcfg");
+    let grammar = pmcfg_from_file("examples/example.pmcfg");
     assert_eq!(
         control_grammar.clone(),
         grammar.clone()
