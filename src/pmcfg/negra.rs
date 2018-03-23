@@ -59,6 +59,8 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
     (identified_tree_map, terminal_map)
 }
 
+/// Takes a tree stack _(encoded in a Gorn tree)_ of PMCFG rules and transforms it into a
+/// corresponding _NEGRA_ string.
 pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: usize)
         -> String
     where H: Clone + ToString,
