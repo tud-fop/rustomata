@@ -41,7 +41,7 @@ impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
         }
 
         pd.reverse();
-        PushDown::from_vec(pd)
+        PushDown::from(pd)
     }
 
     fn approximate_instruction(&self, instr: &TreeStackInstruction<A>)
@@ -80,7 +80,7 @@ mod tests {
         ts = ts.push(7, '4').unwrap();
 
         let tts = TTSElement::new();
-        let control_pushdown = PushDown::from_vec(vec![
+        let control_pushdown = PushDown::from(vec![
             '@', '2', '4',
         ]);
 

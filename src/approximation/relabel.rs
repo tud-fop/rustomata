@@ -62,11 +62,11 @@ mod tests {
         let mapping = |ps: &PushState<_, _>| ps.map(|nt| rel.project(nt));
         let rlb = RlbElement::new(&mapping);
 
-        let pushdown = PushDown::from_vec(vec![
+        let pushdown = PushDown::from(vec![
             PushState::Initial, PushState::Nt(0), PushState::Nt(1), PushState::T('a'),
             PushState::Nt(2), PushState::Nt(3), PushState::Nt(4), PushState::Designated,
         ]);
-        let control_pushdown = PushDown::from_vec(vec![
+        let control_pushdown = PushDown::from(vec![
             PushState::Initial, PushState::Nt(0), PushState::Nt(0),  PushState::T('a'),
             PushState::Nt(1), PushState::Nt(1), PushState::Nt(2), PushState::Designated,
         ]);

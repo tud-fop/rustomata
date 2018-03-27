@@ -125,7 +125,7 @@ impl<N: Clone + Ord + PartialEq + Hash,
 
         PushDownAutomaton::new(
             transitions,
-            PushDown::new(PushState::Initial, PushState::Designated),
+            PushDown::new(PushState::Designated, PushState::Initial),
         )
     }
 }
