@@ -3,6 +3,8 @@ extern crate num_traits;
 extern crate rustomata;
 
 use log_domain::LogDomain;
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+// use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::marker::PhantomData;
@@ -13,6 +15,8 @@ use rustomata::approximation::relabel::RlbElement;
 use rustomata::cfg::*;
 use rustomata::push_down_automaton::*;
 use rustomata::recognisable::*;
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+// use rustomata::recognisable::automaton::Automaton;
 
 fn cfg_from_file(grammar_file_path: &str) -> CFG<String, String, LogDomain<f64>>
 {
@@ -116,3 +120,45 @@ fn test_cfg_from_str_correctness() {
         );
     }
 }
+
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+/*
+#[test]
+fn test_pushdown_automaton_from_str() {
+    use PushDownInstruction::Replace;
+
+    let unprocessed_transitions = vec![
+        ("a", Replace { current_val: vec!["(a)".to_string()], new_val: vec![] }, 1.0),
+        ("b", Replace { current_val: vec!["(b)".to_string()], new_val: vec![] }, 1.0),
+        ("",  Replace { current_val: vec!["(S)".to_string()], new_val: vec![] }, 0.6),
+        ("",  Replace { current_val: vec!["(S)".to_string()], new_val: vec![
+            "(b)".to_string(), "(S)".to_string(), "(a)".to_string(),
+        ] }, 0.4),
+        ("",  Replace { current_val: vec!["I".to_string()], new_val: vec!["(S)".to_string()] }, 1.0),
+    ];
+
+    let mut transitions = Vec::new();
+    for (terminal, instruction, weight) in unprocessed_transitions {
+        transitions.push(Transition {
+            word: terminal.chars().map(|x| x.to_string()).collect(),
+            instruction,
+            weight: LogDomain::new(weight).unwrap()
+        });
+    }
+    let control_automaton = PushDownAutomaton::new(transitions, PushDown::new("I".to_string(), "@".to_string()));
+
+    let mut automaton_file = File::open("examples/example.pda").unwrap();
+    let mut automaton_string = String::new();
+    let _ = automaton_file.read_to_string(&mut automaton_string);
+    let automaton: PushDownAutomaton<String, String, LogDomain<f64>> = automaton_string.parse().unwrap();
+
+    assert_eq!(
+        control_automaton.initial(),
+        automaton.initial()
+    );
+    assert_eq!(
+        control_automaton.list_transitions().collect::<HashSet<_>>(),
+        automaton.list_transitions().collect::<HashSet<_>>()
+    );
+}
+*/
