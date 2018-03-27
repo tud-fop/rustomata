@@ -1,0 +1,8 @@
+% This automaton recognises the language { aⁿbⁿ ∣ n ∈ ℕ }.
+initial: stack: [@ I], empty:@
+
+Transition ["a"] (Replace "(a)" // )                    # 1
+Transition ["b"] (Replace "(b)" // )                    # 1
+Transition []    (Replace "(S)" // )                    # 0.6
+Transition []    (Replace "(S)" // "(b)", "(S)", "(a)") # 0.4
+Transition []    (Replace "I" // "(S)")                 # 1
