@@ -85,3 +85,31 @@ impl<A: FromStr> FromStr for TreeStackInstruction<A> {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tree_stack_automaton_from_str_leading_comment() {
+        let automaton_string = "% leading comment\n\
+                                initial: 18\n\n\
+                                Transition [] (Push 0 1 2) # 1";
+        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+    }
+
+    #[test]
+    fn test_tree_stack_automaton_from_str_end_of_line_comment() {
+        let automaton_string = "initial: 18 % end-of-line comment 1\n\n\
+                                Transition [] (Push 0 1 2) # 1 % end-of-line comment 2";
+        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+    }
+
+    #[test]
+    fn test_tree_stack_automaton_from_str_trailing_comment() {
+        let automaton_string = "initial: 18\n\n\
+                                Transition [] (Push 0 1 2) # 1\n\
+                                % trailing comment";
+        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+    }
+}

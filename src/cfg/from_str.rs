@@ -145,25 +145,25 @@ pub mod tests {
 
     #[test]
     fn test_cfg_from_str_leading_comment() {
-        let grammar = "% leading comment\n\
-                       initial: [S]\n\n\
-                       S → [T a]";
-        let _: CFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "% leading comment\n\
+                              initial: [S]\n\n\
+                              S → [T a]";
+        let _: CFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 
     #[test]
     fn test_cfg_from_str_end_of_line_comment() {
-        let grammar = "initial: [S] % end-of-line comment 1\n\n\
-                       S → [T a] % end-of-line comment 2";
-        let _: CFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "initial: [S] % end-of-line comment 1\n\n\
+                              S → [T a] % end-of-line comment 2";
+        let _: CFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 
     #[test]
     fn test_cfg_from_str_trailing_comment() {
-        let grammar = "initial: [S]\n\n\
-                       S → [T a]\n\
-                       % trailing comment";
-        let _: CFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "initial: [S]\n\n\
+                              S → [T a]\n\
+                              % trailing comment";
+        let _: CFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 
     #[test]
