@@ -3,7 +3,7 @@ use std::collections::btree_map;
 
 /// A tree map where each node has a _Gorn address_, i.e. a sequence of integers that describes the
 /// path one has to follow to get from the root to the particular node.
-#[derive(Debug, Eq)]
+#[derive(Clone, Debug, Eq)]
 pub struct GornTree<V> {
     map: BTreeMap<Vec<usize>, V>,
 }

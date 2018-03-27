@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct TermId {
+struct TermId {
     address: Vec<usize>,
     compos_var_pos: usize,
 }
@@ -20,7 +20,7 @@ impl fmt::Display for TermId {
     }
 }
 
-pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
+fn identify_terminals<A>(tree_map: GornTree<Composition<A>>)
         -> (GornTree<Composition<TermId>>, BTreeMap<TermId, A>)
     where A: Clone,
 {
@@ -37,13 +37,13 @@ pub fn identify_terminals<A>(tree_map: &GornTree<Composition<A>>)
 
             for variable in component {
                 match variable {
-                    &VarT::Var(x, y) => {
+                    VarT::Var(x, y) => {
                         identified_compon.push(VarT::Var(x, y));
                     },
-                    &VarT::T(ref terminal) => {
+                    VarT::T(terminal) => {
                         let terminal_id = TermId { address: address.clone(), compos_var_pos };
                         identified_compon.push(VarT::T(terminal_id.clone()));
-                        terminal_map.insert(terminal_id, terminal.clone());
+                        terminal_map.insert(terminal_id, terminal);
                     },
                 };
 
@@ -121,7 +121,7 @@ fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
           T: Clone + ToString,
 {
     let (term_map, nonterminal_map) = to_term(&tree_map);
-    let (identified_tree_map, terminal_map) = identify_terminals(&term_map);
+    let (identified_tree_map, terminal_map) = identify_terminals(term_map);
     let evaluated_compos = evaluate(&identified_tree_map);
 
     let mut negra_vector = Vec::new();
@@ -223,13 +223,13 @@ mod tests {
         terminal_map.insert(TermId::from((vec![0], 1)), "c");
         terminal_map.insert(TermId::from((vec![0, 1], 0)), "d");
 
-        assert_eq!((identified_tree_map, terminal_map), identify_terminals(&tree_map));
+        assert_eq!((identified_tree_map, terminal_map), identify_terminals(tree_map));
     }
 
     #[test]
     fn test_identify_terminals_inverse() {
         let (tree_map, _) = to_term(&example_tree_map());
-        let (identified_tree_map, terminal_map) = identify_terminals(&tree_map);
+        let (identified_tree_map, terminal_map) = identify_terminals(tree_map.clone());
         let mut unidentified_tree_map = GornTree::new();
 
         for (address, composition) in identified_tree_map {
