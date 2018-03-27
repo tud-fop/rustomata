@@ -17,27 +17,7 @@ impl<N, T, W> FromStr for CFG<N, T, W>
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut it = s.lines();
-        let mut rules = Vec::new();
-        let initial;
-
-        match it.next() {
-            Some(l) => {
-                match parse_initials(l.as_bytes()) {
-                    IResult::Done(_, result)
-                        => initial = result,
-                    _
-                        => return Err(format!("Malformed declaration of initial nonterminals: \'{}\'", l))
-                }
-            },
-            _ => return Err(String::from("Cannot parse an empty string as a CFG!"))
-        }
-
-        while let Some(l) = it.next() {
-            if !l.is_empty() && !l.trim_left().starts_with("%") {
-                rules.push(l.trim().parse()?);
-            }
-        }
+        let (initial, rules) = initial_rule_grammar_from_str(s)?;
 
         Ok(CFG {
             initial,
@@ -313,24 +293,51 @@ pub mod tests {
     #[test]
     fn test_cfg_from_str_legal_input() {
         let input = "initial: [S]\n\n\
-                     S → [T a, Nt S, T b] # 0.4\n\
-                     S → []               # 0.6";
+                     S → [Nt A           ] # 1\n\
+                     A → [T a, Nt A, Nt B] # 0.6\n\
+                     A → [T a            ] # 0.4\n\
+                     initial: [A]\n\
+                     B → [T b, Nt B, Nt A] # 0.3\n\
+                     B → [T b            ] # 0.7";
 
         let rule_s0 = CFGRule {
             head: 'S',
             composition: CFGComposition { composition: vec![
-                LetterT::Value('a'), LetterT::Label('S'), LetterT::Value('b'),
+                LetterT::Label('A'),
+            ] },
+            weight: 1.0
+        };
+        let rule_a0 = CFGRule {
+            head: 'A',
+            composition: CFGComposition { composition: vec![
+                LetterT::Value('a'), LetterT::Label('A'), LetterT::Label('B'),
+            ] },
+            weight: 0.6
+        };
+        let rule_a1 = CFGRule {
+            head: 'A',
+            composition: CFGComposition { composition: vec![
+                LetterT::Value('a')
             ] },
             weight: 0.4
         };
-        let rule_s1 = CFGRule {
-            head: 'S',
-            composition: CFGComposition { composition: vec![]},
+        let rule_b0 = CFGRule {
+            head: 'B',
+            composition: CFGComposition { composition: vec![
+                LetterT::Value('b'), LetterT::Label('B'), LetterT::Label('A'),
+            ] },
             weight: 0.6
         };
+        let rule_b1 = CFGRule {
+            head: 'B',
+            composition: CFGComposition { composition: vec![
+                LetterT::Value('b')
+            ] },
+            weight: 0.4
+        };
         let control_grammar = CFG {
-            initial: vec!['S'],
-            rules: vec![rule_s0, rule_s1]
+            initial: vec!['S', 'A'],
+            rules: vec![rule_s0, rule_a0, rule_a1, rule_b0, rule_b1]
         };
 
         assert_eq!(
@@ -341,11 +348,6 @@ pub mod tests {
 
     #[test]
     fn test_cfg_from_str_illegal_input() {
-        assert_eq!(
-            Err(String::from("Cannot parse an empty string as a CFG!")),
-            CFG::<u8, u8, u8>::from_str("")
-        );
-
         let malformed_initial = "initial: [a]";
         assert_eq!(
             Err(format!("Malformed declaration of initial nonterminals: \'{}\'", &malformed_initial)),
