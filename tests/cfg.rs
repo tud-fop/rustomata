@@ -7,7 +7,6 @@ use log_domain::LogDomain;
 // use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
-use std::marker::PhantomData;
 
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::equivalence_classes::EquivalenceRelation;
@@ -92,7 +91,6 @@ fn test_cfg_from_str_correctness() {
         weight: LogDomain::new(0.6).unwrap()
     };
     let control_grammar = CFG {
-        _dummy: PhantomData,
         initial: vec![String::from("S")],
         rules: vec![rule_s0, rule_s1]
     };

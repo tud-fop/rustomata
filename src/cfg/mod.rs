@@ -1,6 +1,5 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
 
 mod from_str;
 mod from_pmcfg;
@@ -52,7 +51,6 @@ pub struct CFGRule<N, T, W> {
 /// and a set of context-free rules.
 ///
 /// ```
-/// use std::marker::PhantomData;
 /// use std::str::FromStr;
 /// use rustomata::cfg::{CFG, CFGRule};
 ///
@@ -63,7 +61,7 @@ pub struct CFGRule<N, T, W> {
 /// ];
 ///
 /// assert_eq!(
-///     CFG::<char, char, f64> { _dummy: PhantomData, initial, rules },
+///     CFG::<char, char, f64> { initial, rules },
 ///     CFG::from_str("initial: [S]\n\
 ///                    S → [T a, Nt S, T b] # 0.4\n\
 ///                    S → []               # 0.6").unwrap()
@@ -71,7 +69,6 @@ pub struct CFGRule<N, T, W> {
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFG<N, T, W> {
-    pub _dummy: PhantomData<T>,
     pub initial: Vec<N>,
     pub rules: Vec<CFGRule<N, T, W>>,
 }

@@ -1,7 +1,6 @@
 use nom::{IResult, is_space};
 use num_traits::One;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::str::{FromStr, from_utf8};
 
 use cfg::{CFG, CFGComposition, CFGRule, LetterT};
@@ -41,7 +40,6 @@ impl<N, T, W> FromStr for CFG<N, T, W>
         }
 
         Ok(CFG {
-            _dummy: PhantomData,
             initial,
             rules,
         })
@@ -331,7 +329,6 @@ pub mod tests {
             weight: 0.6
         };
         let control_grammar = CFG {
-            _dummy: PhantomData,
             initial: vec!['S'],
             rules: vec![rule_s0, rule_s1]
         };
