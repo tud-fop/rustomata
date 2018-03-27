@@ -7,7 +7,8 @@ use std::str::{FromStr, from_utf8};
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
 /// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
-pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
+pub fn parse_token<A>(input: &[u8])
+        -> IResult<&[u8], A>
     where A: FromStr,
           A::Err: Debug,
 {
@@ -36,7 +37,8 @@ pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
 
 /// Parses the `input` into a `Vec<A>` given an `inner_parser` for type `A`, an `opening` delimiter, a `closing` delimiter, and a `separator`.
 /// The `inner_parser` must not consume the `separator`s or the `closing` delimiter of the given `input`.
-pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, closing: &str, separator: &str) -> IResult<&'a [u8], Vec<A>>
+pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, closing: &str, separator: &str)
+        -> IResult<&'a [u8], Vec<A>>
     where P: Fn(&'a [u8]) -> IResult<&'a [u8], A>
 {
     do_parse!(
@@ -56,10 +58,11 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
         (result)
     )
 }
-/// parses initials of the form `initials: [...]` into a vector of type `N`
-pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
-    where A: FromStr,
-          A::Err: Debug,
+/// Parses a string of the form `initials: [...]` as a vector of initial symbols of type `I`.
+pub fn parse_initials<I>(input: &[u8])
+        -> IResult<&[u8], Vec<I>>
+    where I: FromStr,
+          I::Err: Debug,
 {
     do_parse!(
         input,
@@ -68,6 +71,38 @@ pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
             result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
             (result)
     )
+}
+
+/// Parses a string as a grammar of initial symbols of type `I` and rules of type `R`.
+/// The syntax of the initials must comply with `parse_initials`; the syntax of the rules is solely
+/// determined by their type.
+/// If the string contains multiple definitions of initials, then the initials of the grammar are
+/// going to be the union of all defined initials.
+pub fn initial_rule_grammar_from_str<I, R>(s: &str)
+        -> Result<((Vec<I>, Vec<R>)), String>
+    where I: FromStr,
+          I::Err: Debug,
+          R: FromStr,
+          String: From<R::Err>,
+{
+    let mut it = s.lines();
+    let mut initial = Vec::new();
+    let mut rules: Vec<R> = Vec::new();
+
+    while let Some(l) = it.next() {
+        if l.trim_left().starts_with("initial:") {
+            match parse_initials(l.as_bytes()) {
+                IResult::Done(_, mut result) =>
+                    initial.append(&mut result),
+                _ =>
+                    return Err(format!("Malformed declaration of initial nonterminals: \'{}\'", l))
+            }
+        } else if !l.is_empty() && !l.trim_left().starts_with("%") {
+            rules.push(l.trim().parse()?);
+        }
+    }
+
+    Ok((initial, rules))
 }
 
 #[cfg(test)]
