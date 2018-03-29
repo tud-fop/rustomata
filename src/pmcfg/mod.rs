@@ -125,6 +125,7 @@ impl<N, T, W> PMCFGRule<N, T, W>
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
+    // TODO: use HashSet
     pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
 }

@@ -69,6 +69,7 @@ pub struct CFGRule<N, T, W> {
 /// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFG<N, T, W> {
+    // TODO: use HashSet
     pub initial: Vec<N>,
     pub rules: Vec<CFGRule<N, T, W>>,
 }
