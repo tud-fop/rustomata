@@ -17,6 +17,7 @@ use util::integerisable::{Integerisable1, Integerisable2};
 use util::push_down::Pushdown;
 
 mod from_cfg;
+// TODO: mod from_str;
 
 pub use self::from_cfg::*;
 
@@ -36,7 +37,25 @@ pub struct PushDownAutomaton<A, T, W>
     initial: PushDown<usize>,
 }
 
-/// Instruction on `PushDown<A>`s.
+/// An instruction on a pushdown:
+///
+/// 1. The elements of `current_val` are popped from the pushdown
+/// 2. The elements of `new_val` are pushed to the pushdown
+///
+/// ```
+/// use rustomata::push_down_automaton::{PushDown, PushDownInstruction};
+/// use rustomata::recognisable::Instruction;
+///
+/// let pushdown = PushDown::from(vec![1, 2, 3, 4]);
+/// let instruction = PushDownInstruction::Replace {
+///     current_val: vec![4, 3], new_val: vec![5, 6]
+/// };
+///
+/// assert_eq!(
+///     PushDown::from(vec![1, 2, 5, 6]),
+///     instruction.apply(pushdown).pop().unwrap()
+/// );
+/// ```
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
     Replace { current_val: Vec<A>, new_val: Vec<A> },
@@ -96,7 +115,6 @@ impl<A: Clone + Eq + Hash> Integerisable1 for PushDownInstruction<A> {
 #[derive(PartialEq, Eq, Debug, Clone, Hash, PartialOrd, Ord)]
 pub struct PushDown<A> {
     elements: Vec<A>,
-    empty: A,
 }
 
 impl<A, T, W> PushDownAutomaton<A, T, W>
@@ -228,11 +246,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
     }
 
     fn extract_key(c: &Configuration<PushDown<usize>, usize, W>) -> &usize {
-        if c.storage.is_bottom() {
-            &c.storage.empty
-        } else {
-            c.storage.current_symbol()
-        }
+        c.storage.current_symbol()
     }
 
     fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
@@ -267,7 +281,7 @@ impl<A, T, W> Recognisable<T, W> for PushDownAutomaton<A, T, W>
 
 impl<A> PushDown<A> {
     pub fn empty(&self) -> &A {
-        &self.empty
+        self.elements.get(0).unwrap()
     }
     pub fn current_symbol(&self) -> &A {
         self.elements.last().unwrap()
@@ -286,7 +300,6 @@ impl<A> PushDown<A> {
         where F: Fn(&A) -> B,
     {
         PushDown {
-            empty: f(&self.empty),
             elements: self.elements.iter().map(f).collect(),
         }
     }
@@ -295,7 +308,6 @@ impl<A> PushDown<A> {
         where F: FnMut(&A) -> B,
     {
         PushDown {
-            empty: f(&self.empty),
             elements: self.elements.iter().map(f).collect(),
         }
     }
@@ -317,16 +329,15 @@ impl<A: Clone + Eq + Hash> Integerisable1 for PushDown<A> {
 impl<A> PushDown<A>
     where A: Clone
 {
-    pub fn from_vec(vec: Vec<A>) -> PushDown<A> {
-        PushDown {
-            empty: vec[0].clone(),
-            elements: vec,
-        }
-    }
-
     /// New `PushDown<A>` with empty-symbol of type `A` and initial symbol of type `A`
-    pub fn new(a: A, empty: A) -> PushDown<A> {
-        PushDown::from_vec(vec![empty, a])
+    pub fn new(empty: A, initial: A, ) -> PushDown<A> {
+        PushDown::from(vec![empty, initial])
+    }
+}
+
+impl<A> From<Vec<A>> for PushDown<A> {
+    fn from(vec: Vec<A>) -> Self {
+        PushDown { elements: vec }
     }
 }
 
@@ -351,7 +362,6 @@ impl<A> PushDown<A>
     }
 }
 
-
 impl<A> Display for PushDown<A>
     where A: Display
 {
@@ -365,10 +375,9 @@ impl<A> Display for PushDown<A>
                 buffer.push_str(" ");
             }
         }
-        write!(f, "stack: [{}], empty:{}", buffer, self.empty)
+        write!(f, "stack: [{}], empty:{}", buffer, self.empty())
     }
 }
-
 
 impl<A> Display for PushDownInstruction<A>
     where A: Display
@@ -523,13 +532,13 @@ mod tests {
 
     #[test]
     fn test_pushdown_instruction_apply_correctness() {
-        let pushdown = PushDown::from_vec(vec![1, 2, 3, 4]);
+        let pushdown = PushDown::from(vec![1, 2, 3, 4]);
 
         let pop_instruction = PushDownInstruction::Replace {
             current_val: vec![4, 3], new_val: vec![3]
         };
         assert_eq!(
-            vec![PushDown::from_vec(vec![1, 2, 3])],
+            vec![PushDown::from(vec![1, 2, 3])],
             pop_instruction.apply(pushdown.clone())
         );
 
@@ -537,7 +546,7 @@ mod tests {
             current_val: vec![4], new_val: vec![4, 5]
         };
         assert_eq!(
-            vec![PushDown::from_vec(vec![1, 2, 3, 4, 5])],
+            vec![PushDown::from(vec![1, 2, 3, 4, 5])],
             push_instruction.apply(pushdown.clone())
         );
 
@@ -560,7 +569,7 @@ mod tests {
 
     #[test]
     fn test_pushdown_instruction_inverse() {
-        let pushdown = PushDown::from_vec(vec![1, 2, 3, 4]);
+        let pushdown = PushDown::from(vec![1, 2, 3, 4]);
         let instruction = PushDownInstruction::Replace {
             current_val: vec![4, 3], new_val: vec![3]
         };

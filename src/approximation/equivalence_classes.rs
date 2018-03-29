@@ -195,11 +195,11 @@ fn parse_set<A>(input: &[u8]) -> IResult<&[u8], HashSet<A>>
     where A: Eq + FromStr + Hash,
           A::Err: Debug,
 {
-    match parse_vec(input, parse_token, "[", "]", ",") {
-        IResult::Done(rest, parsed) => IResult::Done(rest, HashSet::from_iter(parsed)),
-        IResult::Incomplete(needed) => IResult::Incomplete(needed),
-        IResult::Error(error) => IResult::Error(error),
-    }
+    do_parse!(
+        input,
+        output: apply!(parse_vec, parse_token, "[", "]", ",") >>
+        (HashSet::from_iter(output))
+    )
 }
 
 #[cfg(test)]
@@ -343,6 +343,21 @@ mod tests {
                            illegal_input, parsed),
                 Err(_) => (),
             }
+        }
+    }
+
+    #[test]
+    fn test_parse_set_legal_input() {
+        let legal_inputs = vec![
+            ("[]xyz", "xyz", HashSet::from_iter(vec![])),
+            ("[0, 1, 2]xyz", "xyz", HashSet::from_iter(vec![0, 1, 2])),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_set(legal_input.as_bytes()).unwrap()
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-use nom::{ErrorKind, IResult, anychar, is_space};
+use nom::{IResult, anychar, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
@@ -7,7 +7,8 @@ use std::str::{FromStr, from_utf8};
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
 /// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
-pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
+pub fn parse_token<A>(input: &[u8])
+        -> IResult<&[u8], A>
     where A: FromStr,
           A::Err: Debug,
 {
@@ -26,44 +27,42 @@ pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
         )
     );
 
-    match parse_token_s(input) {
-        IResult::Done(rest, output) => {
-            match output.parse() {
-                Ok(parsed) => IResult::Done(rest, parsed),
-                Err(_) => IResult::Error(ErrorKind::Verify),
-            }
-        },
-        IResult::Error(error) => IResult::Error(error),
-        IResult::Incomplete(needed) => IResult::Incomplete(needed),
-    }
+    do_parse!(
+        input,
+        output: parse_token_s >>
+        token: expr_res!(output.parse()) >>
+        (token)
+    )
 }
 
 /// Parses the `input` into a `Vec<A>` given an `inner_parser` for type `A`, an `opening` delimiter, a `closing` delimiter, and a `separator`.
 /// The `inner_parser` must not consume the `separator`s or the `closing` delimiter of the given `input`.
-pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, closing: &str, separator: &str) -> IResult<&'a [u8], Vec<A>>
+pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, closing: &str, separator: &str)
+        -> IResult<&'a [u8], Vec<A>>
     where P: Fn(&'a [u8]) -> IResult<&'a [u8], A>
 {
     do_parse!(
         input,
         tag!(opening) >>
-            take_while!(is_space) >>
-            result: many0!(
-                do_parse!(
-                    opt!(tag!(separator)) >>
-                        take_while!(is_space) >>
-                        the_token: inner_parser >>
-                        take_while!(is_space) >>
-                        (the_token)
-                )
-            ) >>
-            tag!(closing) >>
-            (result)
+        take_while!(is_space) >>
+        result: many0!(
+            do_parse!(
+                opt!(tag!(separator)) >>
+                take_while!(is_space) >>
+                the_token: inner_parser >>
+                take_while!(is_space) >>
+                (the_token)
+            )
+        ) >>
+        tag!(closing) >>
+        (result)
     )
 }
-/// parses initials of the form `initials: [...]` into a vector of type `N`
-pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
-    where A: FromStr,
-          A::Err: Debug,
+/// Parses a string of the form `initials: [...]` as a vector of initial symbols of type `I`.
+pub fn parse_initials<I>(input: &[u8])
+        -> IResult<&[u8], Vec<I>>
+    where I: FromStr,
+          I::Err: Debug,
 {
     do_parse!(
         input,
@@ -74,6 +73,38 @@ pub fn parse_initials<A>(input: &[u8]) -> IResult<&[u8], Vec<A>>
     )
 }
 
+/// Parses a string as a grammar of initial symbols of type `I` and rules of type `R`.
+/// The syntax of the initials must comply with `parse_initials`; the syntax of the rules is solely
+/// determined by their type.
+/// If the string contains multiple definitions of initials, then the initials of the grammar are
+/// going to be the union of all defined initials.
+pub fn initial_rule_grammar_from_str<I, R>(s: &str)
+        -> Result<((Vec<I>, Vec<R>)), String>
+    where I: FromStr,
+          I::Err: Debug,
+          R: FromStr,
+          String: From<R::Err>,
+{
+    let mut it = s.lines();
+    let mut initial = Vec::new();
+    let mut rules: Vec<R> = Vec::new();
+
+    while let Some(l) = it.next() {
+        if l.trim_left().starts_with("initial:") {
+            match parse_initials(l.as_bytes()) {
+                IResult::Done(_, mut result) =>
+                    initial.append(&mut result),
+                _ =>
+                    return Err(format!("Malformed declaration of initial nonterminals: \'{}\'", l))
+            }
+        } else if !l.is_empty() && !l.trim_left().starts_with("%") {
+            rules.push(l.trim().parse()?);
+        }
+    }
+
+    Ok((initial, rules))
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -82,6 +113,7 @@ pub mod tests {
     fn test_parse_token_legal_input() {
         let legal_inputs = vec![
             ("abcxyz", "", String::from("abcxyz")),
+            ("abc,xyz", ",xyz", String::from("abc")),
             ("\"abc\"xyz", "xyz", String::from("abc")),
             ("\"a\\\\b\\\"c\"xyz", "xyz", String::from("a\\\\b\\\"c")),
         ];
@@ -150,9 +182,9 @@ pub mod tests {
     fn test_parse_vec_legal_input() {
         let legal_inputs = vec![
             ("[]xyz", "xyz", vec![]),
-            ("[\"a\",\"bc\",\"d\"]xyz", "xyz",
+            ("[a, bc, d]xyz", "xyz",
                 vec![String::from("a"), String::from("bc"), String::from("d")]),
-            ("[  \"a\", \"b\" ,\"c\"]xyz", "xyz",
+            ("[  a, b ,c]xyz", "xyz",
                 vec![String::from("a"), String::from("b"), String::from("c")]),
         ];
 
@@ -167,14 +199,15 @@ pub mod tests {
     #[test]
     fn test_parse_vec_illegal_input() {
         let illegal_inputs = vec![
-            "(\"a\")xyz",
-            "[\"a\"]xyz",
-            "[\"a\",\"b\";\"c\")xyz",
-            " []xyz",
+            "(0)",
+            "[0]",
+            "[0, 1; 2)",
+            " []",
+            "[a)",
         ];
 
         for illegal_input in illegal_inputs {
-            match parse_vec::<String, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
+            match parse_vec::<u8, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
                 IResult::Done(_, _) | IResult::Incomplete(_) =>
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input),
                 IResult::Error(_) => (),
@@ -185,7 +218,8 @@ pub mod tests {
     #[test]
     fn test_parse_vec_incomplete_input() {
         let incomplete_inputs = vec![
-            "[\"a\"",
+            "[a",
+            "["
         ];
 
         for incomplete_input in incomplete_inputs {
@@ -200,7 +234,7 @@ pub mod tests {
     #[test]
     fn test_parse_initials_legal_input() {
         let legal_inputs = vec![
-            ("initial: [\"a\"]xyz", "xyz", vec![String::from("a")]),
+            ("initial: [a]xyz", "xyz", vec![String::from("a")]),
             ("initial:  []xyz", "xyz", vec![]),
         ];
 

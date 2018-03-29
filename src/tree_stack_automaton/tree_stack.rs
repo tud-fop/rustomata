@@ -73,7 +73,7 @@ impl<A: Clone + fmt::Display> fmt::Display for TreeStack<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (tree, pointer) = self.to_tree();
 
-        for (path, value) in tree.iter() {
+        for (path, value) in tree {
             let mut line1 = String::from(" ");
             let mut line2 = String::from(if path.eq(&pointer) {
                 "*"

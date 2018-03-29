@@ -1,0 +1,11 @@
+% This grammar generates the language { "What should I do ?" }.
+initial: [SBARQ]
+
+SBARQ → [[Var 0 0, Var 1 0]                  ] (SQ, .      )
+SQ    → [[Var 1 0, Var 0 0, Var 2 0, Var 1 1]] (MD, VP, PRP)
+MD    → [[T "should"]                        ] (           )
+VP    → [[Var 0 0],  [Var 1 0]               ] (WP, VB     )
+WP    → [[T "What"]                          ] (           )
+VB    → [[T "do"]                            ] (           )
+PRP   → [[T "I"]                             ] (           )
+.     → [[T "?"]                             ] (           )

@@ -1,24 +1,45 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
 
 mod from_str;
 mod from_pmcfg;
 
-/// Variable or terminal symbol in an `CFG`.
+/// Variable or terminal symbol in a CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum LetterT<N,T> {
+pub enum LetterT<N, T> {
     Label(N),
     Value(T),
 }
 
-/// Composition function in an `CFG`.
+/// The composition function in a CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct CFGComposition<N,T> {
-    pub composition: Vec<LetterT<N,T>>,
+pub struct CFGComposition<N, T> {
+    pub composition: Vec<LetterT<N, T>>,
 }
 
-/// Rule of a weighted `CFG`.
+impl<N, T> From<Vec<LetterT<N, T>>> for CFGComposition<N, T> {
+    fn from(encapsulated_value: Vec<LetterT<N, T>>) -> Self {
+        CFGComposition { composition: encapsulated_value }
+    }
+}
+
+/// A rule of a weighted CFG.
+///
+/// ```
+/// use std::str::FromStr;
+/// use rustomata::cfg::{CFGComposition, CFGRule, LetterT};
+///
+/// let head = 'S';
+/// let composition = CFGComposition::from(vec![
+///     LetterT::Value('a'), LetterT::Label('S'), LetterT::Value('b'),
+/// ]);
+/// let weight = 0.4;
+///
+/// assert_eq!(
+///     CFGRule { head, composition, weight },
+///     CFGRule::from_str("S → [T a, Nt S, T b] # 0.4").unwrap()
+/// );
+/// ```
 #[derive(Debug, PartialOrd, Ord, Clone)]
 pub struct CFGRule<N, T, W> {
     pub head: N,
@@ -26,10 +47,29 @@ pub struct CFGRule<N, T, W> {
     pub weight: W,
 }
 
-/// A weighted `CFG`. Contains initial symbols and a set of `CFGRule`
+/// A weighted context-free grammar (CFG). Contains a set of initial nonterminal symbols
+/// and a set of context-free rules.
+///
+/// ```
+/// use std::str::FromStr;
+/// use rustomata::cfg::{CFG, CFGRule};
+///
+/// let initial = vec!['S'];
+/// let rules = vec![
+///     CFGRule::from_str("S → [T a, Nt S, T b] # 0.4").unwrap(),
+///     CFGRule::from_str("S → [] # 0.6").unwrap(),
+/// ];
+///
+/// assert_eq!(
+///     CFG::<char, char, f64> { initial, rules },
+///     CFG::from_str("initial: [S]\n\
+///                    S → [T a, Nt S, T b] # 0.4\n\
+///                    S → []               # 0.6").unwrap()
+/// );
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CFG<N, T, W> {
-    pub _dummy: PhantomData<T>,
+    // TODO: use HashSet
     pub initial: Vec<N>,
     pub rules: Vec<CFGRule<N, T, W>>,
 }

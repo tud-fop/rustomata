@@ -10,7 +10,7 @@ use util::tree::GornTree;
 mod from_str;
 pub mod negra;
 
-/// Variable or terminal symbol in an MCFG.
+/// Variable or terminal symbol in a PMCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum VarT<T> {
     /// `Var(i, j)` represents the `j`th component of the `i`th successor.
@@ -19,7 +19,7 @@ pub enum VarT<T> {
     T(T),
 }
 
-/// Composition function in an MCFG.
+/// Composition function in a PMCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Composition<T> {
     pub composition: Vec<Vec<VarT<T>>>,
@@ -58,7 +58,25 @@ impl<'a, T> IntoIterator for &'a mut Composition<T> {
     }
 }
 
-/// Rule of a weighted MCFG.
+/// A rule of a weighted PMCFG.
+///
+/// ```
+/// use std::str::FromStr;
+/// use rustomata::pmcfg::{Composition, PMCFGRule, VarT};
+///
+/// let head = 'A';
+/// let tail = vec!['A'];
+/// let composition = Composition::from(vec![
+///     vec![VarT::T('a'), VarT::Var(0, 0), VarT::T('b')],
+///     vec![VarT::T('c'), VarT::Var(0, 1)],
+/// ]);
+/// let weight = 0.4;
+///
+/// assert_eq!(
+///     PMCFGRule { head, tail, composition, weight },
+///     PMCFGRule::from_str("A → [[T a, Var 0 0, T b], [T c, Var 0 1]] (A) # 0.4").unwrap()
+/// );
+/// ```
 #[derive(Debug, PartialOrd, Ord, Clone)]
 pub struct PMCFGRule<N, T, W> {
     pub head: N,
@@ -83,9 +101,31 @@ impl<N, T, W> PMCFGRule<N, T, W>
     }
 }
 
-/// A weighted MCFG.
+/// A weighted, parallel multiple context-free grammar (PMCFG) with a set of initial nonterminal
+/// symbols and a set of PMCFG rules.
+///
+/// ```
+/// use std::str::FromStr;
+/// use rustomata::pmcfg::{PMCFG, PMCFGRule};
+///
+/// let initial = vec!['S'];
+/// let rules = vec![
+///     PMCFGRule::from_str("S → [[Var 0 0, Var 0 1]] (A)").unwrap(),
+///     PMCFGRule::from_str("A → [[T a, Var 0 0, T b], [T c, Var 0 1]] (A) # 0.4").unwrap(),
+///     PMCFGRule::from_str("A → [[], []] () # 0.6").unwrap(),
+/// ];
+///
+/// assert_eq!(
+///     PMCFG::<char, char, f64> { initial, rules },
+///     PMCFG::from_str("initial: [S]\n\
+///                      S → [[Var 0 0, Var 0 1]] (A)\n\
+///                      A → [[T a, Var 0 0, T b], [T c, Var 0 1]] (A) # 0.4\n\
+///                      A → [[], []] () # 0.6").unwrap()
+/// );
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PMCFG<N, T, W> {
+    // TODO: use HashSet
     pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
 }
@@ -202,7 +242,7 @@ pub fn evaluate_pos<T>(term_map: &GornTree<Composition<T>>, address: Vec<usize>)
     where T: Clone + fmt::Display,
 {
     let unexpanded_composition = term_map.get(&address).unwrap();
-    let mut expanded_nonterminals: BTreeMap<_, Vec<Vec<VarT<T>>>> = BTreeMap::new();
+    let mut expanded_nonterminals = BTreeMap::new();
     let mut expanded_composition = Vec::new();
 
     for component in unexpanded_composition {
@@ -257,6 +297,60 @@ pub fn to_term<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     (term_map, head_map)
 }
 
+/// Takes a tree stack _(encoded in a Gorn tree)_ of PMCFG rules of arbitrary form, and transforms
+/// it into a tree stack of PMCFG rules of a normal form, requiring each rule to be of one of the
+/// following forms:
+///
+/// * Exactly one terminal symbol and no nonterminal symbols
+/// * Arbitrarily many nonterminal symbols and no terminal symbols
+///
+/// The word that can be derived from the tree stack remains the same after the transformation.
+///
+/// ```
+/// use std::str::FromStr;
+/// use rustomata::pmcfg::*;
+/// use rustomata::util::tree::GornTree;
+///
+/// let mut arbitrary: GornTree<PMCFGRule<String, String, f64>> = GornTree::new();
+/// arbitrary.insert(vec![], PMCFGRule::from_str(
+///     "S → [[Var 0 0, Var 0 1]] (A)"
+/// ).unwrap());
+/// arbitrary.insert(vec![0], PMCFGRule::from_str(
+///     "A → [[T a, Var 0 0, T b], [T c, Var 0 1]] (A) # 0.4"
+/// ).unwrap());
+/// arbitrary.insert(vec![0, 0], PMCFGRule::from_str(
+///     "A → [[], []] () # 0.6"
+/// ).unwrap());
+///
+/// let mut normal_form: GornTree<PMCFGRule<String, String, f64>> = GornTree::new();
+/// normal_form.insert(vec![], PMCFGRule::from_str(
+///     "S → [[Var 0 0, Var 0 1]] (A)"
+/// ).unwrap());
+/// normal_form.insert(vec![0], PMCFGRule::from_str(
+///     "A → [[Var 1 0, Var 0 0, Var 2 0], [Var 3 0, Var 0 1]] (A, a, b, c) # 0.4"
+/// ).unwrap());
+/// normal_form.insert(vec![0, 0], PMCFGRule::from_str(
+///     "A → [[], []] () # 0.6"
+/// ).unwrap());
+/// normal_form.insert(vec![0, 1], PMCFGRule::from_str(
+///     "a → [[T a]] () # 0.4"
+/// ).unwrap());
+/// normal_form.insert(vec![0, 2], PMCFGRule::from_str(
+///     "b → [[T b]] () # 0.4"
+/// ).unwrap());
+/// normal_form.insert(vec![0, 3], PMCFGRule::from_str(
+///     "c → [[T c]] () # 0.4"
+/// ).unwrap());
+///
+/// assert_eq!(
+///     &normal_form,
+///     &separate_terminal_rules(&arbitrary)
+/// );
+/// assert_eq!(
+///     evaluate(&(to_term(&normal_form).0)),
+///     evaluate(&(to_term(&arbitrary).0))
+/// );
+/// ```
 pub fn separate_terminal_rules<HT, W>(tree_map: &GornTree<PMCFGRule<HT, HT, W>>)
         -> GornTree<PMCFGRule<HT, HT, W>>
     where HT: Clone + Eq + Extend<HT> + Hash,

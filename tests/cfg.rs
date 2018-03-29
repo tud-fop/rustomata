@@ -3,10 +3,10 @@ extern crate num_traits;
 extern crate rustomata;
 
 use log_domain::LogDomain;
-use num_traits::identities::One;
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+// use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
-use std::marker::PhantomData;
 
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::equivalence_classes::EquivalenceRelation;
@@ -14,16 +14,15 @@ use rustomata::approximation::relabel::RlbElement;
 use rustomata::cfg::*;
 use rustomata::push_down_automaton::*;
 use rustomata::recognisable::*;
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+// use rustomata::recognisable::automaton::Automaton;
 
-fn example_pushdown_automaton()
-    -> PushDownAutomaton<PushState<String, String>, String, LogDomain<f64>>
+fn cfg_from_file(grammar_file_path: &str) -> CFG<String, String, LogDomain<f64>>
 {
-    let mut grammar_file = File::open("examples/example2.cfg").unwrap();
+    let mut grammar_file = File::open(grammar_file_path).unwrap();
     let mut grammar_string = String::new();
     let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: CFG<String, String, _> = grammar_string.parse().unwrap();
-
-    PushDownAutomaton::from(grammar)
+    grammar_string.parse().unwrap()
 }
 
 fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
@@ -36,7 +35,7 @@ fn example_equivalence_relation() -> EquivalenceRelation<String, String> {
 
 #[test]
 fn test_relabel_pushdown_correctness() {
-    let automaton = example_pushdown_automaton();
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example2.cfg"));
     let rel = example_equivalence_relation();
     let mapping = |ps: &PushState<_, _>| ps.map(|nt| rel.project(nt));
     let rlb = RlbElement::new(&mapping);
@@ -53,11 +52,11 @@ fn test_relabel_pushdown_correctness() {
         "bbbbbb",
     ];
 
-    for word in true_positives_and_true_negatives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in true_positives_and_true_negatives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next().is_some(),
-            relabelled_automaton.recognise(input).next().is_some()
+            automaton.recognise(word.clone()).next().is_some(),
+            relabelled_automaton.recognise(word).next().is_some()
         );
     }
 
@@ -76,79 +75,120 @@ fn test_relabel_pushdown_correctness() {
 }
 
 #[test]
-fn test_from_str_cfg() {
-    let c0 : CFGComposition<String,String> = CFGComposition {
-        composition: vec![LetterT::Label("A".to_string())],
+fn test_cfg_from_str_correctness() {
+    let rule_s0 = CFGRule {
+        head: String::from("S"),
+        composition: CFGComposition { composition: vec![
+            LetterT::Value(String::from("a")),
+            LetterT::Label(String::from("S")),
+            LetterT::Value(String::from("b")),
+        ] },
+        weight: LogDomain::new(0.4).unwrap()
+    };
+    let rule_s1 = CFGRule {
+        head: String::from("S"),
+        composition: CFGComposition { composition: vec![]},
+        weight: LogDomain::new(0.6).unwrap()
+    };
+    let control_grammar = CFG {
+        initial: vec![String::from("S")],
+        rules: vec![rule_s0, rule_s1]
     };
 
-    let c1 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("a".to_string()),LetterT::Label("A".to_string()),LetterT::Label("B".to_string())]
-    };
+    let grammar = cfg_from_file("examples/example.cfg");
+    assert_eq!(
+        control_grammar.clone(),
+        grammar.clone()
+    );
 
-    let c2 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("a".to_string())],
-    };
+    let control_automaton = PushDownAutomaton::from(control_grammar);
+    let automaton = PushDownAutomaton::from(grammar);
+    let inputs = vec![
+        "",
+        "aabb",
+        "abb",
+        "aab",
+    ];
 
-    let c3 : CFGComposition<String,String>  = CFGComposition {
-        composition: vec![LetterT::Value("b".to_string())],
-    };
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_automaton.recognise(word.clone()).next().is_some(),
+            automaton.recognise(word).next().is_some()
+        );
+    }
+}
 
-    let r0: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "S".to_string(),
-        composition: c0.clone(),
-        weight: LogDomain::one(),
-    };
+// TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
+/*
+#[test]
+fn test_pushdown_automaton_from_str() {
+    use PushDownInstruction::Replace;
 
-    let r1: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "A".to_string(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.6).unwrap(),
-    };
+    let unprocessed_transitions = vec![
+        ("a", Replace { current_val: vec!["(a)".to_string()], new_val: vec![] }, 1.0),
+        ("b", Replace { current_val: vec!["(b)".to_string()], new_val: vec![] }, 1.0),
+        ("",  Replace { current_val: vec!["(S)".to_string()], new_val: vec![] }, 0.6),
+        ("",  Replace { current_val: vec!["(S)".to_string()], new_val: vec![
+            "(b)".to_string(), "(S)".to_string(), "(a)".to_string(),
+        ] }, 0.4),
+        ("",  Replace { current_val: vec!["I".to_string()], new_val: vec!["(S)".to_string()] }, 1.0),
+    ];
 
-    let r2: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "A".to_string(),
-        composition: c2.clone(),
-        weight: LogDomain::new(0.4).unwrap(),
-    };
+    let mut transitions = Vec::new();
+    for (terminal, instruction, weight) in unprocessed_transitions {
+        transitions.push(Transition {
+            word: terminal.chars().map(|x| x.to_string()).collect(),
+            instruction,
+            weight: LogDomain::new(weight).unwrap()
+        });
+    }
+    let control_automaton = PushDownAutomaton::new(transitions, PushDown::new("I".to_string(), "@".to_string()));
 
-    let r3: CFGRule<String, String, LogDomain<f64>> = CFGRule {
-        head: "B".to_string(),
-        composition: c3.clone(),
-        weight: LogDomain::one(),
-    };
+    let mut automaton_file = File::open("examples/example.pda").unwrap();
+    let mut automaton_string = String::new();
+    let _ = automaton_file.read_to_string(&mut automaton_string);
+    let automaton: PushDownAutomaton<String, String, LogDomain<f64>> = automaton_string.parse().unwrap();
 
-    let r0_string = "S → [Nt A]";
-    let r1_string = "A → [T a, Nt A, Nt B] # 0.6";
-    let r2_string = "A → [T a] # 0.4";
-    let r3_string = "B → [T b] # 1";
+    assert_eq!(
+        control_automaton.initial(),
+        automaton.initial()
+    );
+    assert_eq!(
+        control_automaton.list_transitions().collect::<HashSet<_>>(),
+        automaton.list_transitions().collect::<HashSet<_>>()
+    );
+}
+*/
 
-    assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<CFGRule<String, String, LogDomain<f64>>>());
+#[test]
+fn test_cfg_recognise_legal_terminal_symbols() {
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example.cfg"));
+    let legal_inputs = vec![
+        ("", true),
+        ("aabb", true),
+        ("aab", false),
+        ("a", false),
+    ];
 
-    let g: CFG<String, String, LogDomain<f64>> = CFG {
-        _dummy: PhantomData,
-        initial: vec!["S".to_string(),"B".to_string()],
-        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone()],
-    };
+    for (legal_input, control_acceptance) in legal_inputs {
+        let legal_word: Vec<_> = String::from(legal_input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_acceptance,
+            automaton.recognise(legal_word).next().is_some()
+        );
+    }
+}
 
-    let mut g_string = String::from("initial: [S, B]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
+#[test]
+fn test_cfg_recognise_illegal_terminal_symbols() {
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example.cfg"));
+    let illegal_inputs = vec![
+        "aacc",
+    ];
 
-    assert_eq!(Ok(g.clone()), g_string.parse());
-
-    let a = PushDownAutomaton::from(g);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "a".to_string(), "a".to_string(), "b".to_string(), "b".to_string()]).next());
+    for illegal_input in illegal_inputs {
+        let illegal_word: Vec<_> = String::from(illegal_input).chars().map(|x| x.to_string()).collect();
+        assert!(automaton.recognise(illegal_word).next().is_none());
+    }
 }

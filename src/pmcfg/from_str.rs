@@ -1,10 +1,9 @@
-use std::fmt::Debug;
+use nom::{IResult, digit, is_space};
 use num_traits::One;
+use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
-use nom::{IResult, is_space, digit};
-
-use pmcfg::{VarT, Composition, PMCFGRule, PMCFG};
+use pmcfg::{Composition, PMCFG, PMCFGRule, VarT};
 use util::parsing::*;
 
 impl<N, T, W> FromStr for PMCFG<N, T, W>
@@ -18,35 +17,14 @@ impl<N, T, W> FromStr for PMCFG<N, T, W>
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut it = s.lines();
-        let mut rules = Vec::new();
-        let initial;
+        let (initial, rules) = initial_rule_grammar_from_str(s)?;
 
-        match it.next() {
-            Some(l) => {
-                match parse_initials(l.as_bytes()) {
-                    IResult::Done(_, result)
-                        => initial = result,
-                    _
-                        => return Err(format!("Malformed declaration of initial nonterminals: {}", l))
-                }
-            },
-            _ => return Err("Given string is empty.".to_string())
-        }
-
-        for l in s.lines() {
-            if !l.is_empty() && !l.starts_with("initial: ") && !l.trim_left().starts_with("%") {
-                rules.push(l.trim().parse()?);
-            }
-        }
         Ok(PMCFG {
             initial,
             rules,
         })
-
     }
 }
-
 
 impl<N, T, W> FromStr for PMCFGRule<N, T, W>
     where N: FromStr,
@@ -66,14 +44,12 @@ impl<N, T, W> FromStr for PMCFGRule<N, T, W>
     }
 }
 
-
 fn parse_successors<N>(input: &[u8]) -> IResult<&[u8], Vec<N>>
     where N: FromStr,
           N::Err: Debug,
 {
     parse_vec(input, parse_token, "(", ")", ",")
 }
-
 
 fn parse_pmcfg_rule<N, T, W>(input: &[u8]) -> IResult<&[u8], PMCFGRule<N, T, W>>
     where N: FromStr,
@@ -115,7 +91,6 @@ fn parse_pmcfg_rule<N, T, W>(input: &[u8]) -> IResult<&[u8], PMCFGRule<N, T, W>>
     )
 }
 
-
 fn parse_var_t<T>(input: &[u8]) -> IResult<&[u8], VarT<T>>
     where T: FromStr,
           T::Err: Debug,
@@ -145,7 +120,6 @@ fn parse_var_t<T>(input: &[u8]) -> IResult<&[u8], VarT<T>>
     )
 }
 
-
 fn parse_projection<T>(input: &[u8]) -> IResult<&[u8], Vec<VarT<T>>>
     where T: FromStr,
           T::Err: Debug,
@@ -166,24 +140,24 @@ pub mod tests {
 
     #[test]
     fn test_pmcfg_from_str_leading_comment() {
-        let grammar = "% leading comment\n\
-                       initial: [S]\n\n\
-                       S → [[T a]] ()";
-        let _: PMCFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "% leading comment\n\
+                              initial: [S]\n\n\
+                              S → [[T a]] ()";
+        let _: PMCFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 
     #[test]
     fn test_pmcfg_from_str_end_of_line_comment() {
-        let grammar = "initial: [S] % end-of-line comment 1\n\n\
-                       S → [[T a]] () % end-of-line comment 2";
-        let _: PMCFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "initial: [S] % end-of-line comment 1\n\n\
+                              S → [[T a]] () % end-of-line comment 2";
+        let _: PMCFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 
     #[test]
     fn test_pmcfg_from_str_trailing_comment() {
-        let grammar = "initial: [S]\n\n\
-                       S → [[T a]] ()\n\
-                       % trailing comment";
-        let _: PMCFG<char, char, usize> = grammar.parse().unwrap();
+        let grammar_string = "initial: [S]\n\n\
+                              S → [[T a]] ()\n\
+                              % trailing comment";
+        let _: PMCFG<char, char, usize> = grammar_string.parse().unwrap();
     }
 }

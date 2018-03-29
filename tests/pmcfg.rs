@@ -3,6 +3,7 @@ extern crate log_domain;
 extern crate rustomata;
 
 use log_domain::LogDomain;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
@@ -17,20 +18,17 @@ use rustomata::recognisable::*;
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use rustomata::tree_stack_automaton::*;
 
-fn example_tree_stack_automaton()
-        -> TreeStackAutomaton<PosState<PMCFGRule<String, String, LogDomain<f64>>>, String, LogDomain<f64>>
+fn pmcfg_from_file(grammar_file_path: &str) -> PMCFG<String, String, LogDomain<f64>>
 {
-    let mut grammar_file = File::open("examples/example.mcfg").unwrap();
+    let mut grammar_file = File::open(grammar_file_path).unwrap();
     let mut grammar_string = String::new();
     let _ = grammar_file.read_to_string(&mut grammar_string);
-    let grammar: PMCFG<String, String, _> = grammar_string.parse().unwrap();
-
-    TreeStackAutomaton::from(grammar)
+    grammar_string.parse().unwrap()
 }
 
 #[test]
 fn test_example_pmcfg_to_negra() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tree_stack = automaton.recognise(
         String::from("aabccd").chars().map(|x| x.to_string()).collect()
     ).next().unwrap().0;
@@ -58,99 +56,8 @@ fn test_example_pmcfg_to_negra() {
 }
 
 #[test]
-fn test_from_str_automaton() {
-    let i1: TreeStackInstruction<String> = TreeStackInstruction::Up {
-        n: 1,
-        current_val: "zwei".to_string(),
-        old_val: "drei".to_string(),
-        new_val: "vier".to_string(),
-    };
-
-    let i2: TreeStackInstruction<String> = TreeStackInstruction::Push {
-        n: 1,
-        current_val: "zwei".to_string(),
-        new_val: "vier".to_string(),
-    };
-
-    let i3: TreeStackInstruction<String> = TreeStackInstruction::Down {
-        current_val: "zwei".to_string(),
-        old_val: "drei".to_string(),
-        new_val: "vier".to_string(),
-    };
-
-    let i1_string = "Up 1 zwei drei vier";
-    let i1_string2 = "   Up 1  zwei  drei   vier  ";
-    let i2_string = "Push 1 zwei vier";
-    let i3_string = "Down zwei drei vier";
-
-    assert_eq!(Ok(i1.clone()), i1_string.parse());
-    assert_eq!(Ok(i1.clone()), i1_string2.parse());
-    assert_eq!(Ok(i2.clone()), i2_string.parse());
-    assert_eq!(Ok(i3.clone()), i3_string.parse());
-
-    let t1 = Transition {
-        word: vec!["hello".to_string(), "world".to_string()],
-        weight: LogDomain::new(0.5).unwrap(),
-        instruction: i1,
-    };
-
-    let t2 = Transition {
-        word: vec!["\"hello\\".to_string(), "world".to_string()],
-        weight: LogDomain::new(0.5).unwrap(),
-        instruction: i2,
-    };
-
-    let t3 = Transition {
-        word: vec!["\"hello\\".to_string(), "world".to_string()],
-        weight: LogDomain::new(0.5).unwrap(),
-        instruction: i3,
-    };
-
-    let mut t1_string = String::from("Transition [\"hello\",\"world\"] (");
-    t1_string.push_str(i1_string);
-    t1_string.push_str(") #0.5");
-
-    let mut t2_string = String::from("Transition [\"\\\"hello\\\\\",\"world\"] (");
-    t2_string.push_str(i2_string);
-    t2_string.push_str(") #0.5");
-
-    let mut t3_string = String::from("Transition [\"\\\"hello\\\\\",\"world\"] (");
-    t3_string.push_str(i3_string);
-    t3_string.push_str(") #0.5");
-
-    assert_eq!(Ok(t1.clone()), t1_string.parse());
-    assert_eq!(Ok(t2.clone()), t2_string.parse());
-    assert_eq!(Ok(t3.clone()), t3_string.parse());
-
-    let automaton: TreeStackAutomaton<String, String, LogDomain<f64>> = TreeStackAutomaton::new(
-        vec![t1.clone(), t2.clone(), t3.clone()],
-        TreeStack::new("eins".to_string())
-    );
-
-    let mut automaton_string: String = String::from("initial: eins\n\n");
-    automaton_string.push_str(t1_string.as_str());
-    automaton_string.push_str("\n");
-    automaton_string.push_str(t2_string.as_str());
-    automaton_string.push_str("\n");
-    automaton_string.push_str(t3_string.as_str());
-    automaton_string.push_str("\n");
-
-    let automaton_parse: TreeStackAutomaton<String, String, LogDomain<f64>> = automaton_string.parse().unwrap();
-
-    let ts1: Vec<_> = automaton.list_transitions().collect();
-    let ts2: Vec<_> = automaton_parse.list_transitions().collect();
-
-    assert_eq!(ts1, ts2);
-
-    assert_eq!(
-        automaton.initial(),
-        automaton_parse.initial()
-    );
-}
-
-#[test]
 fn test_coarse_to_fine_recogniser_correctness() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tts = TTSElement::new();
     let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
     let mapping = |ps: &PosState<_>| ps
@@ -158,25 +65,25 @@ fn test_coarse_to_fine_recogniser_correctness() {
     let rlb = RlbElement::new(&mapping);
     let recogniser = coarse_to_fine_recogniser!(automaton.clone(); tts, rlb);
 
-    let words = vec![
+    let inputs = vec![
         "aabccd",
         "aaabcccd",
         "abccd",
         "abbcd",
     ];
 
-    for word in words {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next(),
-            recogniser.recognise(input).next()
+            automaton.recognise(word.clone()).next(),
+            recogniser.recognise(word).next()
         );
     }
 }
 
 #[test]
 fn test_tts_correctness() {
-    let automaton = example_tree_stack_automaton();
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
     let tts = TTSElement::new();
     let (tts_ed_automaton, _) = tts.approximate_automaton(&automaton);
 
@@ -187,11 +94,11 @@ fn test_tts_correctness() {
         "aaabcccd",
     ];
 
-    for word in true_positives_and_true_negatives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in true_positives_and_true_negatives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next().is_some(),
-            tts_ed_automaton.recognise(input).next().is_some()
+            automaton.recognise(word.clone()).next().is_some(),
+            tts_ed_automaton.recognise(word).next().is_some()
         );
     }
 
@@ -202,106 +109,182 @@ fn test_tts_correctness() {
         "abbbccdddd",
     ];
 
-    for word in false_positives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
-        assert_eq!(false, automaton.recognise(input.clone()).next().is_some());
-        assert_eq!(true, tts_ed_automaton.recognise(input).next().is_some());
+    for input in false_positives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(false, automaton.recognise(word.clone()).next().is_some());
+        assert_eq!(true, tts_ed_automaton.recognise(word).next().is_some());
     }
 }
 
 #[test]
-fn test_from_str_pmcfg() {
-    let c0: Composition<String> = Composition {
-        composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)]],
+fn test_pmcfg_from_str_correctness() {
+    let rule_s0 = PMCFGRule {
+        head: String::from("S"),
+        tail: vec![String::from("A"), String::from("B")],
+        composition: Composition { composition: vec![
+            vec![VarT::Var(0, 0), VarT::Var(1, 0), VarT::Var(0, 1), VarT::Var(1, 1)],
+        ] },
+        weight: LogDomain::new(1.0).unwrap()
+    };
+    let rule_a0 = PMCFGRule {
+        head: String::from("A"),
+        tail: vec![String::from("A")],
+        composition: Composition { composition: vec![
+            vec![VarT::T(String::from("a")), VarT::Var(0, 0)],
+            vec![VarT::T(String::from("c")), VarT::Var(0, 1)],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_a1 = PMCFGRule {
+        head: String::from("A"),
+        tail: vec![],
+        composition: Composition { composition: vec![
+            vec![],
+            vec![],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_b0 = PMCFGRule {
+        head: String::from("B"),
+        tail: vec![String::from("B")],
+        composition: Composition { composition: vec![
+            vec![VarT::T(String::from("b")), VarT::Var(0, 0)],
+            vec![VarT::T(String::from("d")), VarT::Var(0, 1)],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let rule_b1 = PMCFGRule {
+        head: String::from("B"),
+        tail: vec![],
+        composition: Composition { composition: vec![
+            vec![],
+            vec![],
+        ] },
+        weight: LogDomain::new(0.5).unwrap()
+    };
+    let control_grammar = PMCFG {
+        initial: vec![String::from("S")],
+        rules: vec![rule_s0, rule_a0, rule_a1, rule_b0, rule_b1]
     };
 
-    let c1: Composition<String> = Composition { composition: vec![vec![], vec![]] };
+    let grammar = pmcfg_from_file("examples/example.pmcfg");
+    assert_eq!(
+        control_grammar.clone(),
+        grammar.clone()
+    );
 
-    let c2 = Composition {
-        composition: vec![vec![VarT::T("a".to_string()),
-                               VarT::Var(0, 0)],
-                          vec![VarT::T("c".to_string()),
-                               VarT::Var(0, 1)]],
-    };
+    let control_automaton = TreeStackAutomaton::from(control_grammar);
+    let automaton = TreeStackAutomaton::from(grammar);
+    let inputs = vec![
+        "",
+        "aabccd",
+        "aabbcd",
+        "aabccdd",
+    ];
 
-    let c3 = Composition {
-        composition: vec![vec![VarT::T("b".to_string()),
-                               VarT::Var(0, 0)],
-                          vec![VarT::T("d".to_string()),
-                               VarT::Var(0, 1)]],
-    };
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_automaton.recognise(word.clone()).next().is_some(),
+            automaton.recognise(word).next().is_some()
+        );
+    }
+}
 
-    let r0: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "S".to_string(),
-        tail: vec!["A".to_string(), "B".to_string()],
-        composition: c0.clone(),
-        weight: LogDomain::new(1.0).unwrap(),
-    };
+#[test]
+fn test_tree_stack_automaton_from_str() {
+    use TreeStackInstruction::{Up, Down, Push};
 
-    let r1: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "A".to_string(),
-        tail: Vec::new(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.6).unwrap(),
-    };
+    let unprocessed_transitions = vec![
+        ("",  Push { n: 0, current_val: 1.to_string(), new_val: 2.to_string() },                            1.0),
+        ("",  Push { n: 0, current_val: 1.to_string(), new_val: 3.to_string() },                            1.0),
+        ("",  Down { current_val: 4.to_string(), old_val: 18.to_string(), new_val: 19.to_string() },        1.0),
+        ("",  Down { current_val: 5.to_string(), old_val: 6.to_string(), new_val: 5.to_string() },          1.0),
+        ("",  Down { current_val: 5.to_string(), old_val: 7.to_string(), new_val: 8.to_string() },          1.0),
+        ("d", Up   { n: 0, current_val: 9.to_string(), old_val: 10.to_string(), new_val: 11.to_string() },  1.0),
+        ("d", Up   { n: 0, current_val: 9.to_string(), old_val: 5.to_string(), new_val: 9.to_string() },    1.0),
+        ("",  Up   { n: 0, current_val: 12.to_string(), old_val: 2.to_string(), new_val: 13.to_string() },  1.0),
+        ("",  Up   { n: 0, current_val: 12.to_string(), old_val: 14.to_string(), new_val: 15.to_string() }, 1.0),
+        ("c", Up   { n: 0, current_val: 6.to_string(), old_val: 13.to_string(), new_val: 10.to_string() },  1.0),
+        ("c", Up   { n: 0, current_val: 6.to_string(), old_val: 16.to_string(), new_val: 6.to_string() },   1.0),
+        ("",  Down { current_val: 11.to_string(), old_val: 9.to_string(), new_val: 17.to_string() },        1.0),
+        ("",  Down { current_val: 11.to_string(), old_val: 8.to_string(), new_val: 4.to_string() },         1.0),
+        ("b", Up   { n: 0, current_val: 15.to_string(), old_val: 2.to_string(), new_val: 13.to_string() },  1.0),
+        ("b", Up   { n: 0, current_val: 15.to_string(), old_val: 14.to_string(), new_val: 15.to_string() }, 1.0),
+        ("",  Push { n: 0, current_val: 18.to_string(), new_val: 1.to_string() },                           1.0),
+        ("",  Down { current_val: 17.to_string(), old_val: 9.to_string(), new_val: 17.to_string() },        1.0),
+        ("",  Down { current_val: 17.to_string(), old_val: 8.to_string(), new_val: 4.to_string() },         1.0),
+        ("",  Down { current_val: 2.to_string(), old_val: 3.to_string(), new_val: 14.to_string() },         1.0),
+        ("",  Down { current_val: 2.to_string(), old_val: 1.to_string(), new_val: 12.to_string() },         1.0),
+        ("",  Up   { n: 0, current_val: 8.to_string(), old_val: 10.to_string(), new_val: 11.to_string() },  1.0),
+        ("",  Up   { n: 0, current_val: 8.to_string(), old_val: 5.to_string(), new_val: 9.to_string() },    1.0),
+        ("a", Push { n: 0, current_val: 3.to_string(), new_val: 2.to_string() },                            1.0),
+        ("a", Push { n: 0, current_val: 3.to_string(), new_val: 3.to_string() },                            1.0),
+        ("",  Down { current_val: 13.to_string(), old_val: 15.to_string(), new_val: 16.to_string() },       1.0),
+        ("",  Down { current_val: 13.to_string(), old_val: 12.to_string(), new_val: 7.to_string() },        1.0),
+        ("",  Down { current_val: 10.to_string(), old_val: 6.to_string(), new_val: 5.to_string() },         1.0),
+        ("",  Down { current_val: 10.to_string(), old_val: 7.to_string(), new_val: 8.to_string() },         1.0),
+        ("",  Up   { n: 0, current_val: 7.to_string(), old_val: 13.to_string(), new_val: 10.to_string() },  1.0),
+        ("",  Up   { n: 0, current_val: 7.to_string(), old_val: 16.to_string(), new_val: 6.to_string() },   1.0),
+        ("",  Down { current_val: 14.to_string(), old_val: 3.to_string(), new_val: 14.to_string() },        1.0),
+        ("",  Down { current_val: 14.to_string(), old_val: 1.to_string(), new_val: 12.to_string() },        1.0),
+        ("",  Down { current_val: 16.to_string(), old_val: 15.to_string(), new_val: 16.to_string() },       1.0),
+        ("",  Down { current_val: 16.to_string(), old_val: 12.to_string(), new_val: 7.to_string() },        1.0),
+    ];
 
-    let r2: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "A".to_string(),
-        tail: vec!["A".to_string()],
-        composition: c2.clone(),
-        weight: LogDomain::new(0.4).unwrap(),
-    };
+    let mut transitions = Vec::new();
+    for (terminal, instruction, weight) in unprocessed_transitions {
+        transitions.push(Transition {
+            word: terminal.chars().map(|x| x.to_string()).collect(),
+            instruction,
+            weight: LogDomain::new(weight).unwrap()
+        });
+    }
+    let control_automaton = TreeStackAutomaton::new(transitions, TreeStack::new(18.to_string()));
 
-    let r3: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "B".to_string(),
-        tail: Vec::new(),
-        composition: c1.clone(),
-        weight: LogDomain::new(0.7).unwrap(),
-    };
+    let mut automaton_file = File::open("examples/example.tsa").unwrap();
+    let mut automaton_string = String::new();
+    let _ = automaton_file.read_to_string(&mut automaton_string);
+    let automaton: TreeStackAutomaton<String, String, LogDomain<f64>> = automaton_string.parse().unwrap();
 
-    let r4: PMCFGRule<String, String, LogDomain<f64>> = PMCFGRule {
-        head: "B".to_string(),
-        tail: vec!["B".to_string()],
-        composition: c3.clone(),
-        weight: LogDomain::new(0.3).unwrap(),
-    };
+    assert_eq!(
+        control_automaton.initial(),
+        automaton.initial()
+    );
+    assert_eq!(
+        control_automaton.list_transitions().collect::<HashSet<_>>(),
+        automaton.list_transitions().collect::<HashSet<_>>()
+    );
+}
 
-    let r0_string = "\"S\" → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (\"A\", B)";
-    let r1_string = "A → [[],[]] ()  # 0.6 % this is a comment";
-    let r2_string = "A → [[T a, Var 0 0],[T c, Var 0 1]] (A)  # 0.4";
-    let r3_string = "B → [[],[]] ()  # 0.7";
-    let r4_string = "B → [[T b, Var 0 0],[T d, Var 0 1]] (B)  # 0.3";
+#[test]
+fn test_pmcfg_recognise_legal_terminal_symbols() {
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
+    let legal_inputs = vec![
+        ("", true),
+        ("aabccd", true),
+        ("aabccdd", false),
+        ("abc", false),
+    ];
 
-    assert_eq!(Ok(r0.clone()),
-               r0_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r1.clone()),
-               r1_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r2.clone()),
-               r2_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r3.clone()),
-               r3_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
-    assert_eq!(Ok(r4.clone()),
-               r4_string.parse::<PMCFGRule<String, String, LogDomain<f64>>>());
+    for (legal_input, control_acceptance) in legal_inputs {
+        let legal_word: Vec<_> = String::from(legal_input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_acceptance,
+            automaton.recognise(legal_word).next().is_some()
+        );
+    }
+}
 
-    let g: PMCFG<String, String, LogDomain<f64>> = PMCFG {
-        initial: vec!["S".to_string()],
-        rules: vec![r0.clone(), r1.clone(), r2.clone(), r3.clone(), r4.clone()],
-    };
+#[test]
+fn test_pmcfg_recognise_illegal_terminal_symbols() {
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
+    let illegal_inputs = vec![
+        "abce",
+    ];
 
-    let mut g_string = String::from("initial: [S]\n\n");
-    g_string.push_str(r0_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r1_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r2_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r3_string.clone());
-    g_string.push_str("\n");
-    g_string.push_str(r4_string.clone());
-
-    assert_eq!(Ok(g.clone()), g_string.parse());
-
-    let a = TreeStackAutomaton::from(g);
-
-    assert_ne!(None, a.recognise(vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()]).next());
+    for ilegal_input in illegal_inputs {
+        let illegal_word: Vec<_> = String::from(ilegal_input).chars().map(|x| x.to_string()).collect();
+        assert!(automaton.recognise(illegal_word).next().is_none());
+    }
 }
