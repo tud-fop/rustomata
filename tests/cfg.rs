@@ -52,11 +52,11 @@ fn test_relabel_pushdown_correctness() {
         "bbbbbb",
     ];
 
-    for word in true_positives_and_true_negatives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in true_positives_and_true_negatives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next().is_some(),
-            relabelled_automaton.recognise(input).next().is_some()
+            automaton.recognise(word.clone()).next().is_some(),
+            relabelled_automaton.recognise(word).next().is_some()
         );
     }
 
@@ -103,18 +103,18 @@ fn test_cfg_from_str_correctness() {
 
     let control_automaton = PushDownAutomaton::from(control_grammar);
     let automaton = PushDownAutomaton::from(grammar);
-    let words = vec![
+    let inputs = vec![
         "",
         "aabb",
         "abb",
         "aab",
     ];
 
-    for word in words {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            control_automaton.recognise(input.clone()).next().is_some(),
-            automaton.recognise(input).next().is_some()
+            control_automaton.recognise(word.clone()).next().is_some(),
+            automaton.recognise(word).next().is_some()
         );
     }
 }
@@ -160,3 +160,35 @@ fn test_pushdown_automaton_from_str() {
     );
 }
 */
+
+#[test]
+fn test_cfg_recognise_legal_terminal_symbols() {
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example.cfg"));
+    let legal_inputs = vec![
+        ("", true),
+        ("aabb", true),
+        ("aab", false),
+        ("a", false),
+    ];
+
+    for (legal_input, control_acceptance) in legal_inputs {
+        let legal_word: Vec<_> = String::from(legal_input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_acceptance,
+            automaton.recognise(legal_word).next().is_some()
+        );
+    }
+}
+
+#[test]
+fn test_cfg_recognise_illegal_terminal_symbols() {
+    let automaton = PushDownAutomaton::from(cfg_from_file("examples/example.cfg"));
+    let illegal_inputs = vec![
+        "aacc",
+    ];
+
+    for illegal_input in illegal_inputs {
+        let illegal_word: Vec<_> = String::from(illegal_input).chars().map(|x| x.to_string()).collect();
+        assert!(automaton.recognise(illegal_word).next().is_none());
+    }
+}

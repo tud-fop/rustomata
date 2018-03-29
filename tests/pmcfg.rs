@@ -65,18 +65,18 @@ fn test_coarse_to_fine_recogniser_correctness() {
     let rlb = RlbElement::new(&mapping);
     let recogniser = coarse_to_fine_recogniser!(automaton.clone(); tts, rlb);
 
-    let words = vec![
+    let inputs = vec![
         "aabccd",
         "aaabcccd",
         "abccd",
         "abbcd",
     ];
 
-    for word in words {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next(),
-            recogniser.recognise(input).next()
+            automaton.recognise(word.clone()).next(),
+            recogniser.recognise(word).next()
         );
     }
 }
@@ -94,11 +94,11 @@ fn test_tts_correctness() {
         "aaabcccd",
     ];
 
-    for word in true_positives_and_true_negatives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in true_positives_and_true_negatives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            automaton.recognise(input.clone()).next().is_some(),
-            tts_ed_automaton.recognise(input).next().is_some()
+            automaton.recognise(word.clone()).next().is_some(),
+            tts_ed_automaton.recognise(word).next().is_some()
         );
     }
 
@@ -109,10 +109,10 @@ fn test_tts_correctness() {
         "abbbccdddd",
     ];
 
-    for word in false_positives {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
-        assert_eq!(false, automaton.recognise(input.clone()).next().is_some());
-        assert_eq!(true, tts_ed_automaton.recognise(input).next().is_some());
+    for input in false_positives {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(false, automaton.recognise(word.clone()).next().is_some());
+        assert_eq!(true, tts_ed_automaton.recognise(word).next().is_some());
     }
 }
 
@@ -175,18 +175,18 @@ fn test_pmcfg_from_str_correctness() {
 
     let control_automaton = TreeStackAutomaton::from(control_grammar);
     let automaton = TreeStackAutomaton::from(grammar);
-    let words = vec![
+    let inputs = vec![
         "",
         "aabccd",
         "aabbcd",
         "aabccdd",
     ];
 
-    for word in words {
-        let input: Vec<_> = String::from(word).chars().map(|x| x.to_string()).collect();
+    for input in inputs {
+        let word: Vec<_> = String::from(input).chars().map(|x| x.to_string()).collect();
         assert_eq!(
-            control_automaton.recognise(input.clone()).next().is_some(),
-            automaton.recognise(input).next().is_some()
+            control_automaton.recognise(word.clone()).next().is_some(),
+            automaton.recognise(word).next().is_some()
         );
     }
 }
@@ -255,4 +255,36 @@ fn test_tree_stack_automaton_from_str() {
         control_automaton.list_transitions().collect::<HashSet<_>>(),
         automaton.list_transitions().collect::<HashSet<_>>()
     );
+}
+
+#[test]
+fn test_pmcfg_recognise_legal_terminal_symbols() {
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
+    let legal_inputs = vec![
+        ("", true),
+        ("aabccd", true),
+        ("aabccdd", false),
+        ("abc", false),
+    ];
+
+    for (legal_input, control_acceptance) in legal_inputs {
+        let legal_word: Vec<_> = String::from(legal_input).chars().map(|x| x.to_string()).collect();
+        assert_eq!(
+            control_acceptance,
+            automaton.recognise(legal_word).next().is_some()
+        );
+    }
+}
+
+#[test]
+fn test_pmcfg_recognise_illegal_terminal_symbols() {
+    let automaton = TreeStackAutomaton::from(pmcfg_from_file("examples/example.pmcfg"));
+    let illegal_inputs = vec![
+        "abce",
+    ];
+
+    for ilegal_input in illegal_inputs {
+        let illegal_word: Vec<_> = String::from(ilegal_input).chars().map(|x| x.to_string()).collect();
+        assert!(automaton.recognise(illegal_word).next().is_none());
+    }
 }
