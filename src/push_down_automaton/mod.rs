@@ -37,7 +37,25 @@ pub struct PushDownAutomaton<A, T, W>
     initial: PushDown<usize>,
 }
 
-/// Instruction on `PushDown<A>`s.
+/// An instruction on a pushdown:
+///
+/// 1. The elements of `current_val` are popped from the pushdown
+/// 2. The elements of `new_val` are pushed to the pushdown
+///
+/// ```
+/// use rustomata::push_down_automaton::{PushDown, PushDownInstruction};
+/// use rustomata::recognisable::Instruction;
+///
+/// let pushdown = PushDown::from(vec![1, 2, 3, 4]);
+/// let instruction = PushDownInstruction::Replace {
+///     current_val: vec![4, 3], new_val: vec![5, 6]
+/// };
+///
+/// assert_eq!(
+///     PushDown::from(vec![1, 2, 5, 6]),
+///     instruction.apply(pushdown).pop().unwrap()
+/// );
+/// ```
 #[derive(PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord)]
 pub enum PushDownInstruction<A> {
     Replace { current_val: Vec<A>, new_val: Vec<A> },
