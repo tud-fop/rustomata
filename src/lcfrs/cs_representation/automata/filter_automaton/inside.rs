@@ -197,7 +197,7 @@ mod test {
     #[test]
     fn naive() {
         let mut grammar_string = String::new();
-        File::open("examples/german-1.gr")
+        File::open("examples/example_mcfg.gr")
             .unwrap()
             .read_to_string(&mut grammar_string)
             .expect("failed to read file");
@@ -208,7 +208,7 @@ mod test {
         for rule in lcfrs_rules {
             rules.integerise(rule);
         }
-        let word: Vec<String> = "Mögen Puristen aller Musikbereiche auch die Nase rümpfen , die Zukunft der Musik liegt für viele junge Komponisten im Crossover-Stil .".split_whitespace().map(|s| s.to_string()).collect();
+        let word: Vec<String> = "a a a b b c c c d d".split_whitespace().map(|s| s.to_string()).collect();
 
         let generator: PushDownAutomaton<BracketFragment<String>, LogDomain<f64>> =
             PushDownGenerator.create_generator_automaton(rules.values(), initial, &rules);

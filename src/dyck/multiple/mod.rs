@@ -30,7 +30,7 @@ impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
         let &MultipleDyckLanguage(ref mda) = self;
         let word_ = word.to_owned();
         let mut b = recognise(mda, word_);
-        b.next().map(|item| item.0)
+        b.next().is_some()
     }
 }
 
@@ -84,7 +84,7 @@ mod test {
         let mdl = MultipleDyckLanguage::new(partition);
 
         for dyckword in words {
-            assert!(mdl.recognize(&dyckword).is_some());
+            assert!(mdl.recognize(&dyckword));
         }
 
         let not_words = vec![
