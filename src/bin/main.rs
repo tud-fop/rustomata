@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate log_domain;
+extern crate flate2;
 
 #[macro_use]
 extern crate rustomata;
@@ -10,6 +11,7 @@ mod approximation;
 mod cfg;
 mod pmcfg;
 mod tree_stack_automata;
+mod csparsing;
 
 fn main() {
     let matches
@@ -21,6 +23,7 @@ fn main() {
         .subcommand(cfg::get_sub_command())
         .subcommand(tree_stack_automata::get_sub_command())
         .subcommand(approximation::get_sub_command())
+        .subcommand(csparsing::get_sub_command("csparsing"))
         .get_matches();
 
     match matches.subcommand() {
@@ -32,6 +35,8 @@ fn main() {
             tree_stack_automata::handle_sub_matches(tsa_matches),
         ("approximation", Some(r_matches)) =>
             approximation::handle_sub_matches(r_matches),
+        ("csparsing", Some(r_matches)) =>
+            csparsing::handle_sub_matches(r_matches),
         _ => (),
     }
 

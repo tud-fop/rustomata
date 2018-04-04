@@ -1,6 +1,9 @@
 extern crate num_traits;
 
+use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{One, Zero};
+use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
+use recognisable::automaton::Automaton;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -10,9 +13,6 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
 
-use integeriser::{HashIntegeriser, Integeriser};
-use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
-use recognisable::automaton::Automaton;
 use util::integerisable::{Integerisable1, Integerisable2};
 use util::push_down::Pushdown;
 
@@ -249,7 +249,7 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         c.storage.current_symbol()
     }
 
-    fn is_terminal(c: &Configuration<PushDown<usize>, usize, W>) -> bool {
+    fn is_terminal(&self, c: &Configuration<PushDown<usize>, usize, W>) -> bool {
         c.word.is_empty() && c.storage.is_bottom()
     }
 

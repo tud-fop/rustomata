@@ -67,6 +67,52 @@ impl<A> TreeStack<A> {
             Err(self)
         }
     }
+
+    /// Same as `push` but evaluates `a` only if needed.
+    pub fn push_with<F>(mut self, n: usize, a: F) -> Result<Self, Self> where F: Fn() -> A {
+        if n >= self.children.len() {
+            let len = n - self.children.len() + 1;
+            let filler = &mut vec![None; len];
+            self.children.append(filler);
+        }
+
+        if self.children[n].is_none() {
+            Ok(TreeStack { value: a(),
+                           children: Vec::new(),
+                           parent: Some((n, Rc::new(self))) })
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Writes a value in the first free child position.
+    pub fn push_next(self, a: A) -> Self {
+        let index = {
+            match self.children.iter().enumerate().filter(| &(_i,e) | e.is_none()).next() {
+                None => self.children.len(),
+                Some((i,_)) => i
+            }
+        };
+
+        match self.push(index, a) {
+            Ok(t) => t,
+            _ => panic!("tree_stack.rs: could not push into index {}", index)
+        }
+    }
+
+    /// Checks a predicate for all nodes in the subtree at the current pointer.
+    pub fn all<F>(&self, predicate: &F) -> bool where F: Fn(&A) -> bool {
+        predicate(&self.value) 
+        && self.children.iter().all(
+            |maybe_child| {
+                if let &Some(ref child) = maybe_child {
+                    child.all(predicate)
+                } else {
+                    true
+                }
+            }
+        )
+    }
 }
 
 impl<A: Clone + fmt::Display> fmt::Display for TreeStack<A> {
@@ -118,6 +164,14 @@ impl<A: Clone> TreeStack<A> {
                                            parent: Some((n, Rc::new(self))) }),
             _ => Err(self),
         }
+    }
+
+    /// Returns a `TreeStack` for every child position.
+    pub fn ups(self) -> Vec<Self> {
+        self.children.iter().enumerate().filter(| &(_i,e) | !e.is_none()).map(| (i,_e) | match self.clone().up(i) {
+            Ok(t) => t,
+            _ => panic!("tree_stack.rs: up failed")
+        }).collect()
     }
 
     /// Goes down to the parent position (if there is one) and returns the resulting `TreeStack` in an `Ok`.

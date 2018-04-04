@@ -22,7 +22,7 @@ pub enum TreeStackInstruction<A> {
         current_val: A,
         old_val: A,
         new_val: A,
-    },
+    }
 }
 
 

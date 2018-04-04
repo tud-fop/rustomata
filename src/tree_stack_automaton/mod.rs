@@ -147,6 +147,10 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         TreeStackAutomaton::new(transitions, initial)
     }
 
+    fn is_terminal(&self, c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
+        c.word.is_empty() && c.storage.is_at_bottom()
+    }
+
     fn transitions<'a>(&'a self) -> Box<Iterator<Item=Transition<TreeStackInstruction<A>, T, W>> + 'a> {
         self.list_transitions()
     }
@@ -190,10 +194,6 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         match *c {
             Configuration { ref storage, .. } => storage.current_symbol(),
         }
-    }
-
-    fn is_terminal(c: &Configuration<TreeStack<usize>, usize, W>) -> bool {
-        c.word.is_empty() && c.storage.is_at_bottom()
     }
 
     fn transition_map(&self) -> Rc<TransitionMap<usize, usize, W>> {

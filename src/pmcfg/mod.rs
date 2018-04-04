@@ -6,12 +6,13 @@ use std::slice;
 use std::vec;
 
 use util::tree::GornTree;
+use mcfg::Mcfg;
 
 mod from_str;
 pub mod negra;
 
 /// Variable or terminal symbol in a PMCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub enum VarT<T> {
     /// `Var(i, j)` represents the `j`th component of the `i`th successor.
     /// Indexing starts from `0`.
@@ -19,8 +20,24 @@ pub enum VarT<T> {
     T(T),
 }
 
+impl<T> VarT<T> {
+    pub fn is_var(&self) -> bool {
+        match self {
+            &VarT::Var(_, _) => true,
+            _ => false
+        } 
+    }
+
+    pub fn is_t(&self) -> bool {
+        match self {
+            &VarT::T(_) => true,
+            _ => false
+        } 
+    }
+}
+
 /// Composition function in a PMCFG.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub struct Composition<T> {
     pub composition: Vec<Vec<VarT<T>>>,
 }
@@ -77,7 +94,7 @@ impl<'a, T> IntoIterator for &'a mut Composition<T> {
 ///     PMCFGRule::from_str("A → [[T a, Var 0 0, T b], [T c, Var 0 1]] (A) # 0.4").unwrap()
 /// );
 /// ```
-#[derive(Debug, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct PMCFGRule<N, T, W> {
     pub head: N,
     pub tail: Vec<N>,
@@ -128,6 +145,13 @@ pub struct PMCFG<N, T, W> {
     // TODO: use HashSet
     pub initial: Vec<N>,
     pub rules: Vec<PMCFGRule<N, T, W>>,
+}
+
+impl<N, T, W> From<Mcfg<N, T, W>> for PMCFG<N, T, W> {
+    fn from(mcfg: Mcfg<N, T, W>) -> Self {
+        let (rules, initial) = mcfg.destruct();
+        PMCFG{ rules, initial: vec![initial] }
+    }
 }
 
 impl<N: Hash, T: Hash, W> Hash for PMCFGRule<N, T, W> {

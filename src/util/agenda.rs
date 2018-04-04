@@ -1,5 +1,12 @@
-use std::collections::{BinaryHeap, BTreeMap};
+use std::collections::{BTreeMap, BinaryHeap};
 use std::vec::Vec;
+
+/// A limit specification.
+#[derive(PartialEq, PartialOrd, Eq, Ord, Copy, Clone)]
+pub enum Capacity {
+    Limit(usize),
+    Infinite
+}
 
 pub trait Agenda {
     type Item;
@@ -16,37 +23,42 @@ pub trait Weighted {
     fn get_weight(&self) -> Self::Weight;
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct BoundedPriorityQueue<P, I> {
+// #[derive(Debug, PartialEq, Eq)]
+pub struct PriorityQueue<'a, P, I> {
     data: BTreeMap<P, Vec<I>>, // The values should always be non-empty.
-    capacity: usize,
+    capacity: Capacity,
     size: usize,
-    last_key: Option<P>,       // largest key w.r.t. Ord
+    last_key: Option<P>, // largest key w.r.t. Ord
+    pub priority: Box<Fn(&I) -> P + 'a>,
 }
 
-impl<P, I> BoundedPriorityQueue<P, I> {
+impl<'a, P, I> PriorityQueue<'a, P, I> {
     pub fn size(&self) -> usize {
         self.size
     }
 
-    pub fn capacity(&self) -> usize {
+    pub fn capacity(&self) -> Capacity {
         self.capacity
     }
 
     pub fn is_at_capacity(&self) -> bool {
-        self.size == self.capacity
+        Capacity::Limit(self.size) == self.capacity
     }
 }
 
-impl<P: Ord + Clone, I: Weighted<Weight=P>> Agenda for BoundedPriorityQueue<P, I> {
+impl<'a, I, P: Ord + Clone> Agenda for PriorityQueue<'a, P, I> {
     type Item = I;
 
     fn enqueue(&mut self, item: I) -> Option<I> {
-        let priority = item.get_weight();
-        if self.size < self.capacity {
+        let priority = (self.priority)(&item);
+        if Capacity::Limit(self.size) < self.capacity {
             self.enqueue_unchecked(priority, item);
             None
-        } else if &priority < self.last_key.as_ref().expect("[ERROR] `last_key` should not be `None` when the queue is non-empty.") {
+        } else if &priority
+            < self.last_key
+                .as_ref()
+                .expect("[ERROR] `last_key` should not be `None` when the queue is non-empty.")
+        {
             self.enqueue_unchecked(priority, item);
             self.drop_last()
         } else {
@@ -66,13 +78,13 @@ impl<P: Ord + Clone, I: Weighted<Weight=P>> Agenda for BoundedPriorityQueue<P, I
                 }
                 let key = if v.is_empty() { Some(k.clone()) } else { None };
                 (key, res)
-            },
+            }
             None => (None, None),
         } {
             (Some(k), res) => {
                 self.data.remove(&k);
                 res
-            },
+            }
             (None, res) => res,
         }
     }
@@ -81,31 +93,44 @@ impl<P: Ord + Clone, I: Weighted<Weight=P>> Agenda for BoundedPriorityQueue<P, I
         self.data.values().next().and_then(|v| v.last())
     }
 
-   fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.size == 0
     }
 }
 
-impl<P: Ord, I> BoundedPriorityQueue<P, I> {
-    pub fn new(capacity: usize) -> BoundedPriorityQueue<P, I> {
-        assert!(capacity > 0);
-        BoundedPriorityQueue { data: BTreeMap::new(), capacity, size: 0, last_key: None }
+impl<'a, P: Ord, I> PriorityQueue<'a, P, I> {
+    pub fn new(capacity: Capacity, priority: Box<Fn(&I) -> P + 'a>) -> PriorityQueue<P, I> {
+        assert!(capacity > Capacity::Limit(0));
+        PriorityQueue {
+            data: BTreeMap::new(),
+            capacity,
+            size: 0,
+            last_key: None,
+            priority
+        }
     }
 }
 
-impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
-    pub fn set_capacity(&mut self, capacity: usize) -> Vec<I>{
-        self.capacity = capacity;
+impl<'a, P: Ord + Clone, I> PriorityQueue<'a, P, I> {
+    pub fn set_capacity(&mut self, capacity: usize) -> Vec<I> {
+        self.capacity = Capacity::Limit(capacity);
         let mut res = Vec::new();
-        while self.size > self.capacity {  // TODO optimise to remove entire key-value-pairs at a time
-            res.push(self.drop_last().expect("[ERROR] `last_key` should not be `None` when the queue is non-empty."));
+        while Capacity::Limit(self.size) > self.capacity {
+            // TODO optimise to remove entire key-value-pairs at a time
+            res.push(
+                self.drop_last()
+                    .expect("[ERROR] `last_key` should not be `None` when the queue is non-empty."),
+            );
         }
         res.reverse();
         res
     }
 
     fn enqueue_unchecked(&mut self, priority: P, item: I) {
-        self.data.entry(priority.clone()).or_insert_with(Vec::new).push(item);
+        self.data
+            .entry(priority.clone())
+            .or_insert_with(Vec::new)
+            .push(item);
         self.last_key = match self.last_key {
             Some(ref lk) if priority < *lk => Some(lk.clone()),
             _ => Some(priority),
@@ -116,8 +141,11 @@ impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
     fn drop_last(&mut self) -> Option<I> {
         match self.last_key.clone() {
             Some(key) => {
-                let mut vec = self.data.remove(&key).expect("[ERROR] `last_key` should only hold keys that occur in `data`.");
-                let item = vec.pop().expect("[ERROR] `data` should not contain empty `Vec`tors.");
+                let mut vec = self.data
+                    .remove(&key)
+                    .expect("[ERROR] `last_key` should only hold keys that occur in `data`.");
+                let item = vec.pop()
+                    .expect("[ERROR] `data` should not contain empty `Vec`tors.");
 
                 if !vec.is_empty() {
                     self.data.insert(key.clone(), vec);
@@ -127,7 +155,7 @@ impl<P: Ord + Clone, I> BoundedPriorityQueue<P, I> {
                 self.size -= 1;
 
                 Some(item)
-            },
+            }
             None => None,
         }
     }
@@ -178,15 +206,7 @@ impl<I> Agenda for Vec<I> {
 
 #[test]
 fn test_bounded_priority_queue() {
-    impl Weighted for char {
-        type Weight = Self;
-
-        fn get_weight(&self) -> Self::Weight {
-            self.clone()
-        }
-    }
-
-    let mut q = BoundedPriorityQueue::new(5);
+    let mut q = PriorityQueue::new(Capacity::Limit(5), Box::new(|c| *c as u8));
 
     assert_eq!(q.size(), 0);
     assert!(q.is_empty());

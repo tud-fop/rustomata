@@ -12,7 +12,7 @@ use util::agenda::Weighted;
 use util::push_down::Pushdown;
 
 pub use self::configuration::Configuration;
-pub use self::recogniser::Recogniser;
+pub use self::recogniser::{Recogniser, Search, WeightedSearchItem};
 pub use self::transition::Transition;
 
 

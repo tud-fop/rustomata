@@ -113,6 +113,17 @@ cargo run mcfg parse grammar.gr
 cargo run cfg parse grammar.gr
 ```
 
+## Chomsky-Schützenberger parsing for LCFRS
+
+* extract an internal Chomsky-Schützenberger representation as binary file
+```bash
+cat "examples/example.pmcfg" | cargo run -- csparsing extract > example.cs
+```
+
+* parse a space separated word using a C-S representation file
+```bash
+echo "a a b c c d" | cargo run -- csparsing parse example.cs
+```
 
 ## approximation
 
@@ -153,7 +164,7 @@ cargo run approximation ptk automaton example.cfg k
 * parse with the approximation finite state automaton:
 ```bash
 cargo run approximation ptk parse grammar.gr k
-``**
+```
 
 
 ## coarse-to-fine parsing
