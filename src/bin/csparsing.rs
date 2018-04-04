@@ -6,7 +6,7 @@ extern crate bincode;
 use rustomata::lcfrs::Lcfrs;
 use log_domain::LogDomain;
 use rustomata::lcfrs::cs_representation::CSRepresentation;
-use rustomata::lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
+use rustomata::lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, FilterStrategy};
 use rustomata::util::agenda::Capacity;
 use rustomata::pmcfg::negra::to_negra;
 
@@ -79,9 +79,6 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
     enum Strat {
         Keller, Naive, Approx(usize)
     }
-    enum Filter {
-        Naive, Inside
-    }
 
     let strategy = {
         if submatches.is_present("naive") {
@@ -94,9 +91,9 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
     };
     let filter = {
         if submatches.is_present("naive-filter")  {
-            Filter::Naive
+            FilterStrategy::Naive
         } else {
-            Filter::Inside
+            FilterStrategy::Inside
         }
     };
 
@@ -110,41 +107,23 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 "Could not decode the grammar provided via stdin.",
             );
 
-            match (strategy, filter) {
-                (Strat::Keller, Filter::Inside) => {
+            match strategy {
+                Strat::Keller => {
                     bincode::serialize_into(
                         &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, InsideFilterAutomaton<String>, PushDownGenerator>::new(PushDownGenerator, grammar),
+                        &CSRepresentation::<String, String, PushDownGenerator>::new(PushDownGenerator, grammar, filter),
                         bincode::Infinite
                     ).unwrap()
-                }, (Strat::Naive, Filter::Inside) => {
+                }, Strat::Naive => {
                     bincode::serialize_into(
                         &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, InsideFilterAutomaton<String>, NaiveGenerator>::new(NaiveGenerator, grammar),
+                        &CSRepresentation::<String, String, NaiveGenerator>::new(NaiveGenerator, grammar, filter),
                         bincode::Infinite
                     ).unwrap()
-                }, (Strat::Approx(d), Filter::Inside) => {
+                }, Strat::Approx(d) => {
                     bincode::serialize_into(
                         &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, InsideFilterAutomaton<String>, ApproxGenerator>::new(ApproxGenerator(d), grammar),
-                        bincode::Infinite
-                    ).unwrap()
-                },(Strat::Keller, Filter::Naive) => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, NaiveFilterAutomaton<String>, PushDownGenerator>::new(PushDownGenerator, grammar),
-                        bincode::Infinite
-                    ).unwrap()
-                }, (Strat::Naive, Filter::Naive) => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, NaiveFilterAutomaton<String>, NaiveGenerator>::new(NaiveGenerator, grammar),
-                        bincode::Infinite
-                    ).unwrap()
-                }, (Strat::Approx(d), Filter::Naive) => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, NaiveFilterAutomaton<String>, ApproxGenerator>::new(ApproxGenerator(d), grammar),
+                        &CSRepresentation::<String, String, ApproxGenerator>::new(ApproxGenerator(d), grammar, filter),
                         bincode::Infinite
                     ).unwrap()
                 }
@@ -166,9 +145,9 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             };
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
             
-            match (strategy, filter) {
-                (Strat::Keller, Filter::Inside) => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+            match strategy {
+                Strat::Keller => {
+                    let csrep: CSRepresentation<String, String, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for sentence in word_strings.lines() {
                         let words: Vec<String> = sentence.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -180,8 +159,8 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             }
                         }
                     }
-                }, (Strat::Naive, Filter::Inside) => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, NaiveGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+                }, Strat::Naive => {
+                    let csrep: CSRepresentation<String, String, NaiveGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -193,8 +172,8 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             }
                         }
                     }
-                }, (Strat::Approx(_), Filter::Inside) => {
-                    let csrep: CSRepresentation<String, String, InsideFilterAutomaton<String>, ApproxGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+                }, Strat::Approx(_) => {
+                    let csrep: CSRepresentation<String, String, ApproxGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
                     for line in word_strings.lines() {
                         let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
@@ -206,46 +185,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             }
                         }
                     }
-                }, (Strat::Keller, Filter::Naive) => {
-                    let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{:?}", derivation);
-                            }
-                        }
-                    }
-                }, (Strat::Naive, Filter::Naive) => {
-                    let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>, NaiveGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{:?}", derivation);
-                            }
-                        }
-                    }
-                }, (Strat::Approx(_), Filter::Naive) => {
-                    let csrep: CSRepresentation<String, String, NaiveFilterAutomaton<String>, ApproxGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{:?}", derivation);
-                            }
-                        }
-                    }
-                }, 
+                }
             }
         },
         _ => (),

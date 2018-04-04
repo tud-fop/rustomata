@@ -1,4 +1,3 @@
-use serde::Serialize;
 use util::agenda::Capacity;
 use std::hash::Hash;
 use integeriser::{HashIntegeriser, Integeriser};
@@ -49,30 +48,28 @@ where
 /// A CS representation of an LCFRS contains a `GeneratorAutomaton`, a ´FilterAutomaton`,
 /// and a `MultipleDyckLanguage` over the same bracket alphabet.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CSRepresentation<N, T, F, S>
+pub struct CSRepresentation<N, T, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: for<'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     generator: S::Generator,
     rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
-    filter: F,
+    filter: Filter<T>,
     checker: MultipleDyckLanguage<BracketContent<T>>
 }
 
 use self::automata::GeneratorStrategy;
 
-impl<N, T, F, S> CSRepresentation<N, T, F, S>
+impl<N, T, S> CSRepresentation<N, T, S>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    F: for<'a> FilterAutomaton<'a, T> + Serialize,
     S: GeneratorStrategy<T>,
 {
     /// Instantiates a CS representation for an `LCFRS` and `GeneratorStrategy`.
-    pub fn new<M>(strategy: S, grammar: M) -> Self
+    pub fn new<M>(strategy: S, grammar: M, fstrat: FilterStrategy) -> Self
     where
         M: Into<Lcfrs<N, T, LogDomain<f64>>>,
     {
@@ -84,7 +81,11 @@ where
 
         let checker = mdl::mdl(irules.values(), &irules);
         let gen = strategy.create_generator_automaton(irules.values(), initial, &irules);
-        let fil = F::new(irules.values().iter(), &irules, &gen);
+        let fil = match fstrat {
+            FilterStrategy::Naive => Filter::naive(irules.values().iter(), &irules, &gen),
+            FilterStrategy::Inside => Filter::inside(irules.values().iter(), &irules, &gen)
+        };
+        
         CSRepresentation {
             generator: gen,
             filter: fil,
@@ -220,11 +221,12 @@ mod test {
     use pmcfg::VarT;
     use pmcfg::PMCFGRule;
     use pmcfg::Composition;
+    use super::FilterStrategy;
     use super::Capacity;
     use super::CSRepresentation;
     use super::LogDomain;
     use super::Lcfrs;
-    use super::automata::{NaiveFilterAutomaton, PushDownGenerator};
+    use super::automata::PushDownGenerator;
 
     #[test]
     fn csrep() {
@@ -237,9 +239,10 @@ mod test {
                 ].into_iter().collect();
 
         let cs =
-            CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, PushDownGenerator>::new(
+            CSRepresentation::<&str, char, PushDownGenerator>::new(
                 PushDownGenerator,
                 grammar.clone(),
+                FilterStrategy::Naive
             );
         assert_eq!(cs.generate(&['A'], Capacity::Infinite).next(), Some(d1));
         assert_eq!(
