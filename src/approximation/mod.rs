@@ -1,21 +1,14 @@
-use std::collections::{BinaryHeap, BTreeMap};
-use std::hash::Hash;
-use std::ops::MulAssign;
 use num_traits::One;
+use std::collections::{BinaryHeap, BTreeMap};
+use std::ops::MulAssign;
+
+use recognisable::{Instruction, Transition};
+use recognisable::automaton::Automaton;
 use util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
 pub mod tts;
-
-pub mod cli;
-
-use recognisable::{Instruction, Transition};
-use recognisable::automaton::Automaton;
-
-use self::relabel::*;
-use self::tts::*;
-
 
 /// Object defining the strategies used for `approximation`
 pub trait ApproximationStrategy<T, W>: Sized
@@ -66,7 +59,7 @@ impl<Strategy, T, W> ApproximationInstance<Strategy, T, W>
     pub fn new(strategy: Strategy) -> Self {
         ApproximationInstance {
             reverse_transition_map: BTreeMap::new(),
-            strategy: strategy,
+            strategy,
         }
     }
 

@@ -1,6 +1,7 @@
+% This grammar generates the language { aⁱbᵏcⁱdᵏ ∣ i, k ∈ ℕ }.
 initial: [S]
 
-S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
+S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5
 A → [[],  []                             ] (    )   # 0.5
 B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5

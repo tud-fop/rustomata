@@ -7,7 +7,7 @@ use std::rc::Rc;
 use lcfrs::cs_representation::bracket_fragment::{BracketFragment};
 use super::{FilterAutomaton};
 use lcfrs::cs_representation::automata::{StateInstruction, FiniteAutomaton, GeneratorAutomaton};
-use Transition;
+use recognisable::Transition;
 use lcfrs::cs_representation::rule_fragments::fragments;
 
 /// The `NaiveFilterAutomaton` will produce a `FiniteAutomaton` that loops all
@@ -119,7 +119,7 @@ mod test {
     #[test]
     fn naive() {
         let mut grammar_string = String::new();
-        File::open("examples/example_mcfg.gr")
+        File::open("examples/example.pmcfg")
             .unwrap()
             .read_to_string(&mut grammar_string)
             .expect("failed to read file");

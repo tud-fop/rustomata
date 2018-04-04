@@ -1,32 +1,38 @@
 # rustomata
+
 Framework for (weighted) automata with storage
 
+
 ## example usage
+
 * create a grammar file
 ```bash
-cat <<EOF > grammar.gr
+cat <<EOF > example.mcfg
 initial: [S]
-S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
+S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5
 A → [[],  []                             ] (    )   # 0.5
 B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5
 B → [[],  []                             ] (    )   # 0.5
 EOF
 ```
-* construct a tree-stack automaton from the given grammar,
-print out that automaton
+
+* construct a tree-stack automaton from the given grammar, print out that automaton
 ```bash
 cargo run mcfg automaton grammar.gr
 ```
-* construct a tree-stack automaton from the given grammar and recognise the word "a a b c c d",
-print out a best (maximum weight) accepting configuration (if there is one)
+
+* construct a tree-stack automaton from the given grammar and recognise the word "a a b c c d", print out a best (maximum weight) accepting configuration (if there is one)
 ```bash
 echo "a a b c c d" | cargo run mcfg parse grammar.gr
 ```
 
-## grammar format by example
-The given grammar must be a multiple context-free grammar (MCFG) to construct a tree-stack automaton or a context-free grammar (CFG) to construct a push-down automaton.
+
+## the grammar formats
+
+Rustomata can deal with multiple context-free grammars (short: MCFGs) and context-free grammars (short: CFGs).
 MCFGs are expressively equivalent to linear context-free rewriting systems (LCFRSs) and simple range concatenation grammars (sRCG).
+MCFGs are internally represented by tree-stack automata (short: TSA) and CFG are represented by pushdown automata (short: PDA).
 The weights are (for now) assumed to be from the algebra (ℝ₊, ⋅, 1) of non-negative reals with multiplication.
 
 * an example of an MCFG (in the notation of an sRCG):
@@ -45,122 +51,122 @@ B(ε, ε)     ← ε                    with weight 0.5
 ```
 initial: [S]
 
-S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
+S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)
 A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.5
 A → [[],  []                             ] (    )   # 0.5
 B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.5
 B → [[],  []                             ] (    )   # 0.5
 ```
 
-* an example of an CFG:
+* Lines that contain no non-whitespace characters are ignored by the parser.
+
+* Lines whose first non-whitespace character is a `%` are also ignored (comments).
+
+* A single production *may not* contain newline characters.
+
+* A production may be followed by a comment (starting with `%`).
+
+* The weight definition (e.g. `# 1.0`) may be omitted.  Rustomata then assumes a weight of `1.0`.
+
+* an example of a CFG:
 ```
 initial non-terminals: S
 
-S→ A        with weight 1
-A→ a A B    with weight 0.6
-A→ a        with weight 0.4
-B→ b        with weight 1
+S → a S b    with weight 0.4
+S → ε        with weight 0.6
 
 ```
 
 * the same grammar in rustomata's notation:
-
 ```
 initial: [S]
 
-S → [Nt A             ] # 1
-A → [T a, Nt A, Nt B  ] # 0.6
-A → [T a              ] # 0.4
-B → [T b              ] # 1
-
+S → [T a, Nt A, Tb]  # 0.4
+S → []               # 0.6
 ```
-## recognition functionality
-To create an tree-stack automaton from an MCFG and print it use
+
+* The parser specifics of MCFGs also apply for CFGs.
+
+
+## constructing automata
+
+* create a tree-stack automaton that is equivalent to the given MCFG:
 ```bash
-cargo run mcfg automaton grammar.gr
+cargo run mcfg automaton example.mcfg
 ```
 
-To recognize from stdin using a tree-stack automaton use
+* create a push-down automaton that is equivalent to the given CFG:
+```bash
+cargo run cfg automaton example.cfg
+```
+
+
+## recognition functionality
+
+* parse an MCFG (internally constructing an tree-stack automaton):
 ```bash
 cargo run mcfg parse grammar.gr
 ```
 
-The same functions for push-down automata and CFG are
-```bash
-cargo run cfg automaton grammar.gr
-```
-
+* parse a CFG (internally constructing a pushdown automaton):
 ```bash
 cargo run cfg parse grammar.gr
 ```
+
+## Chomsky-Schützenberger parsing for LCFRS
+
+* extract an internal Chomsky-Schützenberger representation as binary file
+```bash
+cat "examples/example.pmcfg" | cargo run -- csparsing extract > example.cs
+```
+
+* parse a space separated word using a C-S representation file
+```bash
+echo "a a b c c d" | cargo run -- csparsing parse example.cs
+```
+
 ## approximation
+
 Rustomata contains several approximation strategies, allowing the transformation of automata with storage into other automata with storage. Available are
 
-* Transform Tree-Stack (TTS) transforms a tree-stack automata into a push-down automata.
+* approximation of an MCFG (via a tree-stack automaton) by a pushdown automaton:
 ```bash
-cargo run approximation tts automaton grammar.gr
+cargo run approximation tts automaton example.mcfg
 ```
-Transforms an MCFG into a tree-stack automaton, then transforms this automaton into a push-down automaton and prints both.
 
+* parse a word with the approximation automaton for the given MCFG:
 ```bash
-cargo run approximation tts parse grammar.gr
+cargo run approximation tts parse example.mcfg
 ```
-Creates both automata and recognizes words from stdin using the latter.
 
-* Relabel transforms a push-down automata into another push-down automata, where the non-terminals are replabelled using an equivalence-relation. Equivalence relations are defined by their equivalence classes in an extra file looking like this:
+* approximate a CFG (via a pushdown automaton) by a pushdown automaton using an equivalence relation on the non-terminal symbols.  An equivalence relation is defined by specifying equivalence classes:
 ```
 S [S    ]
 N [A, B ]
-R [*    ]
+R *
 ```
-
-with `*` matching every non-terminal not included.
-
+  with `*` matching the remaining non-terminals.
+  To get the approximation automaton:
 ```bash
-cargo run approximation relabel automaton grammar.gr eq.classes
+cargo run approximation relabel automaton example.cfg example.classes
 ```
-Transforms a CFG into a push-down automaton, then transforms this automaton into a push-down automaton using `eq.classes` and prints both.
 
+* to parse with the approximation pushdown automaton:
 ```bash
-cargo run approximation relabel parse grammar.gr eq.classes
+cargo run approximation relabel parse example.cfg example.classes
 ```
-Creates both automata and recognizes words from stdin using the latter.
 
-* Topk transforms a push-down automata into a push-down automata only containing stacks of height small or equal `k`.
-
+* approximation of a CFG (via a pushdown automaton) by a finite state automaton using a restriction of the underlying pushdown to height `k`:
 ```bash
-cargo run approximation relabel automaton grammar.gr k
+cargo run approximation ptk automaton example.cfg k
 ```
-Transforms a CFG into a push-down automaton, then transforms this automaton into a push-down automaton with max height `k`.
 
+* parse with the approximation finite state automaton:
 ```bash
-cargo run approximation relabel parse grammar.gr k
-```
-Creates both automata and recognizes words from stdin using the latter.
-
-## coarse-to-fine recognition
-Rustomata also allows for recognition using a coarse-to-fine scheme, where we create multiple automata using approximation and recognise words on the coarsest automata, while checking the results using the finer automata.
-
-```bash
-cargo run coarse-to-fine mcfg automaton grammar.gr eq.classes k
+cargo run approximation ptk parse grammar.gr k
 ```
 
-creates a tree-stack automaton from an MCFG and then three push-down automata using the implemented approximation functions. Prints all automata. Uses `k` and `eq.classes` for these approximations.
 
-```bash
-cargo run coarse-to-fine mcfg parse grammar.gr eq.classes k
-```
+## coarse-to-fine parsing
 
-creates all automata and then recognizes the words in stdin using coarse-to-fine recognition.
-
-The same functionality can be achieved for CFG using
-
-```bash
-cargo run coarse-to-fine mcfg automaton grammar.gr eq.classes k
-```
-
-```bash
-cargo run coarse-to-fine mcfg parse grammar.gr eq.classes k
-```
-
-but this scheme does not use TTS.
+*currently being refactored*

@@ -4,7 +4,7 @@ use dyck::multiple::MultipleDyckLanguage;
 use pmcfg::PMCFGRule;
 use integeriser::Integeriser;
 use super::BracketContent;
-use VarT;
+use pmcfg::VarT;
 
 /// Construction of a sorted `MultipleDycklanguage` for the CS characterization of an LCFRS. 
 pub fn mdl<'a, R, I, N, T, W>(lcfrs: R, integeriser: &I) -> MultipleDyckLanguage<BracketContent<T>>

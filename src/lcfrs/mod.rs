@@ -1,5 +1,5 @@
-use PMCFGRule;
-use VarT;
+use pmcfg::PMCFGRule;
+use pmcfg::VarT;
 use std::hash::Hash;
 use std::collections::HashMap;
 
@@ -113,8 +113,8 @@ fn check_composition<T>(composition: &Vec<Vec<VarT<T>>>, fanouts: &[usize]) -> b
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Composition;
-    use VarT;
+    use pmcfg::Composition;
+    use pmcfg::VarT;
     use std::collections::BTreeSet;
     use mcfg::Mcfg;
 

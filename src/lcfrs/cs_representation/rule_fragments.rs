@@ -1,4 +1,4 @@
-use {PMCFGRule, VarT};
+use pmcfg::{PMCFGRule, VarT};
 use integeriser::Integeriser;
 use super::BracketContent;
 use super::bracket_fragment::BracketFragment;
@@ -180,7 +180,7 @@ where
 }
 
 use super::automata::{PushDownInstruction, StateInstruction};
-use Transition;
+use recognisable::Transition;
 use log_domain::LogDomain;
 use num_traits::One;
 

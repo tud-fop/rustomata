@@ -11,7 +11,7 @@ use std::rc::Rc;
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 
-use Transition;
+use recognisable::Transition;
 
 /// An operation on a push-down.
 /// The set of ops is limited to removal, addition and replacement of a single symbol.
@@ -26,7 +26,7 @@ pub enum PushDownInstruction<S> {
 type PDSInstruction<Q, S> = (StateInstruction<Q>, PushDownInstruction<S>);
 type PDSTransition<Q, S, T, W> = Transition<PDSInstruction<Q, S>, T, W>;
 
-use Instruction;
+use recognisable::Instruction;
 impl<Q: Clone + PartialEq, S: Copy + PartialEq> Instruction for (StateInstruction<Q>, PushDownInstruction<S>) {
     type Storage = (Q, Vec<S>);
     
@@ -540,8 +540,8 @@ where
 }
 
 use std::ops::MulAssign;
-use automaton::Automaton;
-use Configuration;
+use recognisable::automaton::Automaton;
+use recognisable::Configuration;
 use std::collections::{BinaryHeap, HashMap};
 use recognisable::Item;
 impl<T, W> Automaton<T, W> for PushDownAutomaton<T, W>

@@ -6,7 +6,7 @@ use num_traits::{One, Zero};
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 use recognisable::{Search, WeightedSearchItem};
-use Instruction;
+use recognisable::Instruction;
 
 /// The instruction for state transitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -358,9 +358,9 @@ where
 }
 
 use std::ops::MulAssign;
-use automaton::Automaton;
-use Transition;
-use Configuration;
+use recognisable::automaton::Automaton;
+use recognisable::Transition;
+use recognisable::Configuration;
 use std::collections::{BinaryHeap, HashMap};
 use recognisable::Item;
 impl<T, W> Automaton<T, W> for FiniteAutomaton<T, W>

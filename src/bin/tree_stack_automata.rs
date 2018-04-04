@@ -1,17 +1,22 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use recognisable::{Item, Recognisable};
+use rustomata::recognisable::{Item, Recognisable};
+use rustomata::tree_stack_automaton::{TreeStackAutomaton, TreeStack, TreeStackInstruction};
+use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::tts::TTSElement;
+use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use std::fmt::Debug;
-use tree_stack_automaton::{TreeStackAutomaton, TreeStack, TreeStackInstruction};
-
 use std::io::{self, Read};
+use std::rc::Rc;
 use std::fs::File;
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("tsa")
+        .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
         .about("functions related to tree-stack automata")
         .subcommand(
             SubCommand::with_name("recognise")
+                .author("Tobias Denkinger <tobias.denkinger@tu-dresden.de>")
                 .about("recognises from stdin with a tree-stack automaton")
                 .arg(
                     Arg::with_name("automaton")
@@ -79,11 +84,6 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
 
             match tsa_recognise_matches.value_of("strategies") {
                 Some("tts") => {
-                    use approximation::ApproximationStrategy;
-                    use approximation::tts::TTSElement;
-                    use recognisable::coarse_to_fine::CoarseToFineRecogniser;
-                    use std::rc::Rc;
-
                     let rec = coarse_to_fine_recogniser!(automaton; TTSElement::new());
 
                     recognise_corpus(rec, n, beam, corpus)

@@ -1,14 +1,13 @@
-extern crate bincode;
-
 use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
 use std::io::{stdin, stdout, Read};
 use std::fs::File;
+extern crate bincode;
 
-use lcfrs::Lcfrs;
+use rustomata::lcfrs::Lcfrs;
 use log_domain::LogDomain;
-use lcfrs::cs_representation::CSRepresentation;
-use lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
-use util::agenda::Capacity;
+use rustomata::lcfrs::cs_representation::CSRepresentation;
+use rustomata::lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
+use rustomata::util::agenda::Capacity;
 
 use flate2::{read, write, Compression};
 

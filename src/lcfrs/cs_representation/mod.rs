@@ -1,5 +1,3 @@
-pub mod cli;
-
 use serde::Serialize;
 use util::agenda::Capacity;
 use std::hash::Hash;
@@ -223,9 +221,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use VarT;
-    use PMCFGRule;
-    use Composition;
+    use pmcfg::VarT;
+    use pmcfg::PMCFGRule;
+    use pmcfg::Composition;
     use super::Capacity;
     use super::CSRepresentation;
     use super::LogDomain;

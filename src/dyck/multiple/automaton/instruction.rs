@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
-use Instruction;
-use TreeStack;
+use recognisable::Instruction;
+use tree_stack_automaton::TreeStack;
 
 
 /// An element of the tree push-down for recognizing a MDL.

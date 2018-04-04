@@ -1,10 +1,11 @@
-use approximation::{ApproximationInstance, ApproximationStrategy};
 use num_traits::One;
-use recognisable::{Instruction, Item, Recognisable};
-use recognisable::automaton::Automaton;
 use std::collections::BinaryHeap;
 use std::ops::MulAssign;
 use std::rc::Rc;
+
+use approximation::{ApproximationInstance, ApproximationStrategy};
+use recognisable::{Instruction, Item, Recognisable};
+use recognisable::automaton::Automaton;
 use util::agenda::Weighted;
 
 pub struct CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
@@ -144,37 +145,4 @@ macro_rules! coarse_to_fine_recogniser {
             }
         }
     }
-}
-
-#[test]
-fn test_coarse_to_fine_recogniser() {
-    use approximation::relabel::RlbElement;
-    use approximation::tts::TTSElement;
-    use approximation::equivalence_classes::EquivalenceClass;
-    use log_domain::LogDomain;
-    use pmcfg::{PMCFG, PMCFGRule};
-    use tree_stack_automaton::{PosState, TreeStackAutomaton};
-
-    let pmcfg: PMCFG<String, String, LogDomain<f64>>
-        = r"initial: [S]
-            S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B)   # 1
-            A → [[T a, Var 0 0],  [T c, Var 0 1]     ] (A   )   # 0.2
-            A → [[],  []                             ] (    )   # 0.8
-            B → [[T b, Var 0 0],  [T d, Var 0 1]     ] (B   )   # 0.2
-            B → [[],  []                             ] (    )   # 0.8".parse().unwrap();
-
-    let automaton = TreeStackAutomaton::from(pmcfg);
-
-    let tts = TTSElement::new();
-
-    let e: EquivalenceClass<String, String> = "0 [A, B]\n1 [*]".parse().unwrap();
-    let f = |ps: &PosState<_>| ps.map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| e.project(nt)));
-    let rlb = RlbElement::new(&f);
-
-    let recogniser = coarse_to_fine_recogniser!(automaton; tts, rlb);
-
-    assert_ne!(
-        recogniser.recognise("a b b c d d".split_whitespace().map(|x| x.to_string()).collect()).next(),
-        None
-    );
 }

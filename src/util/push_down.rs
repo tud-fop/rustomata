@@ -1,9 +1,10 @@
-use integeriser::{HashIntegeriser, Integeriser};
-use integerisable::Integerisable1;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::vec::IntoIter;
+
+use integeriser::{HashIntegeriser, Integeriser};
+use util::integerisable::Integerisable1;
 
 #[derive(Debug, Clone, PartialOrd, Ord)]
 pub enum Pushdown<A> {
@@ -42,7 +43,7 @@ impl<A> Pushdown<A> {
     pub fn set(self, a: A) -> Result<Self, Self> {
         match self {
             Pushdown::Empty => Err(Pushdown::Empty),
-            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below: below }),
+            Pushdown::Cons { below, .. } => Ok(Pushdown::Cons { value: a, below }),
         }
     }
 
@@ -54,7 +55,7 @@ impl<A> Pushdown<A> {
         }
     }
 
-    /// Applies a function `FnMut(&A) -> B`to every node in a `Pushdown<A>`.
+    /// Applies a function `FnMut(&A) -> B` to every node in a `Pushdown<A>`.
     pub fn map<F, B>(&self, f: &mut F) -> Pushdown<B>
         where F: FnMut(&A) -> B,
     {
@@ -155,12 +156,102 @@ impl<A: Clone + Eq + Hash> Integerisable1 for Pushdown<A> {
     }
 }
 
-#[test]
-fn test_pushdown() {
-    assert_eq!(Pushdown::new().push(1).push(2).push(3).push(4).pop().unwrap().0,
-               Pushdown::from(vec![1,2,3].as_slice()));
+#[cfg(test)]
+pub mod tests {
+    use super::*;
 
-    let v1: Vec<i32> = Pushdown::new().push(1).push(2).push(3).into();
-    assert_eq!(v1, vec![1,2,3]);
+    #[test]
+    fn test_pushdown_legal_operations_correctness() {
+        assert_eq!(
+            Pushdown::from(vec![1, 2].as_slice()),
+            Pushdown::new().push(1).push(1).set(2).unwrap().push(3).pop().unwrap().0
+        );
+    }
+
+    #[test]
+    fn test_pushdown_illegal_operations_on_empty() {
+        if let Ok(_) = Pushdown::<u8>::new().pop() {
+            panic!("Popping an empty pushdown didn't yield an error!");
+        }
+
+        if let Some(_) = Pushdown::<u8>::new().peek() {
+            panic!("Peeking an empty pushdown didn't yield an error!");
+        }
+    }
+
+    #[test]
+    fn test_pushdown_eq() {
+        let pushdown1 = Pushdown::new().push(1).push(2);
+        let pushdown2 = Pushdown::new().push(1).push(2);
+        assert_eq!(pushdown1, pushdown2);
+        assert_eq!(pushdown1, pushdown1.clone());
+
+        let pushdown1 = pushdown1.push(3);
+        assert_ne!(pushdown1, pushdown2);
+
+        let pushdown2 = pushdown2.push(3);
+        assert_eq!(pushdown1, pushdown2);
+    }
+
+    #[test]
+    fn test_pushdown_push_inverse() {
+        assert_eq!(
+            Pushdown::new(),
+            Pushdown::new().push(1).pop().unwrap().0
+        )
+    }
+
+    #[test]
+    fn test_pushdown_map_correctness() {
+        let pushdown = Pushdown::new().push(1).push(2).push(3);
+
+        assert_eq!(
+            Pushdown::new().push(2).push(4).push(6),
+            pushdown.map(&mut |x| x * 2)
+        );
+    }
+
+    #[test]
+    fn test_pushdown_map_inverse() {
+        let pushdown = Pushdown::new().push(1).push(2).push(3);
+        let mapped_pushdown = pushdown.map(&mut |x| x * 2);
+
+        assert_eq!(
+            pushdown,
+            mapped_pushdown.map(&mut |x| x / 2)
+        );
+    }
+
+    #[test]
+    fn test_pushdown_to_vec_correctness() {
+        let pushdown = Pushdown::new().push(1).push(2).push(3);
+
+        assert_eq!(
+            vec![1, 2, 3],
+            pushdown.to_vec()
+        );
+    }
+
+    #[test]
+    fn test_pushdown_to_vec_inverse() {
+        let pushdown = Pushdown::new().push(1).push(2).push(3);
+
+        assert_eq!(
+            pushdown,
+            Pushdown::from(pushdown.to_vec().as_slice())
+        );
+    }
+
+    #[test]
+    fn test_pushdown_integerise_inverse() {
+        let pushdown = Pushdown::new().push(1).push(2).push(3);
+        let mut integeriser = HashIntegeriser::new();
+        let integerised_pushdown = pushdown.integerise(&mut integeriser);
+
+        assert_eq!(
+            pushdown,
+            Pushdown::un_integerise(&integerised_pushdown, &integeriser)
+        );
+    }
 }
 

@@ -12,7 +12,7 @@ use lcfrs::cs_representation::rule_fragments::{fragments};
 use util::{IntMap};
 use recognisable::{Search};
 
-use Transition;
+use recognisable::Transition;
 
 /// In contrast to the `NaiveFilterAutomaton`, the `FiniteAutomaton`
 /// that is produced using the `InsideFilterAutomaton` will not loop
@@ -197,7 +197,7 @@ mod test {
     #[test]
     fn naive() {
         let mut grammar_string = String::new();
-        File::open("examples/example_mcfg.gr")
+        File::open("examples/example.pmcfg")
             .unwrap()
             .read_to_string(&mut grammar_string)
             .expect("failed to read file");

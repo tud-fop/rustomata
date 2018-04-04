@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use pmcfg::*;
 use cfg::{LetterT, CFGComposition, CFGRule, CFG};
 
@@ -44,9 +42,9 @@ impl<N: Clone + Ord + PartialEq,
             });
         }
 
-        CFG { _dummy: PhantomData,
-               initial: pmcfg.initial.clone(),
-               rules: rules,
+        CFG {
+            initial: pmcfg.initial.clone(),
+            rules,
         }
     }
 }

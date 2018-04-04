@@ -3,12 +3,12 @@ pub mod instruction;
 use std::collections::{BinaryHeap, HashMap};
 pub use dyck::multiple::automaton::instruction::{MDTreeElem, MultipleDyckInstruction};
 use util::partition::Partition;
-use Transition;
-use TreeStack;
-use Configuration;
+use recognisable::Transition;
+use tree_stack_automaton::TreeStack;
+use recognisable::Configuration;
 
 use dyck::Bracket;
-use automaton::{Automaton, TransitionMap};
+use recognisable::automaton::{Automaton, TransitionMap};
 
 use recognisable::Item;
 use std::rc::Rc;
@@ -86,7 +86,7 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
     }
 }
 
-use Instruction;
+use recognisable::Instruction;
 
 impl<T> Automaton<Bracket<T>, u8> for MultipleDyckAutomaton<T>
 where

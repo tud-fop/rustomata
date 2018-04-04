@@ -1,5 +1,5 @@
 use std::iter::{once, repeat};
-use PMCFGRule;
+use pmcfg::PMCFGRule;
 use log_domain::LogDomain;
 use std::fmt;
 use std::collections::BTreeMap;
@@ -43,7 +43,7 @@ fn descend_terminals<'a, N, T>(
     N: 'a + ToString,
     T: 'a,
 {
-    use VarT;
+    use pmcfg::VarT;
     
     let rule = *derivation.0.get(&position).unwrap();
     let id = *ids.get(&position).unwrap();

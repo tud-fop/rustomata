@@ -1,9 +1,9 @@
 /// This module contains the implementation of the construction of an
 /// LCFRS for each MCFG.
 
-use PMCFGRule;
+use pmcfg::PMCFGRule;
 use mcfg::Mcfg;
-use VarT;
+use pmcfg::VarT;
 use std::hash::Hash;
 use std::collections::{BTreeSet, HashMap};
 use super::*;
@@ -106,7 +106,7 @@ fn to_lcfrs_rule<N, T, W>(
 ) -> PMCFGRule<(N, BTreeSet<usize>), T, W> 
 where N: Hash + Eq
 {
-    use Composition;
+    use pmcfg::Composition;
     
     let PMCFGRule {
         head,
