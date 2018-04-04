@@ -8,6 +8,7 @@ use log_domain::LogDomain;
 use rustomata::lcfrs::cs_representation::CSRepresentation;
 use rustomata::lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, NaiveFilterAutomaton, InsideFilterAutomaton};
 use rustomata::util::agenda::Capacity;
+use rustomata::pmcfg::negra::to_negra;
 
 use flate2::{read, write, Compression};
 
@@ -175,7 +176,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                print!("{}", derivation);
+                                print!("{}", to_negra(&derivation.into_iter().map(|(k,v)| (k, v.clone())).collect(), 0));
                             }
                         }
                     }
@@ -188,7 +189,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("{:?}", derivation);
                             }
                         }
                     }
@@ -201,7 +202,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("{:?}", derivation);
                             }
                         }
                     }
@@ -214,7 +215,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("{:?}", derivation);
                             }
                         }
                     }
@@ -227,7 +228,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("{:?}", derivation);
                             }
                         }
                     }
@@ -240,7 +241,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             csrep.debug(words.as_slice(), beam);
                         } else {
                             for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{}", derivation);
+                                println!("{:?}", derivation);
                             }
                         }
                     }

@@ -3,7 +3,6 @@ use pmcfg::VarT;
 use std::hash::Hash;
 use std::collections::HashMap;
 
-mod derivation;
 mod conversion;
 mod from_str;
 pub mod cs_representation;

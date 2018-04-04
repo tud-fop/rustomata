@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::btree_map;
+use std::iter::FromIterator;
 
 /// A tree map where each node has a _Gorn address_, i.e. a sequence of integers that describes the
 /// path one has to follow to get from the root to the particular node.
@@ -100,5 +101,13 @@ impl<'a, V> IntoIterator for &'a mut GornTree<V> {
 impl<V: PartialEq> PartialEq for GornTree<V> {
     fn eq(&self, other: &GornTree<V>) -> bool {
         self.map.eq(&other.map)
+    }
+}
+
+impl<V> FromIterator<(Vec<usize>, V)> for GornTree<V> {
+    fn from_iter<T>(iter: T) -> Self
+    where T: IntoIterator<Item = (Vec<usize>, V)>
+    {
+        GornTree{ map: iter.into_iter().collect() }
     }
 }

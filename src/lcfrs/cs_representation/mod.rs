@@ -4,7 +4,6 @@ use std::hash::Hash;
 use integeriser::{HashIntegeriser, Integeriser};
 use std::collections::BTreeMap;
 
-use super::derivation::Derivation;
 use pmcfg::PMCFGRule;
 use log_domain::LogDomain;
 use dyck;
@@ -20,6 +19,7 @@ use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
 use util::with_time;
+use util::tree::GornTree;
 
 use dyck::multiple::MultipleDyckLanguage;
 mod mdl;
@@ -129,7 +129,7 @@ where
                 .enumerate()
                 .map(|(i, frag)| (i, BracketFragment::concat(frag)))
                 .filter(|&(_, ref candidate)| dyck::recognize(candidate))
-                .filter_map(|(i, candidate)| from_brackets(&self.rules, candidate).map(|_| (i + 1)))
+                .filter_map(|(i, candidate)| toderiv(&self.rules, &candidate).map(|_| (i + 1)))
                 .next()
             {
                 Some(i) => i, // valid candidate
@@ -141,20 +141,16 @@ where
     }
 }
 
-/// Reads off the `Derivation` tree from a generated bracket word.
-fn from_brackets<N, T>(
-    rules: &HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
-    word: Vec<Delta<T>>,
-) -> Option<Derivation<N, T>>
+fn toderiv<'a, 'b, N, T, I>(rules: &'a I, word: &'b [Delta<T>]) -> Option<GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>>
 where
-    N: Hash + Eq + Clone,
-    T: Hash + Eq + Clone,
+    I: Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>,
+    T: PartialEq
 {
     let mut tree = BTreeMap::new();
     let mut pos = Vec::new();
-
+    
     for sigma in word {
-        match sigma {
+        match *sigma {
             dyck::Bracket::Open(BracketContent::Component(rule_id, _)) => {
                 let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
                 if rule_at_pos != &rule_id {
@@ -171,11 +167,11 @@ where
         }
     }
 
-    Some(Derivation(
+    Some(
         tree.into_iter()
             .map(|(pos, i)| (pos, rules.find_value(i).unwrap()))
             .collect(),
-    ))
+    )
 }
 
 /// Iterates Dyck words that represent a derivation for a word according to
@@ -195,9 +191,9 @@ where
     T: PartialEq + Hash + Clone + Eq + Ord,
     N: Hash + Eq + Clone,
 {
-    type Item = Derivation<'a, N, T>;
+    type Item = GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>;
 
-    fn next(&mut self) -> Option<Derivation<'a, N, T>> {
+    fn next(&mut self) -> Option<GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>> {
         let &mut CSGenerator {
             ref mut candidates,
             rules,
@@ -209,7 +205,7 @@ where
                 _ => true
             }).collect();
             if checker.recognize(&candidate) {
-                if let Some(derivation) = from_brackets(rules, candidate) {
+                if let Some(derivation) = toderiv(rules, &candidate) {
                     return Some(derivation);
                 }
             }
@@ -227,22 +223,18 @@ mod test {
     use super::Capacity;
     use super::CSRepresentation;
     use super::LogDomain;
-    use super::Derivation;
     use super::Lcfrs;
     use super::automata::{NaiveFilterAutomaton, PushDownGenerator};
 
     #[test]
     fn csrep() {
         let grammar = lcfrs();
-        let d1 = Derivation(vec![(vec![], &grammar.rules[1])].into_iter().collect());
-        let d2 = Derivation(
-            vec![
-                (vec![], &grammar.rules[0]),
-                (vec![0], &grammar.rules[1]),
-                (vec![1], &grammar.rules[1]),
-            ].into_iter()
-                .collect(),
-        );
+        let d1 = vec![(vec![], &grammar.rules[1])].into_iter().collect();
+        let d2 = vec![
+                    (vec![], &grammar.rules[0]),
+                    (vec![0], &grammar.rules[1]),
+                    (vec![1], &grammar.rules[1]),
+                ].into_iter().collect();
 
         let cs =
             CSRepresentation::<&str, char, NaiveFilterAutomaton<char>, PushDownGenerator>::new(
@@ -254,23 +246,6 @@ mod test {
             cs.generate(&['A', 'A'], Capacity::Infinite).next(),
             Some(d2)
         );
-    }
-
-    #[test]
-    fn export_format() {
-        let grammar = lcfrs();
-        let d = Derivation(
-            vec![
-                (vec![], &grammar.rules[0]),
-                (vec![0], &grammar.rules[0]),
-                (vec![0, 0], &grammar.rules[1]),
-                (vec![0, 1], &grammar.rules[1]),
-                (vec![1], &grammar.rules[1]),
-            ].into_iter()
-                .collect(),
-        );
-
-        println!("{}", d);
     }
 
     fn lcfrs() -> Lcfrs<&'static str, char, LogDomain<f64>> {
