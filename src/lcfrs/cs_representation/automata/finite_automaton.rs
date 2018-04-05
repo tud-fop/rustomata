@@ -117,7 +117,7 @@ where
     T: Eq + Hash + Clone,
 {
     /// Constructs the intersection of two deterministic `FiniteAutomata`.
-    fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
+    pub fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
         let mut new_states = HashIntegeriser::new();
 
         let mut initial_arcs = Vec::new();
@@ -179,7 +179,7 @@ where
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
-    fn generate<'a>(self, beamwidth: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
+    pub fn generate<'a>(self, beamwidth: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
     where
         T: 'a,
     {
@@ -253,31 +253,13 @@ where
             .map(|WeightedSearchItem(q, w)| (q, w))
             .collect()
     }
-}
 
-use super::GeneratorAutomaton;
-
-impl<T> GeneratorAutomaton<T> for FiniteAutomaton<T, LogDomain<f64>>
-where
-    T: Eq + Hash + Clone,
-{
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.arcs.iter().flat_map(|map| map.values()).count()
     }
 
-    fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
+    pub fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)
-    }
-
-    fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self {
-        self.intersect(&other)
-    }
-
-    fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
-    where
-        T: 'a,
-    {
-        self.generate(beam)
     }
 }
 

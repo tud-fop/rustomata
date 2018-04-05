@@ -435,30 +435,13 @@ where
         }
         heuristics
     }
-}
 
-use super::GeneratorAutomaton;
-impl<T> GeneratorAutomaton<T> for PushDownAutomaton<T, LogDomain<f64>>
-where
-    T: Eq + Clone + Hash,
-{
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.arcs.iter().flat_map(|map| map.values()).count()
     }
 
-    fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
+    pub fn get_integeriser(&self) -> Rc<HashIntegeriser<T>> {
         Rc::clone(&self.labels)
-    }
-
-    fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self {
-        self.clone().intersect(&other)
-    }
-
-    fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
-    where
-        T: 'a,
-    {
-        self.generate(beam)
     }
 }
 

@@ -6,7 +6,7 @@ extern crate bincode;
 use rustomata::lcfrs::Lcfrs;
 use log_domain::LogDomain;
 use rustomata::lcfrs::cs_representation::CSRepresentation;
-use rustomata::lcfrs::cs_representation::automata::{PushDownGenerator, NaiveGenerator, ApproxGenerator, FilterStrategy};
+use rustomata::lcfrs::cs_representation::automata::{FilterStrategy, GeneratorStrategy};
 use rustomata::util::agenda::Capacity;
 use rustomata::pmcfg::negra::to_negra;
 
@@ -19,6 +19,37 @@ pub fn get_sub_command(name: &str) -> App {
                     SubCommand::with_name("extract")
                                 .about("Reads a grammar from stdin and prints an object
                                        that Chomsky-Schützenberger-represents the grammar.")
+                                .group(
+                                    ArgGroup::with_name("strategy")
+                                ).arg(
+                                    Arg::with_name("naive")
+                                        .help("Use a naive Generator automaton.")
+                                        .long("naive")
+                                        .group("strategy")
+                                ).arg(
+                                    Arg::with_name("approx")
+                                        .help("Use a regular approximation the push-down generator.")
+                                        .long("approx")
+                                        .group("strategy")
+                                        .takes_value(true)
+                                ).arg(
+                                    Arg::with_name("pd")
+                                        .help("Use a push-down automaton to generate candidates.")
+                                        .long("pd")
+                                        .group("strategy")
+                                ).group(
+                                    ArgGroup::with_name("filter")
+                                ).arg(
+                                    Arg::with_name("naive-filter")
+                                        .help("Use a naive filter automaton.")
+                                        .long("naive-filter")
+                                        .group("filter")
+                                ).arg(
+                                    Arg::with_name("inside-filter")
+                                        .help("Use the inside filter automaton.")
+                                        .long("inside-filter")
+                                        .group("filter")
+                                )
                 ).subcommand(
                     SubCommand::with_name("parse")
                                 .about("Reads a list of words from stdin and parses them
@@ -42,51 +73,17 @@ pub fn get_sub_command(name: &str) -> App {
                                     Arg::with_name("debugmode")
                                         .short("d").long("debug")
                                 )
-                ).group(
-                    ArgGroup::with_name("strategy")
-                ).arg(
-                    Arg::with_name("naive")
-                        .help("Use a naive Generator automaton.")
-                        .long("naive")
-                        .group("strategy")
-                ).arg(
-                    Arg::with_name("approx")
-                        .help("Use a regular approximation the push-down generator.")
-                        .long("approx")
-                        .group("strategy")
-                        .takes_value(true)
-                ).arg(
-                    Arg::with_name("pd")
-                        .help("Use a push-down automaton to generate candidates.")
-                        .long("pd")
-                        .group("strategy")
-                ).group(
-                    ArgGroup::with_name("filter")
-                ).arg(
-                    Arg::with_name("naive-filter")
-                        .help("Use a naive filter automaton.")
-                        .long("naive-filter")
-                        .group("filter")
-                ).arg(
-                    Arg::with_name("inside-filter")
-                        .help("Use the inside filter automaton.")
-                        .long("inside-filter")
-                        .group("filter")
                 )
 }
 
 pub fn handle_sub_matches(submatches: &ArgMatches) {
-    enum Strat {
-        Keller, Naive, Approx(usize)
-    }
-
     let strategy = {
         if submatches.is_present("naive") {
-            Strat::Naive
+            GeneratorStrategy::Finite
         } else if let Some(depth) = submatches.value_of("approx") {
-                Strat::Approx(depth.parse().unwrap())
+                GeneratorStrategy::Approx(depth.parse().unwrap())
         } else {
-            Strat::Keller
+            GeneratorStrategy::PushDown
         }
     };
     let filter = {
@@ -107,27 +104,11 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 "Could not decode the grammar provided via stdin.",
             );
 
-            match strategy {
-                Strat::Keller => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, PushDownGenerator>::new(PushDownGenerator, grammar, filter),
-                        bincode::Infinite
-                    ).unwrap()
-                }, Strat::Naive => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, NaiveGenerator>::new(NaiveGenerator, grammar, filter),
-                        bincode::Infinite
-                    ).unwrap()
-                }, Strat::Approx(d) => {
-                    bincode::serialize_into(
-                        &mut write::GzEncoder::new(stdout(), Compression::best()),
-                        &CSRepresentation::<String, String, ApproxGenerator>::new(ApproxGenerator(d), grammar, filter),
-                        bincode::Infinite
-                    ).unwrap()
-                }
-            }
+            bincode::serialize_into(
+                &mut write::GzEncoder::new(stdout(), Compression::best()),
+                &CSRepresentation::<_, _>::new(grammar, filter, strategy),
+                bincode::Infinite
+            ).unwrap()
         }
 
         ("parse", Some(params)) => {
@@ -145,45 +126,15 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             };
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
             
-            match strategy {
-                Strat::Keller => {
-                    let csrep: CSRepresentation<String, String, PushDownGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for sentence in word_strings.lines() {
-                        let words: Vec<String> = sentence.split_whitespace().map(|s| s.to_string()).collect();
+            let csrep: CSRepresentation<String, String> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
+            for sentence in word_strings.lines() {
+                let words: Vec<String> = sentence.split_whitespace().map(|s| s.to_string()).collect();
 
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                print!("{}", to_negra(&derivation.into_iter().map(|(k,v)| (k, v.clone())).collect(), 0));
-                            }
-                        }
-                    }
-                }, Strat::Naive => {
-                    let csrep: CSRepresentation<String, String, NaiveGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{:?}", derivation);
-                            }
-                        }
-                    }
-                }, Strat::Approx(_) => {
-                    let csrep: CSRepresentation<String, String, ApproxGenerator> = bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite).unwrap();
-                    for line in word_strings.lines() {
-                        let words: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
-
-                        if params.is_present("debugmode") {
-                            csrep.debug(words.as_slice(), beam);
-                        } else {
-                            for derivation in csrep.generate(words.as_slice(), beam).take(k) {
-                                println!("{:?}", derivation);
-                            }
-                        }
+                if params.is_present("debugmode") {
+                    csrep.debug(words.as_slice(), beam);
+                } else {
+                    for derivation in csrep.generate(words.as_slice(), beam).take(k) {
+                        print!("{}", to_negra(&derivation.into_iter().map(|(k,v)| (k, v.clone())).collect(), 0));
                     }
                 }
             }

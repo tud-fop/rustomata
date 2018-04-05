@@ -1,34 +1,99 @@
-use integeriser::HashIntegeriser;
+use integeriser::{Integeriser, HashIntegeriser};
 use std::hash::Hash;
 use dyck::Bracket;
 use lcfrs::cs_representation::BracketContent;
-use super::FiniteAutomaton;
 use std::rc::Rc;
 use util::agenda::Capacity;
 
-pub mod strategy;
-pub use self::strategy::{GeneratorStrategy, PushDownGenerator, NaiveGenerator, ApproxGenerator};
+use super::super::rule_fragments::fragments;
+use super::super::bracket_fragment::BracketFragment;
+use super::{PushDownAutomaton, FiniteAutomaton};
+use log_domain::LogDomain;
+use pmcfg::PMCFGRule;
 
-/// A `GeneratorAutomaton` with respect to a weighted LCFRS is an automaton
-/// that recognizes bracket words δ ∈ Δ(G).
-pub trait GeneratorAutomaton<T>
-where
-    T: Hash + Clone + Eq
-{
-    /// Size of the automaton (the number of transitions) for debugging purposes.
-    fn size(&self) -> usize;
-    
-    /// Returns a pointer to the internal `Integeriser` that is used to integerize `BracketFragements`.
-    fn get_integeriser(&self) -> Rc<HashIntegeriser<T>>;
+pub enum GeneratorStrategy {
+    Finite,
+    Approx(usize),
+    PushDown
+}
 
-    /// Constructs the intersection of the automaton with an unweighted finite state automaton.
-    fn intersect(&self, other: FiniteAutomaton<T, ()>) -> Self
-    where Self: Sized;
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Generator<T> where T: Clone + Eq + Hash {
+    Finite ( FiniteAutomaton<BracketFragment<T>, LogDomain<f64>> ),
+    PushDown ( PushDownAutomaton<BracketFragment<T>, LogDomain<f64>> )
+}
 
-    /// Returns an `Iterator` that enumerates words recognized by this automaton.
-    /// If `beam` is a `Capacity::Limit`, it uses beam search.
-    fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item=Vec<T>> + 'a>
-    where T: 'a;
+impl<T> Generator<T> where T: Clone + Eq + Hash {
+    fn unboxed_push_down<'a, N, R>(grammar_rules: R, initial: N, integeriser: &Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>) -> PushDownAutomaton<BracketFragment<T>, LogDomain<f64>>
+    where R: IntoIterator<Item=&'a PMCFGRule<N, T, LogDomain<f64>>>,
+          N: Eq + Clone + Hash + 'a,
+          T: 'a
+    {
+        let mut transitions = Vec::new();
+        for rule in grammar_rules {
+            transitions.extend(fragments(&rule).map(|f| f.pds(integeriser)));
+        }
+        
+        PushDownAutomaton::new(transitions, Bracket::Open((initial.clone(), 0)), vec![Bracket::Close((initial, 0))])
+    }
+
+    pub fn push_down<'a, N, R>(grammar_rules: R, initial: N, integeriser: &Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>) -> Self
+    where R: IntoIterator<Item=&'a PMCFGRule<N, T, LogDomain<f64>>>,
+          N: Eq + Clone + Hash + 'a,
+          T: 'a
+    {
+        Generator::PushDown(
+            Generator::unboxed_push_down(grammar_rules, initial, integeriser)
+        )
+    }
+
+    pub fn naive<'a, N, R>(grammar_rules: R, initial: N, integeriser: &Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>) -> Self 
+    where R: IntoIterator<Item=&'a PMCFGRule<N, T, LogDomain<f64>>>,
+          N: Eq + Clone + Hash + 'a,
+          T: 'a
+    {
+        Generator::Finite(
+            Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(0)
+        )
+    }
+
+    pub fn approx<'a, N, R>(grammar_rules: R, initial: N, integeriser: &Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>, d: usize) -> Self 
+    where R: IntoIterator<Item=&'a PMCFGRule<N, T, LogDomain<f64>>>,
+          N: Eq + Clone + Hash + 'a,
+          T: 'a
+    {
+        Generator::Finite(
+            Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(d)
+        )
+    }
+
+    pub fn intersect(&self, other: FiniteAutomaton<BracketFragment<T>, ()>) -> Self {
+        match *self {
+            Generator::Finite(ref fsa) => Generator::Finite(fsa.intersect(&other)),
+            Generator::PushDown(ref pda) => Generator::PushDown(pda.clone().intersect(&other))
+        }
+    }
+
+    pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item=Vec<BracketFragment<T>>> + 'a> where T: 'a{
+        match self {
+            Generator::Finite(fsa) => fsa.generate(beam),
+            Generator::PushDown(pda) => pda.generate(beam)
+        }
+    }
+
+    pub fn get_integeriser(&self) -> Rc<HashIntegeriser<BracketFragment<T>>> {
+        match *self {
+            Generator::Finite(ref fsa) => fsa.get_integeriser(),
+            Generator::PushDown(ref pda) => pda.get_integeriser()
+        }
+    }
+
+    pub fn size(&self) -> usize {
+        match *self {
+            Generator::Finite(ref fsa) => fsa.size(),
+            Generator::PushDown(ref pda) => pda.size()
+        }
+    }
 }
 
 /// The alphabet Δ(G) with respect to a grammar G = (N, Σ, P, S) consisting of three types of brackets:

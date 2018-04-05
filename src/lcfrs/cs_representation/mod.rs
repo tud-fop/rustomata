@@ -48,28 +48,27 @@ where
 /// A CS representation of an LCFRS contains a `GeneratorAutomaton`, a ´FilterAutomaton`,
 /// and a `MultipleDyckLanguage` over the same bracket alphabet.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CSRepresentation<N, T, S>
+pub struct CSRepresentation<N, T>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    S: GeneratorStrategy<T>,
 {
-    generator: S::Generator,
-    rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
+    generator: Generator<T>,
     filter: Filter<T>,
-    checker: MultipleDyckLanguage<BracketContent<T>>
+    checker: MultipleDyckLanguage<BracketContent<T>>,
+    
+    rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>
 }
 
 use self::automata::GeneratorStrategy;
 
-impl<N, T, S> CSRepresentation<N, T, S>
+impl<N, T> CSRepresentation<N, T>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
-    S: GeneratorStrategy<T>,
 {
     /// Instantiates a CS representation for an `LCFRS` and `GeneratorStrategy`.
-    pub fn new<M>(strategy: S, grammar: M, fstrat: FilterStrategy) -> Self
+    pub fn new<M>(grammar: M, fstrat: FilterStrategy, gstrat: GeneratorStrategy) -> Self
     where
         M: Into<Lcfrs<N, T, LogDomain<f64>>>,
     {
@@ -80,7 +79,13 @@ where
         }
 
         let checker = mdl::mdl(irules.values(), &irules);
-        let gen = strategy.create_generator_automaton(irules.values(), initial, &irules);
+        
+        let gen = match gstrat {
+            GeneratorStrategy::Finite => Generator::naive(irules.values(), initial, &irules),
+            GeneratorStrategy::Approx(d) => Generator::approx(irules.values(), initial, &irules, d),
+            GeneratorStrategy::PushDown => Generator::push_down(irules.values(), initial, &irules)
+        };
+        
         let fil = match fstrat {
             FilterStrategy::Naive => Filter::naive(irules.values().iter(), &irules, &gen),
             FilterStrategy::Inside => Filter::inside(irules.values().iter(), &irules, &gen)
@@ -226,7 +231,7 @@ mod test {
     use super::CSRepresentation;
     use super::LogDomain;
     use super::Lcfrs;
-    use super::automata::PushDownGenerator;
+    use super::GeneratorStrategy;
 
     #[test]
     fn csrep() {
@@ -239,10 +244,10 @@ mod test {
                 ].into_iter().collect();
 
         let cs =
-            CSRepresentation::<&str, char, PushDownGenerator>::new(
-                PushDownGenerator,
+            CSRepresentation::<&str, char>::new(
                 grammar.clone(),
-                FilterStrategy::Naive
+                FilterStrategy::Naive,
+                GeneratorStrategy::Finite
             );
         assert_eq!(cs.generate(&['A'], Capacity::Infinite).next(), Some(d1));
         assert_eq!(

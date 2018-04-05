@@ -3,7 +3,7 @@ use pmcfg::PMCFGRule;
 use std::hash::Hash;
 use lcfrs::cs_representation::bracket_fragment::BracketFragment;
 
-use super::{FiniteAutomaton, GeneratorAutomaton, StateInstruction};
+use super::{FiniteAutomaton, Generator, StateInstruction};
 
 use std::collections::{HashMap, HashSet, BTreeSet};
 use std::rc::Rc;
@@ -38,7 +38,7 @@ pub enum Filter<T: Eq + Hash> {
 }
 
 impl<'a, T> Filter<T> where T: Hash + Eq + Clone + 'a {
-    pub fn naive<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &GeneratorAutomaton<BracketFragment<T>>) -> Self 
+    pub fn naive<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T>) -> Self 
     where N: Hash + Eq + Clone + 'a,
           W: Eq + Clone + 'a,
           R: Iterator<Item=&'a PMCFGRule<N, T, W>>,
@@ -68,7 +68,7 @@ impl<'a, T> Filter<T> where T: Hash + Eq + Clone + 'a {
         }
     }
 
-    pub fn inside<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &GeneratorAutomaton<BracketFragment<T>>) -> Self 
+    pub fn inside<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T>) -> Self 
     where N: Hash + Eq + Clone + 'a,
           W: Eq + Clone + 'a,
           R: Iterator<Item=&'a PMCFGRule<N, T, W>>,
@@ -119,7 +119,7 @@ impl<'a, T> Filter<T> where T: Hash + Eq + Clone + 'a {
     pub fn fsa(
         &self,
         word: &[T],
-        reference_automaton: &GeneratorAutomaton<BracketFragment<T>>,
+        reference_automaton: &Generator<T>,
     ) -> FiniteAutomaton<BracketFragment<T>, ()>
     {
         match *self {

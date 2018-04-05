@@ -7,4 +7,4 @@ pub use self::push_down_automaton::{PushDownAutomaton, PushDownInstruction};
 pub use self::finite_automaton::{FiniteAutomaton, StateInstruction};
 
 pub use self::filter_automaton::{Filter, FilterStrategy};
-pub use self::generator_automaton::{GeneratorAutomaton, PushDownGenerator, NaiveGenerator, GeneratorStrategy, Delta, ApproxGenerator};
+pub use self::generator_automaton::{Generator, GeneratorStrategy, Delta};
