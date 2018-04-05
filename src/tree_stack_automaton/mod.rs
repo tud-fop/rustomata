@@ -186,8 +186,8 @@ impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
         }
     }
 
-    fn terminal_to_int(&self, t: &T) -> usize {
-        self.t_integeriser.find_key(t).unwrap()
+    fn terminal_to_int(&self, t: &T) -> Option<usize> {
+        self.t_integeriser.find_key(t)
     }
 
     fn extract_key(c: &Configuration<TreeStack<usize>, usize, W>) -> &usize {

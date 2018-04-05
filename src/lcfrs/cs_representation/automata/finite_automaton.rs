@@ -437,8 +437,8 @@ where
         )
     }
 
-    fn terminal_to_int(&self, t: &T) -> usize {
-        self.labels.find_key(t).unwrap()
+    fn terminal_to_int(&self, t: &T) -> Option<usize> {
+        self.labels.find_key(t)
     }
 
     fn extract_key(

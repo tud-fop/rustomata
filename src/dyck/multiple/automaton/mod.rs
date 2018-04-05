@@ -120,8 +120,8 @@ where
         i.clone()
     }
 
-    fn terminal_to_int(&self, t: &Bracket<T>) -> Self::TInt {
-        t.clone()
+    fn terminal_to_int(&self, t: &Bracket<T>) -> Option<Self::TInt> {
+        Some(t.clone())
     }
 
     fn extract_key(_: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> &Self::Key {

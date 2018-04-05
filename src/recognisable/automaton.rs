@@ -1,5 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::Hash;
+use std::iter::empty;
 use std::ops::MulAssign;
 use std::rc::Rc;
 
@@ -61,7 +62,7 @@ pub trait Automaton<T, W>
 
     /// Translates a terminal symbol to its internal representation.
     fn terminal_to_int(&self, t: &T)
-                       -> Self::TInt;
+                       -> Option<Self::TInt>;
 
 
     /// Returns the `Self::Key` for the given `Configuration` (in its internal representation).
@@ -153,26 +154,30 @@ pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
           A::TInt: Clone + Eq + Ord,
           W: Copy + MulAssign + One + Ord + 'a,
 {
-    let i = Configuration {
-        word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
-        storage: a.initial_int(),
-        weight: W::one(),
-    };
+    if let Some(the_word) = word.iter().map(|t| a.terminal_to_int(t)).collect() {
+        let i = Configuration {
+            word: the_word,
+            storage: a.initial_int(),
+            weight: W::one(),
+        };
 
-    let mut init_heap = BinaryHeap::new();
-    init_heap.enqueue((i, Pushdown::new()));
+        let mut init_heap = BinaryHeap::new();
+        init_heap.enqueue((i, Pushdown::new()));
 
-    Box::new(
-        Recogniser {
-            agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key(c)),
-            filtered_rules: a.transition_map(),
-            apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(move |c| a.is_terminal(c)),
-            item_map: Box::new(move |i| a.item_map(&i)),
-            already_found: None
-        }
-    )
+        Box::new(
+            Recogniser {
+                agenda: init_heap,
+                configuration_characteristic: Box::new(|c| A::extract_key(c)),
+                filtered_rules: a.transition_map(),
+                apply: Box::new(|c, r| r.apply(c)),
+                accepting: Box::new(move |c| a.is_terminal(c)),
+                item_map: Box::new(move |i| a.item_map(&i)),
+                already_found: None
+            }
+        )
+    } else {
+        Box::new(empty())
+    }
 }
 
 
@@ -188,32 +193,36 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
           A::TInt: Clone + Eq + Ord,
           W: Copy + MulAssign + One + Ord + 'a,
 {
-    let i = Configuration {
-        word: word.iter().map(|t| a.terminal_to_int(t)).collect(),
-        storage: a.initial_int(),
-        weight: W::one(),
-    };
-    let mut init_heap = PriorityQueue::new(
-        Capacity::Limit(beam), 
+    if let Some(the_word) = word.iter().map(|t| a.terminal_to_int(t)).collect() {
+        let i = Configuration {
+            word: the_word,
+            storage: a.initial_int(),
+            weight: W::one(),
+        };
+        let mut init_heap = PriorityQueue::new(
+            Capacity::Limit(beam), 
+            Box::new(
+                | cp: &(Configuration<<A::IInt as Instruction>::Storage, A::TInt, W>, Pushdown<Transition<A::IInt, A::TInt, W>>) | { 
+                    let &Configuration{ ref weight, .. } = &cp.0;
+                    *weight
+                }
+            )
+        );
+        init_heap.enqueue((i, Pushdown::new()));
+
         Box::new(
-            | cp: &(Configuration<<A::IInt as Instruction>::Storage, A::TInt, W>, Pushdown<Transition<A::IInt, A::TInt, W>>) | { 
-                let &Configuration{ ref weight, .. } = &cp.0;
-                *weight
+            Recogniser {
+                agenda: init_heap,
+                configuration_characteristic: Box::new(|c| A::extract_key(c)),
+                filtered_rules: a.transition_map(),
+                apply: Box::new(|c, r| r.apply(c)),
+                accepting: Box::new(move |c| a.is_terminal(c)),
+                item_map: Box::new(move |i| a.item_map(&i)),
+                already_found: None
             }
         )
-    );
-    init_heap.enqueue((i, Pushdown::new()));
-
-    Box::new(
-        Recogniser {
-            agenda: init_heap,
-            configuration_characteristic: Box::new(|c| A::extract_key(c)),
-            filtered_rules: a.transition_map(),
-            apply: Box::new(|c, r| r.apply(c)),
-            accepting: Box::new(move |c| a.is_terminal(c)),
-            item_map: Box::new(move |i| a.item_map(&i)),
-            already_found: None
-        }
-    )
+    } else {
+        Box::new(empty())
+    }
 }
 

@@ -241,8 +241,8 @@ impl<A, T, W> Automaton<T, W> for PushDownAutomaton<A, T, W>
         }
     }
 
-    fn terminal_to_int(&self, t: &T) -> usize {
-        self.t_integeriser.find_key(t).unwrap()
+    fn terminal_to_int(&self, t: &T) -> Option<usize> {
+        self.t_integeriser.find_key(t)
     }
 
     fn extract_key(c: &Configuration<PushDown<usize>, usize, W>) -> &usize {
