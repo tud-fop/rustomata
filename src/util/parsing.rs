@@ -2,10 +2,11 @@ use nom::{IResult, anychar, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
+
 /// Parses a token (i.e. a terminal symbol or a non-terminal symbol).
 /// A *token* can be of one of the following two forms:
 ///
-/// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`.
+/// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`, `'%'`.
 /// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
 pub fn parse_token<A>(input: &[u8])
         -> IResult<&[u8], A>
@@ -17,11 +18,11 @@ pub fn parse_token<A>(input: &[u8])
         map_res!(
             alt!(
                 delimited!(
-                    char!('\"'),
-                    escaped!(is_not!("\\\""), '\\', anychar),
-                    char!('\"')
+                    tag!("\""),
+                    escaped!(is_not!("\"\\"), '\\', one_of!("\\\"")),
+                    tag!("\"")
                 ) |
-                is_not!(" \"-→,;)]")
+                is_not!(" \\\"-→,;)]%#")
             ),
             from_utf8
         )
@@ -58,6 +59,25 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
         (result)
     )
 }
+
+
+/// Parses a string of the form `initials: ⟨token⟩` as a the initial symbol of type `I`.
+pub fn parse_initial<I>(input: &[u8])
+                         -> IResult<&[u8], I>
+where I: FromStr,
+      I::Err: Debug,
+{
+    do_parse!(
+        input,
+        tag!("initial:") >>
+            take_while!(is_space) >>
+            result: parse_token >>
+            take_while!(|_| true) >>
+            (result)
+    )
+}
+
+
 /// Parses a string of the form `initials: [...]` as a vector of initial symbols of type `I`.
 pub fn parse_initials<I>(input: &[u8])
         -> IResult<&[u8], Vec<I>>
@@ -72,6 +92,18 @@ pub fn parse_initials<I>(input: &[u8])
             (result)
     )
 }
+
+
+/// Consumes any string that begins with the character `%`.
+pub fn parse_comment(input: &[u8]) -> IResult<&[u8], ()> {
+    do_parse!(
+        input,
+        tag!("%") >>
+            take_while!(|_| true) >>
+            (())
+    )
+}
+
 
 /// Parses a string as a grammar of initial symbols of type `I` and rules of type `R`.
 /// The syntax of the initials must comply with `parse_initials`; the syntax of the rules is solely
@@ -105,9 +137,41 @@ pub fn initial_rule_grammar_from_str<I, R>(s: &str)
     Ok((initial, rules))
 }
 
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_comment_legal_input() {
+        let legal_inputs = vec![
+            "% some comment",
+            "%% another comment",
+        ];
+
+        for legal_input in legal_inputs {
+            assert_eq!(
+                ("".as_bytes(), ()),
+                parse_comment(legal_input.as_bytes()).unwrap(),
+            )
+        }
+    }
+
+    #[test]
+    fn test_parse_comment_illegal_input() {
+        let illegal_inputs = vec![
+            " % not a comment",
+            "something else % not a comment",
+        ];
+
+        for illegal_input in illegal_inputs {
+            match parse_comment(illegal_input.as_bytes()) {
+                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Error(_) => (),
+            }
+        }
+    }
 
     #[test]
     fn test_parse_token_legal_input() {
@@ -228,6 +292,22 @@ pub mod tests {
                     panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
                 IResult::Incomplete(_) => (),
             }
+        }
+    }
+
+    #[test]
+    fn test_parse_initial_legal_input() {
+        let legal_inputs = vec![
+            ("initial: xyz % some comment", "", String::from("xyz")),
+            ("initial: \"% xy\"", "", String::from("% xy")),
+            ("initial:  xyz something else", "", String::from("xyz")),
+        ];
+
+        for (legal_input, control_rest, control_parsed) in legal_inputs {
+            assert_eq!(
+                (control_rest.as_bytes(), control_parsed),
+                parse_initial(legal_input.as_bytes()).unwrap()
+            );
         }
     }
 

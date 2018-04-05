@@ -1,91 +1,103 @@
+use nom::{IResult, is_space};
+use num_traits::One;
+use std::fmt::Debug;
 use std::vec::Vec;
-use std::str::FromStr;
+use std::str::{FromStr, from_utf8};
 
 use recognisable::{Instruction, Transition};
+use util::parsing::{parse_comment, parse_token, parse_vec};
 
-/// Each item must be enclosed in quotation marks (i.e. `"⟨item⟩"`), `"` inside the `⟨item⟩` as well as `\` need to be escaped with `\`.
-fn vec_from_str<T: FromStr>(s: &str) -> Result<Vec<T>, String> {
-    let mut result: Vec<T> = Vec::new();
-    let mut buffer: String = String::new();
-    let mut is_escaped: bool = false;
-    let mut is_inside: bool = false;
 
-    for c in s.chars() {
-        match (c, is_inside, is_escaped) {
-            (']' , false, _    )  // read closing bracket in outer mode
-                => break,
-            ('"' , false, _    )  // read '"' in outer mode
-                => {
-                    is_inside = true;
-                    is_escaped = false;
-                },
-            ('"' , true , true )  // read escaped '"' in inner mode
-                => {
-                    buffer.push('"');
-                    is_escaped = false;
-                },
-            ('"' , true , false)  // read unescaped '"' in inner mode
-                => {
-                    result.push(buffer.parse().map_err(|_| format!("Substring {} could not be parsed.", buffer))?);
-                    is_inside = false;
-                    buffer.clear();
-                }
-            ('\\', true , false)  // read escape char in inner mode
-                => is_escaped = true,
-            ('\\', true , true )  // read escaped '\' in inner mode
-                => {
-                    buffer.push('\\');
-                    is_escaped = false;
-                },
-            (_   , true , false)  // read a normal character in inner mode
-                => buffer.push(c),
-            (_   , true , true )  // read escaped character in inner mode
-                => return Err(format!("Character {} should not be escaped.", c)),
-            _
-                => ()
-        }
-        // println!("character: {},  buffer: {},  is_inside: {},  is_escaped: {}", c, buffer, is_inside, is_escaped);
-    }
-
-    Ok(result)
-}
-
-impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I, T, W> {
+impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I, T, W>
+    where I: FromStr,
+    I::Err: Debug,
+    T: FromStr,
+    T::Err: Debug,
+    W: FromStr + One,
+    W::Err: Debug,
+{
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.starts_with("Transition ") {
-            let word: Vec<T> = match (s.find('['), s.rfind(']')) {
-                (Some(bl), Some(br)) => vec_from_str(&s[bl..br + 1]),
-                _ => return Err("Substring \"[⟨word⟩]\" not found.".to_string()),
-            }?;
-
-            let weight: W = match s.find('#') {
-                Some(rl) => {
-                    s[rl + 1..]
-                        .trim()
-                        .parse()
-                        .map_err(|_| format!("Substring {} is no weight.", &s[rl + 1..]))
-                }
-                _ => return Err("Substring \"#⟨weight⟩\" not found.".to_string()),
-            }?;
-
-            let instruction: I = match (s.find('('), s.rfind(')')) {
-                (Some(pl), Some(pr)) => {
-                    s[pl + 1..pr]
-                        .parse()
-                        .map_err(|_| format!("Substring {} is not an instruction.", &s[pl + 1..pr]))
-                }
-                _ => Err("Substring \"(⟨instr⟩)\" not found.".to_string()),
-            }?;
-
-            Ok(Transition {
-                word,
-                weight,
-                instruction,
-            })
-        } else {
-            Err("Not a transition.".to_string())
+        match parse_transition(s.as_bytes()) {
+            IResult::Done(_, result) => Ok(result),
+            _                        => Err(format!("Could not parse: {}", s)),
         }
+    }
+}
+
+fn parse_transition<I, T, W>(input: &[u8]) -> IResult<&[u8], Transition<I, T, W>>
+    where I: FromStr,
+          I::Err: Debug,
+          T: FromStr,
+          T::Err: Debug,
+          W: FromStr + One,
+          W::Err: Debug,
+{
+    do_parse!(
+        input,
+        tag!("Transition") >>
+            take_while!(is_space) >>
+            word: parse_word >>
+            take_while!(is_space) >>
+            instruction: map_res!(delimited!(tag!("("), take_until!(")"), tag!(")")), from_utf8) >>
+            take_while!(is_space) >>
+            weight_o: opt!(
+                complete!(
+                    do_parse!(
+                        tag!("#") >>
+                            take_while!(is_space) >>
+                            weight_s: map_res!(is_not!(" "), from_utf8) >>
+                            (weight_s.parse().unwrap())
+                    )
+                )
+            ) >>
+            take_while!(is_space) >>
+            opt!(complete!(parse_comment)) >>
+            (Transition {
+                word: word,
+                weight: weight_o.unwrap_or(W::one()),
+                instruction: instruction.parse().unwrap(),
+            })
+    )
+}
+
+fn parse_word<T>(input: &[u8]) -> IResult<&[u8], Vec<T>>
+    where T: FromStr,
+          T::Err: Debug,
+{
+    parse_vec(input, parse_token, "[", "]", ",")
+}
+
+#[test]
+fn test_parse_word() {
+    let legal_inputs = vec![
+        ("[]", "", vec![]),
+        ("[a, b, c]", "", vec![String::from("a"), String::from("b"), String::from("c")]),
+        ("[xyz, ab]", "", vec![String::from("xyz"), String::from("ab")]),
+        ("[\"xyz\", \"ab\", cd] bla", " bla", vec![String::from("xyz"), String::from("ab"), String::from("cd")]),
+    ];
+
+    for (legal_input, control_rest, control_parsed) in legal_inputs {
+        assert_eq!(
+            (control_rest.as_bytes(), control_parsed),
+            parse_word(legal_input.as_bytes()).unwrap()
+        );
+    }
+}
+
+#[test]
+fn test_parse_transitions() {
+    let legal_inputs = vec![
+        ("Transition [1, 2, 3] (1) # 2 % blub", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 2usize, instruction: 1usize }),
+        ("Transition [1, 2, 3] (1) % blub", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 1usize, instruction: 1usize }),
+        ("Transition [1, 2, 3] (1)", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 1usize, instruction: 1usize }),
+    ];
+
+    for (legal_input, control_rest, control_parsed) in legal_inputs {
+        assert_eq!(
+            IResult::Done(control_rest.as_bytes(), control_parsed),
+            parse_transition(legal_input.as_bytes())
+        );
     }
 }

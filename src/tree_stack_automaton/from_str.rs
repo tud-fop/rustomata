@@ -1,3 +1,6 @@
+use nom::IResult;
+use num_traits::One;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
@@ -5,40 +8,40 @@ use std::num::ParseIntError;
 
 use recognisable::Transition;
 use tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use util::parsing::parse_initial;
 
 impl<A, T, W> FromStr for TreeStackAutomaton<A, T, W>
     where A: Clone + FromStr + Hash + Ord + PartialEq,
+          A::Err: Debug,
           T: Clone + Eq + FromStr + Hash + Ord,
-          W: Clone + Eq + FromStr + Ord,
+          T::Err: Debug,
+          W: Clone + Eq + FromStr + One + Ord,
+          W::Err: Debug,
 {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let initial: A;
+        let mut initial = None;
         let mut transitions: Vec<Transition<TreeStackInstruction<A>, T, W>>
                 = Vec::new();
 
         let mut it = s.lines();
 
-        match it.next() {
-            Some(l) if l.starts_with("initial: ") => {
-                initial = l[8..]
-                    .trim()
-                    .parse()
-                    .map_err(|_| format!("Substring {} is not a storage symbol.", l[8..].trim()))?
-            }
-            _ => return Err("No initial state supplied on line 1.".to_string()),
-        }
-
-        for l in s.lines() {
-            if l.starts_with("Transition ") {
-                transitions.push(l.trim()
-                    .parse()
-                    .map_err(|_| format!("Substring {} is not a transition.", l.trim()))?);
+        while let Some(l) = it.next() {
+            if l.trim_left().starts_with("initial:") {
+                match parse_initial(l.trim_left().as_bytes()) {
+                    IResult::Done(_, result) => { initial = Some(result); },
+                    _                        => return Err(format!("Malformed initial declaration: {}", l)),
+                }
+            } else if !l.is_empty() && !l.trim_left().starts_with("%") {
+                transitions.push(l.trim().parse()?);
             }
         }
 
-        Ok(TreeStackAutomaton::new(transitions, TreeStack::new(initial)))
+        match initial {
+            Some(init) => Ok(TreeStackAutomaton::new(transitions, TreeStack::new(init))),
+            None       => Err(format!("No initial configuration found.")),
+        }
     }
 }
 
@@ -95,14 +98,14 @@ pub mod tests {
         let automaton_string = "% leading comment\n\
                                 initial: 18\n\n\
                                 Transition [] (Push 0 1 2) # 1";
-        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+        let _: TreeStackAutomaton<usize, char, usize> = automaton_string.parse().unwrap();
     }
 
     #[test]
     fn test_tree_stack_automaton_from_str_end_of_line_comment() {
         let automaton_string = "initial: 18 % end-of-line comment 1\n\n\
                                 Transition [] (Push 0 1 2) # 1 % end-of-line comment 2";
-        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+        let _: TreeStackAutomaton<usize, char, usize> = automaton_string.parse().unwrap();
     }
 
     #[test]
@@ -110,6 +113,6 @@ pub mod tests {
         let automaton_string = "initial: 18\n\n\
                                 Transition [] (Push 0 1 2) # 1\n\
                                 % trailing comment";
-        let _: TreeStackAutomaton<char, char, usize> = automaton_string.parse().unwrap();
+        let _: TreeStackAutomaton<usize, char, usize> = automaton_string.parse().unwrap();
     }
 }
