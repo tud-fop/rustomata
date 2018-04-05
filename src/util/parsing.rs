@@ -1,4 +1,4 @@
-use nom::{IResult, anychar, is_space};
+use nom::{IResult, is_space};
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
@@ -180,6 +180,7 @@ pub mod tests {
             ("abc,xyz", ",xyz", String::from("abc")),
             ("\"abc\"xyz", "xyz", String::from("abc")),
             ("\"a\\\\b\\\"c\"xyz", "xyz", String::from("a\\\\b\\\"c")),
+            ("\"\"\"", "\"", String::from("")),
         ];
 
         for (legal_input, control_rest, control_parsed) in legal_inputs {
@@ -201,15 +202,14 @@ pub mod tests {
             ")xyz",
             "]xyz",
             "\"\\\"",
-            "\"\"\"",
             " \"a\"",
         ];
 
         for illegal_input in illegal_inputs {
             match parse_token::<String>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                IResult::Done(_, _) =>
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input),
-                IResult::Error(_) => (),
+                IResult::Error(_) | IResult::Incomplete(_) => (),
             }
         }
 
@@ -220,9 +220,9 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_token::<u8>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Incomplete(_) =>
+                IResult::Done(_, _) =>
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input),
-                IResult::Error(_) => (),
+                IResult::Error(_) | IResult::Incomplete(_) => (),
             }
         }
     }
