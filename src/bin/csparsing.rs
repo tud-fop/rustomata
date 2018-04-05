@@ -77,25 +77,25 @@ pub fn get_sub_command(name: &str) -> App {
 }
 
 pub fn handle_sub_matches(submatches: &ArgMatches) {
-    let strategy = {
-        if submatches.is_present("naive") {
-            GeneratorStrategy::Finite
-        } else if let Some(depth) = submatches.value_of("approx") {
-                GeneratorStrategy::Approx(depth.parse().unwrap())
-        } else {
-            GeneratorStrategy::PushDown
-        }
-    };
-    let filter = {
-        if submatches.is_present("naive-filter")  {
-            FilterStrategy::Naive
-        } else {
-            FilterStrategy::Inside
-        }
-    };
-
     match submatches.subcommand() {
-        ("extract", _) => {
+        ("extract", Some(susbsubmatches)) => {
+            let strategy = {
+                if susbsubmatches.is_present("naive") {
+                    GeneratorStrategy::Finite
+                } else if let Some(depth) = susbsubmatches.value_of("approx") {
+                    GeneratorStrategy::Approx(depth.parse().unwrap())
+                } else {
+                    GeneratorStrategy::PushDown
+                }
+            };
+            let filter = {
+                if susbsubmatches.is_present("naive-filter")  {
+                    FilterStrategy::Naive
+                } else {
+                    FilterStrategy::Inside
+                }
+            };
+            
             let mut grammar_string = String::new();
             stdin().read_to_string(&mut grammar_string).expect(
                 "Could not read from stdin. Be sure to provide the gramar file as input.",

@@ -86,18 +86,18 @@ where
     }
 }
 
-impl<'a, I, W, F> Search<PriorityQueue<'a, W, I>, I, F>
+impl<I, W, F> Search<PriorityQueue<W, I>, I, F>
 where
-    I: Clone + Ord,
+    I: Clone + Ord + Weighted<Weight=W>,
     W: Ord + Clone,
     F: FnMut(&I) -> Vec<I>,
 {
     /// Initializes a weighted `Search` using a `PriorityQueue`.
-    pub fn weighted<C>(init: C, successors: F, weight: Box<Fn(&I) -> W + 'a>) -> Self
+    pub fn weighted<C>(init: C, successors: F) -> Self
     where
         C: IntoIterator<Item = I>,
     {
-        let mut agenda = PriorityQueue::new(Capacity::Infinite, weight);
+        let mut agenda = PriorityQueue::new(Capacity::Infinite);
 
         for item in init {
             agenda.enqueue(item);
@@ -169,6 +169,7 @@ where
 }
 
 use std::cmp::Ordering;
+use util::agenda::Weighted;
 
 /// A tuple consisting of an item of type `I` and a weight of type `W`.
 /// `Eq` and `Ord` impls only consider the item.
@@ -201,5 +202,13 @@ where
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
+    }
+}
+impl<I, W> Weighted for WeightedSearchItem<I, W> where W: Copy {
+    type Weight = W;
+    fn get_weight(&self) -> W {
+        match *self {
+            WeightedSearchItem(_, ref w) => *w
+        }
     }
 }

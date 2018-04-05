@@ -184,6 +184,7 @@ where
         T: 'a,
     {
         let heuristics = self.heuristics();
+
         let FiniteAutomaton {
             initial,
             finals,
@@ -192,7 +193,12 @@ where
         } = self;
 
         let initial_agenda = if !finals.is_empty() {
-            vec![(initial, Vec::new(), LogDomain::one())]
+            vec![
+                WeightedSearchItem(
+                    (initial, Vec::new(), LogDomain::one()),
+                    (*heuristics.get(&initial).unwrap()).pow(-1.0)
+                )
+            ]
         } else {
             Vec::new()
         };
@@ -200,21 +206,27 @@ where
         Box::new(
             Search::weighted(
                 initial_agenda,
-                move |&(q, ref word, weight)| {
+                move |&WeightedSearchItem((q, ref word, weight), _)| {
                     let mut successors = Vec::new();
+                    
                     for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
                         let mut word_: Vec<usize> = word.clone();
                         word_.push(label.clone());
-                        successors.push((to, word_, weight * w))
+                        
+                        let successorweight = weight * w;
+                        let priority = *heuristics.get(&to).unwrap_or(&LogDomain::zero()) * successorweight;
+                        
+                        if priority > LogDomain::zero() {
+                            successors.push(
+                                WeightedSearchItem( (to, word_, successorweight), priority.pow(-1.0) )
+                            )
+                        }
                     }
                     successors
                 },
-                Box::new(move |&(ref q, _, w)| {
-                    (*heuristics.get(q).unwrap_or(&LogDomain::zero()) * w).pow(-1.0)
-                }),
             ).beam(beamwidth)
-                .filter(move |&(ref q, _, _)| finals.contains(q))
-                .map(move |(_, wi, _)| {
+                .filter(move |&WeightedSearchItem((ref q, _, _), _)| finals.contains(q))
+                .map(move |WeightedSearchItem((_, wi, _), _)| {
                     wi.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
@@ -242,15 +254,14 @@ where
                 if let Some(arcs_to) = bwtrans.get(to) {
                     arcs_to
                         .iter()
-                        .map(|&(from, w_)| WeightedSearchItem(from, w_ * w))
+                        .map(|&(from, w_)| WeightedSearchItem(from, w * w_.pow(-1.0)))
                         .collect()
                 } else {
                     Vec::new()
                 }
-            },
-            Box::new(|&WeightedSearchItem(_, w)| w.pow(-1.0)),
+            }
         ).uniques()
-            .map(|WeightedSearchItem(q, w)| (q, w))
+            .map(|WeightedSearchItem(q, w)| (q, w.pow(-1.0)))
             .collect()
     }
 

@@ -200,13 +200,7 @@ pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
             weight: W::one(),
         };
         let mut init_heap = PriorityQueue::new(
-            Capacity::Limit(beam), 
-            Box::new(
-                | cp: &(Configuration<<A::IInt as Instruction>::Storage, A::TInt, W>, Pushdown<Transition<A::IInt, A::TInt, W>>) | { 
-                    let &Configuration{ ref weight, .. } = &cp.0;
-                    *weight
-                }
-            )
+            Capacity::Limit(beam)
         );
         init_heap.enqueue((i, Pushdown::new()));
 

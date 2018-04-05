@@ -339,7 +339,12 @@ where
         // empty agenda if there are no final states
         let initial_agenda =
             if !finals.is_empty() {
-                vec![(LogDomain::one(), initial, vec![], vec![])]
+                vec![
+                    WeightedSearchItem(
+                        (LogDomain::one(), initial, vec![], vec![]),
+                        heuristics.get(&initial).unwrap().1.pow(-1.0)
+                    )
+                ]
             } else {
                 Vec::new()
             };
@@ -348,41 +353,48 @@ where
         Box::new(
             Search::weighted(
                 initial_agenda,
-                move |&(weight_, q, ref word, ref pd)| {
+                
+                move |&WeightedSearchItem((weight_, q, ref word, ref pd), _)| {
                     let mut results = Vec::new();
+                    
                     if let Some(arcs_from) = arcs.get(q) {
                         for (label, &(to, weight, ref op)) in arcs_from {
                             if let Some(pd_) = op.apply(pd) {
                                 let mut word_ = word.clone();
                                 word_.push(*label);
-                                results.push((weight * weight_, to, word_, pd_));
+
+                                let successorweight = weight * weight_;
+                                let priority = pd_.iter()
+                                          .map(|pds| {
+                                                heuristics
+                                                    .get(&to)
+                                                    .and_then(|&(ref m, _)| m.get(pds).cloned())
+                                                    .unwrap_or_else(LogDomain::zero)
+                                            })
+                                          .min()
+                                          .unwrap_or(
+                                                heuristics
+                                                    .get(&to)
+                                                    .map(|&(_, w)| w)
+                                                    .unwrap_or_else(LogDomain::zero),
+                                          ) * successorweight;
+
+                                if priority > LogDomain::zero() {
+                                    results.push(
+                                        WeightedSearchItem( (successorweight, to, word_, pd_), priority.pow(-1.0) )
+                                    );
+                                }
                             }
                         }
                     }
+                    
                     results
-                },
-                Box::new(move |&(weight, ref q, _, ref pd)| {
-                    let h = pd.iter()
-                        .map(|pds| {
-                            heuristics
-                                .get(q)
-                                .and_then(|&(ref m, _)| m.get(pds).cloned())
-                                .unwrap_or_else(LogDomain::zero)
-                        })
-                        .min()
-                        .unwrap_or(
-                            heuristics
-                                .get(q)
-                                .map(|&(_, w)| w)
-                                .unwrap_or_else(LogDomain::zero),
-                        );
-                    (h * weight).pow(-1.0)
-                }),
+                }
             ).beam(beamwidth)
-                .filter(move |&(_, ref q, _, ref pd)| {
+                .filter(move |&WeightedSearchItem((_, ref q, _, ref pd), _)| {
                     finals.contains(q) && pd.is_empty()
                 })
-                .map(move |(_, _, word, _)| {
+                .map(move |WeightedSearchItem((_, _, word, _), _)| {
                     word.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
@@ -421,16 +433,15 @@ where
                         }
                         _ => (),
                     }
-                    succ.push(WeightedSearchItem((from, removeables_), w * weight));
+                    succ.push(WeightedSearchItem((from, removeables_), w / weight));
                 }
                 succ
-            },
-            Box::new(|&WeightedSearchItem(_, w)| w.pow(-1.0)),
+            }
         ).uniques()
         {
-            let map = heuristics.entry(q).or_insert((IntMap::default(), w));
+            let map = heuristics.entry(q).or_insert((IntMap::default(), w.pow(-1.0)));
             for rem in removeables {
-                map.0.entry(rem).or_insert(w);
+                map.0.entry(rem).or_insert(w.pow(-1.0));
             }
         }
         heuristics

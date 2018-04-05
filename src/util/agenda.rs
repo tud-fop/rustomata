@@ -24,15 +24,15 @@ pub trait Weighted {
 }
 
 // #[derive(Debug, PartialEq, Eq)]
-pub struct PriorityQueue<'a, P, I> {
+pub struct PriorityQueue<P, I> where I: Weighted<Weight=P> {
     data: BTreeMap<P, Vec<I>>, // The values should always be non-empty.
     capacity: Capacity,
     size: usize,
     last_key: Option<P>, // largest key w.r.t. Ord
-    pub priority: Box<Fn(&I) -> P + 'a>,
+    // pub priority: Box<Fn(&I) -> P + 'a>,
 }
 
-impl<'a, P, I> PriorityQueue<'a, P, I> {
+impl<P, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
     pub fn size(&self) -> usize {
         self.size
     }
@@ -46,11 +46,13 @@ impl<'a, P, I> PriorityQueue<'a, P, I> {
     }
 }
 
-impl<'a, I, P: Ord + Clone> Agenda for PriorityQueue<'a, P, I> {
+impl<I, P: Ord + Clone> Agenda for PriorityQueue<P, I>
+where I: Weighted<Weight=P>
+{
     type Item = I;
 
     fn enqueue(&mut self, item: I) -> Option<I> {
-        let priority = (self.priority)(&item);
+        let priority = item.get_weight();
         if Capacity::Limit(self.size) < self.capacity {
             self.enqueue_unchecked(priority, item);
             None
@@ -98,20 +100,19 @@ impl<'a, I, P: Ord + Clone> Agenda for PriorityQueue<'a, P, I> {
     }
 }
 
-impl<'a, P: Ord, I> PriorityQueue<'a, P, I> {
-    pub fn new(capacity: Capacity, priority: Box<Fn(&I) -> P + 'a>) -> PriorityQueue<P, I> {
+impl<P: Ord, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
+    pub fn new(capacity: Capacity) -> PriorityQueue<P, I> {
         assert!(capacity > Capacity::Limit(0));
         PriorityQueue {
             data: BTreeMap::new(),
             capacity,
             size: 0,
-            last_key: None,
-            priority
+            last_key: None
         }
     }
 }
 
-impl<'a, P: Ord + Clone, I> PriorityQueue<'a, P, I> {
+impl<P: Ord + Clone, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
     pub fn set_capacity(&mut self, capacity: usize) -> Vec<I> {
         self.capacity = Capacity::Limit(capacity);
         let mut res = Vec::new();
@@ -206,49 +207,60 @@ impl<I> Agenda for Vec<I> {
 
 #[test]
 fn test_bounded_priority_queue() {
-    let mut q = PriorityQueue::new(Capacity::Limit(5), Box::new(|c| *c as u8));
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+    struct Item(char);
+    impl Weighted for Item {
+        type Weight = char;
+        fn get_weight(&self) -> char {
+            match *self {
+                Item(c) => c
+            }
+        }
+    }
+
+    let mut q = PriorityQueue::new(Capacity::Limit(5));
 
     assert_eq!(q.size(), 0);
     assert!(q.is_empty());
 
-    assert_eq!(q.enqueue('i'), None);
-    assert_eq!(q.peek_next(), Some(&'i'));
+    assert_eq!(q.enqueue(Item('i')), None);
+    assert_eq!(q.peek_next(), Some(&Item('i')));
     assert_eq!(q.size(), 1);
 
-    assert_eq!(q.enqueue('h'), None);
-    assert_eq!(q.peek_next(), Some(&'h'));
+    assert_eq!(q.enqueue(Item('h')), None);
+    assert_eq!(q.peek_next(), Some(&Item('h')));
     assert_eq!(q.size(), 2);
 
-    assert_eq!(q.enqueue('g'), None);
-    assert_eq!(q.peek_next(), Some(&'g'));
+    assert_eq!(q.enqueue(Item('g')), None);
+    assert_eq!(q.peek_next(), Some(&Item('g')));
     assert_eq!(q.size(), 3);
 
-    assert_eq!(q.enqueue('a'), None);
-    assert_eq!(q.peek_next(), Some(&'a'));
+    assert_eq!(q.enqueue(Item('a')), None);
+    assert_eq!(q.peek_next(), Some(&Item('a')));
     assert_eq!(q.size(), 4);
 
-    assert_eq!(q.enqueue('f'), None);
-    assert_eq!(q.peek_next(), Some(&'a'));
+    assert_eq!(q.enqueue(Item('f')), None);
+    assert_eq!(q.peek_next(), Some(&Item('a')));
 
     assert_eq!(q.size(), 5);
     assert!(q.is_at_capacity());
 
-    assert_eq!(q.enqueue('e'), Some('i'));
+    assert_eq!(q.enqueue(Item('e')), Some(Item('i')));
 
     assert_eq!(q.set_capacity(7), vec![]);
 
-    assert_eq!(q.enqueue('c'), None);
-    assert_eq!(q.enqueue('b'), None);
+    assert_eq!(q.enqueue(Item('c')), None);
+    assert_eq!(q.enqueue(Item('b')), None);
 
-    assert_eq!(q.set_capacity(5), vec![('g'), ('h')]);
+    assert_eq!(q.set_capacity(5), vec![(Item('g')), (Item('h'))]);
 
     assert_eq!(q.size(), 5);
     assert!(q.is_at_capacity());
 
-    assert_eq!(q.dequeue(), Some('a'));
-    assert_eq!(q.dequeue(), Some('b'));
-    assert_eq!(q.dequeue(), Some('c'));
-    assert_eq!(q.dequeue(), Some('e'));
-    assert_eq!(q.dequeue(), Some('f'));
+    assert_eq!(q.dequeue(), Some(Item('a')));
+    assert_eq!(q.dequeue(), Some(Item('b')));
+    assert_eq!(q.dequeue(), Some(Item('c')));
+    assert_eq!(q.dequeue(), Some(Item('e')));
+    assert_eq!(q.dequeue(), Some(Item('f')));
     assert_eq!(q.dequeue(), None);
 }
