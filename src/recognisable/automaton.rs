@@ -102,43 +102,6 @@ pub trait Automaton<T, W>
             .map(|s| (Configuration { word: Vec::new(), storage: s, weight: weight.clone() }, run.clone()))
             .collect()
     }
-
-    /*
-    // TODO: remove
-    fn check_run(&self, run: &[Transition<Self::IInt, T, W>])
-                 -> Option<VecItem<<Self::IInt as Instruction>::Storage, Self::IInt, T, W>>
-    {
-        let heap = self.check(self.initial().clone(), run);
-        if heap.is_empty(){
-            return None;
-        }
-        let c = Configuration {
-            word: run_word(run),
-            storage: heap[0].clone(),
-            weight: run_weight(run),
-        };
-        Some((c, run.to_owned()))
-    }
-
-    // TODO: remove
-    // note: gives back the first configuration it finds
-    fn check<'b>(&'b self, storage: <Self::IInt as Instruction>::Storage, run: &[Transition<Self::IInt, T, W>])
-                 -> Vec<<Self::IInt as Instruction>::Storage>
-    {
-        let mut storage_heap = Vec::new();
-        storage_heap.push(storage);
-        for t in run {
-            let mut new_storage_heap = Vec::new();
-            for s in storage_heap{
-                for s1 in t.instruction.apply(s) {
-                    new_storage_heap.push(s1);
-                }
-            }
-            storage_heap = new_storage_heap;
-        }
-        storage_heap
-    }
-     */
 }
 
 

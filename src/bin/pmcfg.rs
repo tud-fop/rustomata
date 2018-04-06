@@ -1,8 +1,10 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
 use rustomata::pmcfg::PMCFG;
+use rustomata::pmcfg::negra::to_negra;
 use rustomata::recognisable::Recognisable;
 use rustomata::tree_stack_automaton::TreeStackAutomaton;
+use rustomata::tree_stack_automaton::to_abstract_syntax_tree;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -37,6 +39,11 @@ pub fn get_sub_command() -> App<'static, 'static> {
                         .long("beam")
                         .value_name("beam-width")
                         .required(false),
+                )
+                .arg(
+                    Arg::with_name("negra")
+                        .help("turn on output in NeGra export format")
+                        .long("negra"),
                 ),
         )
         .subcommand(
@@ -72,7 +79,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
             let mut corpus = String::new();
             let _ = io::stdin().read_to_string(&mut corpus);
 
-            for sentence in corpus.lines() {
+            for (i, sentence) in corpus.lines().enumerate() {
                 let word = sentence.split_whitespace().map(|x| x.to_string()).collect();
                 match mcfg_parse_matches.value_of("beam-width") {
                     Some(b) => {
@@ -80,12 +87,22 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                             .recognise_beam_search(b.parse().unwrap(), word)
                             .take(n)
                         {
-                            println!("{}", parse.0);
+                            let ast = to_abstract_syntax_tree(parse.0.storage.to_tree());
+                            if mcfg_parse_matches.is_present("negra") {
+                                println!("{}", to_negra(&ast, i + 1));
+                            } else {
+                                println!("{}", parse.0);
+                            }
                         }
                     }
                     None => {
                         for parse in automaton.recognise(word).take(n) {
-                            println!("{}", parse.0);
+                            let ast = to_abstract_syntax_tree(parse.0.storage.to_tree());
+                            if mcfg_parse_matches.is_present("negra") {
+                                println!("{}", to_negra(&ast, i + 1));
+                            } else {
+                                println!("{}", parse.0);
+                            }
                         }
                     }
                 };

@@ -39,16 +39,15 @@ fn test_example_pmcfg_to_negra() {
     let negra_string = to_negra(&separated_syntax_tree, 0);
     let negra_control_string = String::from(
         "#BOS 0\n\
-         a\ta\t--\t--\t1\n\
-         a\ta\t--\t--\t2\n\
-         b\tb\t--\t--\t3\n\
-         c\tc\t--\t--\t1\n\
-         c\tc\t--\t--\t2\n\
-         d\td\t--\t--\t3\n\
-         #1\tA\t--\t--\t4\n\
-         #2\tA\t--\t--\t1\n\
-         #3\tB\t--\t--\t4\n\
-         #4\tS\t--\t--\t0\n\
+         a\ta\t--\t--\t500\n\
+         a\ta\t--\t--\t501\n\
+         b\tb\t--\t--\t502\n\
+         c\tc\t--\t--\t500\n\
+         c\tc\t--\t--\t501\n\
+         d\td\t--\t--\t502\n\
+         #500\tA\t--\t--\t0\n\
+         #501\tA\t--\t--\t500\n\
+         #502\tB\t--\t--\t0\n\
          #EOS 0"
     );
 

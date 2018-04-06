@@ -82,7 +82,7 @@ pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: u
     output
 }
 
-fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
+pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
         -> bool
 {
     for (_address, rule) in tree_map {
@@ -127,7 +127,7 @@ fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     let mut negra_vector = Vec::new();
     let mut rule_queue = VecDeque::new();
     let mut rule_number_map = GornTree::new();
-    let mut rule_counter = 1;
+    let mut rule_counter = 500;
 
     for component in evaluated_compos {
         for variable in component {
@@ -156,14 +156,11 @@ fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>)
     while let Some((address, rule_number)) = rule_queue.pop_front() {
         let mut parent_address = address.clone();
 
-        let parent_number = if let None = parent_address.pop() {
-            0
-        } else {
-            get_rule_number(parent_address, &mut rule_queue, &mut rule_number_map, &mut rule_counter)
-        };
-
-        let rule_label = nonterminal_map.get(&address).unwrap();
-        negra_vector.push((format!("#{}", rule_number), rule_label.to_string(), parent_number));
+        if let Some(_) = parent_address.pop() {
+            let parent_number = get_rule_number(parent_address, &mut rule_queue, &mut rule_number_map, &mut rule_counter);
+            let rule_label = nonterminal_map.get(&address).unwrap();
+            negra_vector.push((format!("#{}", rule_number), rule_label.to_string(), parent_number));
+        }
     }
 
     negra_vector
@@ -176,8 +173,12 @@ fn get_rule_number(address: Vec<usize>, rule_queue: &mut VecDeque<(Vec<usize>, u
         return *rule_number
     }
 
-    let rule_number = *rule_counter;
-    *rule_counter = *rule_counter + 1;
+    let rule_number = if address.is_empty() {
+        0
+    } else {
+        *rule_counter = *rule_counter + 1;
+        *rule_counter - 1
+    };
 
     rule_number_map.insert(address.clone(), rule_number.clone());
     rule_queue.push_back((address, rule_number));
@@ -264,16 +265,15 @@ mod tests {
     fn test_to_negra_vector() {
         let tree_map = example_tree_map();
         let negra_vector = vec![
-            (String::from("a"), String::from("a"), 1),
-            (String::from("a"), String::from("a"), 2),
-            (String::from("b"), String::from("b"), 3),
-            (String::from("c"), String::from("c"), 1),
-            (String::from("c"), String::from("c"), 2),
-            (String::from("d"), String::from("d"), 3),
-            (String::from("#1"), String::from("A"), 4),
-            (String::from("#2"), String::from("A"), 1),
-            (String::from("#3"), String::from("B"), 4),
-            (String::from("#4"), String::from("S"), 0)
+            (String::from("a"), String::from("a"), 500),
+            (String::from("a"), String::from("a"), 501),
+            (String::from("b"), String::from("b"), 502),
+            (String::from("c"), String::from("c"), 500),
+            (String::from("c"), String::from("c"), 501),
+            (String::from("d"), String::from("d"), 502),
+            (String::from("#500"), String::from("A"), 0),
+            (String::from("#501"), String::from("A"), 500),
+            (String::from("#502"), String::from("B"), 0),
         ];
 
         assert_eq!(negra_vector, to_negra_vector(&tree_map));
