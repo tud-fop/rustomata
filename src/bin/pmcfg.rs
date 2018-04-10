@@ -5,6 +5,7 @@ use rustomata::grammars::pmcfg::negra::to_negra;
 use rustomata::recognisable::Recognisable;
 use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
 use rustomata::automata::tree_stack_automaton::to_abstract_syntax_tree;
+use rustomata::util::reverse::Reverse;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -71,7 +72,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                 .unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            let grammar: PMCFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
             let automaton = TreeStackAutomaton::from(grammar);
 
@@ -113,7 +114,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
             let mut grammar_file = File::open(grammar_file_name).unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            let grammar: PMCFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
             let automaton = TreeStackAutomaton::from(grammar);
             println!("{}", automaton);
         }

@@ -195,7 +195,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: CFG<String, String, LogDomain<f64>> =
+                    let grammar: CFG<String, String, Reverse<LogDomain<f64>>> =
                         grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(grammar);
@@ -276,7 +276,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: CFG<String, String, LogDomain<f64>> =
+                    let grammar: CFG<String, String, Reverse<LogDomain<f64>>> =
                         grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(grammar);
@@ -316,7 +316,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, LogDomain<f64>> =
+                    let grammar: PMCFG<String, String, Reverse<LogDomain<f64>>> =
                         grammar_string.parse().unwrap();
 
                     let automaton = TreeStackAutomaton::from(grammar);
@@ -424,7 +424,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let grammar: PMCFG<String, String, LogDomain<f64>> =
+                    let grammar: PMCFG<String, String, Reverse<LogDomain<f64>>> =
                         grammar_string.parse().unwrap();
 
                     let automaton = TreeStackAutomaton::from(grammar);
@@ -472,7 +472,7 @@ pub fn handle_sub_matches(ctf_matches: &ArgMatches) {
             let mut grammar_file = File::open(grammar_file_name).unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            let grammar: PMCFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
             let classes_file_name = benchmark_matches.value_of("classes").unwrap();
             let mut classes_file = File::open(classes_file_name).unwrap();

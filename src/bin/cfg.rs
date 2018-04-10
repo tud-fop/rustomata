@@ -3,6 +3,7 @@ use log_domain::LogDomain;
 use rustomata::grammars::cfg::CFG;
 use rustomata::recognisable::Recognisable;
 use rustomata::automata::push_down_automaton::PushDownAutomaton;
+use rustomata::util::reverse::Reverse;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -65,7 +66,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
                 .unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            let grammar: CFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
             let automaton = PushDownAutomaton::from(grammar);
 
@@ -97,7 +98,7 @@ pub fn handle_sub_matches(cfg_matches: &ArgMatches) {
             let mut grammar_file = File::open(grammar_file_name).unwrap();
             let mut grammar_string = String::new();
             let _ = grammar_file.read_to_string(&mut grammar_string);
-            let grammar: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            let grammar: CFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
             let automaton = PushDownAutomaton::from(grammar);
             println!("{}", automaton);

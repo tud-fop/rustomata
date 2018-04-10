@@ -6,6 +6,7 @@ use rustomata::automata::tree_stack_automaton::{TreeStackAutomaton, TreeStack,
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
+use rustomata::util::reverse::Reverse;
 use std::fmt::Debug;
 use std::io::{self, Read};
 use std::rc::Rc;
@@ -60,7 +61,7 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
             let mut automaton_file = File::open(automaton_file_name).unwrap();
             let mut automaton_string = String::new();
             let _ = automaton_file.read_to_string(&mut automaton_string);
-            let automaton: TreeStackAutomaton<String, String, LogDomain<f64>> =
+            let automaton: TreeStackAutomaton<String, String, Reverse<LogDomain<f64>>> =
                 automaton_string.parse().unwrap();
 
             let mut corpus_raw = String::new();

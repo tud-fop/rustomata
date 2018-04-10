@@ -9,6 +9,7 @@ use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::approximation::equivalence_classes::EquivalenceRelation;
+use rustomata::util::reverse::Reverse;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -116,7 +117,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+                    let g: CFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(g);
 
@@ -149,7 +150,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+                    let g: CFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(g);
 
@@ -176,7 +177,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+                    let g: PMCFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
                     let a = TreeStackAutomaton::from(g);
 
@@ -202,7 +203,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+                    let g: PMCFG<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().unwrap();
 
                     let a = TreeStackAutomaton::from(g);
                     let tts = TTSElement::new();
