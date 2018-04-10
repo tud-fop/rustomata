@@ -117,7 +117,13 @@ mod test {
             vec![3, 4].into_iter().collect(),
         ]).unwrap();
 
-        let sort = | i: &usize | -> usize { if vec![1usize, 2usize].contains(i) { 1 } else { 2 } };
+        let sort = |i: &usize| -> usize {
+            if vec![1usize, 2usize].contains(i) {
+                1
+            } else {
+                2
+            }
+        };
 
         let l = MultipleDyckLanguage::sorted(partition, sort);
 
@@ -160,7 +166,16 @@ mod test {
 
         let unwords = vec![
             vec![Open(1), Close(2), Open(2), Close(1)],
-            vec![Open(1), Close(1), Close(2), Open(2), Open(1), Close(1), Close(2), Open(2)],
+            vec![
+                Open(1),
+                Close(1),
+                Close(2),
+                Open(2),
+                Open(1),
+                Close(1),
+                Close(2),
+                Open(2),
+            ],
             vec![
                 Open(1),
                 Open(4),

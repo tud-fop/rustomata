@@ -26,7 +26,7 @@ pub trait Instruction {
 pub type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
 pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
-impl<S, I: Instruction<Storage=S>, T, W: Clone> Weighted for Item<S, I, T, W> {
+impl<S, I: Instruction<Storage = S>, T, W: Clone> Weighted for Item<S, I, T, W> {
     type Weight = W;
 
     fn get_weight(&self) -> W {
@@ -37,12 +37,15 @@ impl<S, I: Instruction<Storage=S>, T, W: Clone> Weighted for Item<S, I, T, W> {
 
 
 /// Something that recognises words and output corresponding parses.
-pub trait Recognisable<T, W> { // TODO rename to Recogniser
+pub trait Recognisable<T, W> {
+    // TODO rename to Recogniser
     type Parse;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a>;
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item = Self::Parse> + 'a>;
 
-    fn recognise_beam_search<'a>(&'a self, beam: usize, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a>;
+    fn recognise_beam_search<'a>(
+        &'a self,
+        beam: usize,
+        word: Vec<T>,
+    ) -> Box<Iterator<Item = Self::Parse> + 'a>;
 }
-
-

@@ -1,8 +1,8 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use rustomata::cfg::CFG;
+use rustomata::grammars::cfg::CFG;
 use rustomata::recognisable::Recognisable;
-use rustomata::push_down_automaton::PushDownAutomaton;
+use rustomata::automata::push_down_automaton::PushDownAutomaton;
 
 use std::io::{self, Read};
 use std::fs::File;
@@ -11,32 +11,46 @@ pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("cfg")
         .author("Max Korn <max.korn@tu-dresden.de>")
         .about("functions related to context-free grammars")
-        .subcommand(SubCommand::with_name("parse")
-                    .author("Max Korn <max.korn@tu-dresden.de>")
-                    .about("parses a word given a context-free grammar")
-                    .arg(Arg::with_name("grammar")
-                         .help("grammar file to use")
-                         .index(1)
-                         .required(true))
-                    .arg(Arg::with_name("number-of-parses")
-                         .help("number of parses that should be returned")
-                         .short("n")
-                         .long("number")
-                         .default_value("1")
-                         .required(false))
-                    .arg(Arg::with_name("beam-width")
-                         .help("maximum number of frontier nodes in the search space")
-                         .short("b")
-                         .long("beam")
-                         .value_name("beam-width")
-                         .required(false)))
-        .subcommand(SubCommand::with_name("automaton")
-                    .author("Max Korn <max.korn@tu-dresden.de>")
-                    .about("constructs a pushdown automaton from the given context-free grammar")
-                    .arg(Arg::with_name("grammar")
-                         .help("grammar file to use")
-                         .index(1)
-                         .required(true)))
+        .subcommand(
+            SubCommand::with_name("parse")
+                .author("Max Korn <max.korn@tu-dresden.de>")
+                .about("parses a word given a context-free grammar")
+                .arg(
+                    Arg::with_name("grammar")
+                        .help("grammar file to use")
+                        .index(1)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("number-of-parses")
+                        .help("number of parses that should be returned")
+                        .short("n")
+                        .long("number")
+                        .default_value("1")
+                        .required(false),
+                )
+                .arg(
+                    Arg::with_name("beam-width")
+                        .help("maximum number of frontier nodes in the search space")
+                        .short("b")
+                        .long("beam")
+                        .value_name("beam-width")
+                        .required(false),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("automaton")
+                .author("Max Korn <max.korn@tu-dresden.de>")
+                .about(
+                    "constructs a pushdown automaton from the given context-free grammar",
+                )
+                .arg(
+                    Arg::with_name("grammar")
+                        .help("grammar file to use")
+                        .index(1)
+                        .required(true),
+                ),
+        )
 }
 
 pub fn handle_sub_matches(cfg_matches: &ArgMatches) {

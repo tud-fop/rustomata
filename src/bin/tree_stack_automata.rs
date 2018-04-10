@@ -1,7 +1,8 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
 use rustomata::recognisable::{Item, Recognisable};
-use rustomata::tree_stack_automaton::{TreeStackAutomaton, TreeStack, TreeStackInstruction};
+use rustomata::automata::tree_stack_automaton::{TreeStackAutomaton, TreeStack,
+                                                TreeStackInstruction};
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
@@ -64,8 +65,7 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
 
             let mut corpus_raw = String::new();
             let _ = io::stdin().read_to_string(&mut corpus_raw);
-            let corpus =
-                corpus_raw
+            let corpus = corpus_raw
                 .lines()
                 .map(|s| s.split_whitespace().map(|x| x.to_string()).collect())
                 .collect();
@@ -76,20 +76,19 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
                 .parse()
                 .unwrap();
 
-            let beam =
-                match tsa_recognise_matches.value_of("beam-width") {
-                    Some(b) => Some(b.parse().unwrap()),
-                    None => None,
-                };
+            let beam = match tsa_recognise_matches.value_of("beam-width") {
+                Some(b) => Some(b.parse().unwrap()),
+                None => None,
+            };
 
             match tsa_recognise_matches.value_of("strategies") {
                 Some("tts") => {
                     let rec = coarse_to_fine_recogniser!(automaton; TTSElement::new());
 
                     recognise_corpus(rec, n, beam, corpus)
-                },
+                }
                 Some(e) => panic!("[ERR] Strategy \"{}\" unknown.", e),
-                None => recognise_corpus(automaton, n, beam, corpus)
+                None => recognise_corpus(automaton, n, beam, corpus),
             }
         }
         _ => (),
@@ -97,22 +96,25 @@ pub fn handle_sub_matches(tsa_matches: &ArgMatches) {
 }
 
 fn recognise_corpus<A, Rec, T, W>(rec: Rec, n: usize, beam: Option<usize>, corpus: Vec<Vec<T>>)
-    where Rec: Recognisable<T, W, Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>>,
-          A: Debug,
-          W: Debug,
-          T: Debug,
+where
+    Rec: Recognisable<T, W, Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>>,
+    A: Debug,
+    W: Debug,
+    T: Debug,
 {
     for sentence in corpus {
         println!("{:?}:", sentence);
         match beam {
-            Some(b) =>
+            Some(b) => {
                 for run in rec.recognise_beam_search(b, sentence).take(n) {
                     println!("  {:?}", run.1);
-                },
-            None =>
+                }
+            }
+            None => {
                 for run in rec.recognise(sentence).take(n) {
                     println!("  {:?}", run.1)
                 }
+            }
         }
         println!();
     }

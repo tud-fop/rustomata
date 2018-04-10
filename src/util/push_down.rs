@@ -16,10 +16,14 @@ impl<A: PartialEq> PartialEq for Pushdown<A> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (&Pushdown::Empty, &Pushdown::Empty) => true,
-            (&Pushdown::Cons { value: ref a1, below: ref b1},
-             &Pushdown::Cons { value: ref a2, below: ref b2}) => {
-                a1 == a2 && (Rc::ptr_eq(b1, b2) || b1 == b2)
-            },
+            (&Pushdown::Cons {
+                 value: ref a1,
+                 below: ref b1,
+             },
+             &Pushdown::Cons {
+                 value: ref a2,
+                 below: ref b2,
+             }) => a1 == a2 && (Rc::ptr_eq(b1, b2) || b1 == b2),
             _ => false,
         }
     }
@@ -35,7 +39,10 @@ impl<A> Pushdown<A> {
 
     /// Pushes an `a: A` on top of the `Pushdown`.
     pub fn push(self, a: A) -> Self {
-        Pushdown::Cons { value: a, below: Rc::new(self) }
+        Pushdown::Cons {
+            value: a,
+            below: Rc::new(self),
+        }
     }
 
     /// Replaces the top-most symbol of the `Pushdown` and returns the result.
@@ -57,15 +64,18 @@ impl<A> Pushdown<A> {
 
     /// Applies a function `FnMut(&A) -> B` to every node in a `Pushdown<A>`.
     pub fn map<F, B>(&self, f: &mut F) -> Pushdown<B>
-        where F: FnMut(&A) -> B,
+    where
+        F: FnMut(&A) -> B,
     {
         match *self {
             Pushdown::Empty => Pushdown::Empty,
-            Pushdown::Cons { ref value, ref below } =>
-                Pushdown::Cons {
-                    value: f(value),
-                    below: Rc::new(below.map(f)),
-                },
+            Pushdown::Cons {
+                ref value,
+                ref below,
+            } => Pushdown::Cons {
+                value: f(value),
+                below: Rc::new(below.map(f)),
+            },
         }
     }
 }
@@ -94,10 +104,13 @@ impl<A: Clone> Pushdown<A> {
         loop {
             match *current {
                 Pushdown::Empty => break,
-                Pushdown::Cons { ref value, ref below } => {
+                Pushdown::Cons {
+                    ref value,
+                    ref below,
+                } => {
                     res.push(value.clone());
                     current = below;
-                },
+                }
             }
         }
         res.reverse();
@@ -135,7 +148,7 @@ impl<A: Clone> Into<Vec<A>> for Pushdown<A> {
                 Pushdown::Cons { value, below } => {
                     res.push(value);
                     current = below.deref().clone();
-                },
+                }
             }
         }
         res.reverse();
@@ -164,7 +177,15 @@ pub mod tests {
     fn test_pushdown_legal_operations_correctness() {
         assert_eq!(
             Pushdown::from(vec![1, 2].as_slice()),
-            Pushdown::new().push(1).push(1).set(2).unwrap().push(3).pop().unwrap().0
+            Pushdown::new()
+                .push(1)
+                .push(1)
+                .set(2)
+                .unwrap()
+                .push(3)
+                .pop()
+                .unwrap()
+                .0
         );
     }
 
@@ -195,10 +216,7 @@ pub mod tests {
 
     #[test]
     fn test_pushdown_push_inverse() {
-        assert_eq!(
-            Pushdown::new(),
-            Pushdown::new().push(1).pop().unwrap().0
-        )
+        assert_eq!(Pushdown::new(), Pushdown::new().push(1).pop().unwrap().0)
     }
 
     #[test]
@@ -216,30 +234,21 @@ pub mod tests {
         let pushdown = Pushdown::new().push(1).push(2).push(3);
         let mapped_pushdown = pushdown.map(&mut |x| x * 2);
 
-        assert_eq!(
-            pushdown,
-            mapped_pushdown.map(&mut |x| x / 2)
-        );
+        assert_eq!(pushdown, mapped_pushdown.map(&mut |x| x / 2));
     }
 
     #[test]
     fn test_pushdown_to_vec_correctness() {
         let pushdown = Pushdown::new().push(1).push(2).push(3);
 
-        assert_eq!(
-            vec![1, 2, 3],
-            pushdown.to_vec()
-        );
+        assert_eq!(vec![1, 2, 3], pushdown.to_vec());
     }
 
     #[test]
     fn test_pushdown_to_vec_inverse() {
         let pushdown = Pushdown::new().push(1).push(2).push(3);
 
-        assert_eq!(
-            pushdown,
-            Pushdown::from(pushdown.to_vec().as_slice())
-        );
+        assert_eq!(pushdown, Pushdown::from(pushdown.to_vec().as_slice()));
     }
 
     #[test]
@@ -254,4 +263,3 @@ pub mod tests {
         );
     }
 }
-

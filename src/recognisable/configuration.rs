@@ -27,61 +27,73 @@ impl<S: PartialEq, T: PartialEq, W> PartialEq for Configuration<S, T, W> {
 impl<S: Eq, T: Eq, W> Eq for Configuration<S, T, W> {}
 
 impl<S, T, W> PartialOrd for Configuration<S, T, W>
-    where S: PartialOrd + Eq,
-          T: PartialOrd + Eq,
-          W: PartialOrd + Eq,
+where
+    S: PartialOrd + Eq,
+    T: PartialOrd + Eq,
+    W: PartialOrd + Eq,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {
-            None | Some(Ordering::Equal) =>
+            None |
+            Some(Ordering::Equal) => {
                 match other.word.len().partial_cmp(&self.word.len()) {
-                    None | Some(Ordering::Equal) =>
+                    None |
+                    Some(Ordering::Equal) => {
                         match self.word.partial_cmp(&other.word) {
-                            None | Some(Ordering::Equal) => self.storage.partial_cmp(&other.storage),
-                            x     => x
-                        },
+                            None |
+                            Some(Ordering::Equal) => self.storage.partial_cmp(&other.storage),
+                            x => x,
+                        }
+                    }
                     x => x,
-                },
+                }
+            }
             x => x,
         }
     }
 }
 
 impl<S, T, W> Ord for Configuration<S, T, W>
-    where S: Eq + Ord,
-          T: Eq + Ord,
-          W: Eq + Ord,
+where
+    S: Eq + Ord,
+    T: Eq + Ord,
+    W: Eq + Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.weight.cmp(&other.weight) {
-            Ordering::Equal =>
+            Ordering::Equal => {
                 match other.word.len().cmp(&self.word.len()) {
-                    Ordering::Equal =>
+                    Ordering::Equal => {
                         match self.word.cmp(&other.word) {
                             Ordering::Equal => self.storage.cmp(&other.storage),
-                            x     => x
-                        },
+                            x => x,
+                        }
+                    }
                     x => x,
-                },
+                }
+            }
             x => x,
         }
     }
 }
 
-impl<S: fmt::Display,
-     T: fmt::Display,
-     W: fmt::Display
-    >fmt::Display for Configuration<S, T, W> {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let mut buffer = String::new();
-            let mut iter1 = self.word.iter().peekable();
+impl<S: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for Configuration<S, T, W> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut buffer = String::new();
+        let mut iter1 = self.word.iter().peekable();
 
-            while let Some(nt) = iter1.next() {
-                buffer.push_str(format!("{}", nt).as_str());
-                if iter1.peek().is_some() {
-                    buffer.push_str(" ");
-                }
+        while let Some(nt) = iter1.next() {
+            buffer.push_str(format!("{}", nt).as_str());
+            if iter1.peek().is_some() {
+                buffer.push_str(" ");
             }
-            write!(f, "Configuration:\nword:[{}]\nweight:{}\n{}\n", buffer, self.weight, self.storage)
         }
+        write!(
+            f,
+            "Configuration:\nword:[{}]\nweight:{}\n{}\n",
+            buffer,
+            self.weight,
+            self.storage
+        )
     }
+}

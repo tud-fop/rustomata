@@ -106,8 +106,9 @@ impl<V: PartialEq> PartialEq for GornTree<V> {
 
 impl<V> FromIterator<(Vec<usize>, V)> for GornTree<V> {
     fn from_iter<T>(iter: T) -> Self
-    where T: IntoIterator<Item = (Vec<usize>, V)>
+    where
+        T: IntoIterator<Item = (Vec<usize>, V)>,
     {
-        GornTree{ map: iter.into_iter().collect() }
+        GornTree { map: iter.into_iter().collect() }
     }
 }

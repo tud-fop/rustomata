@@ -5,7 +5,7 @@ use std::vec::Vec;
 #[derive(PartialEq, PartialOrd, Eq, Ord, Copy, Clone)]
 pub enum Capacity {
     Limit(usize),
-    Infinite
+    Infinite,
 }
 
 pub trait Agenda {
@@ -24,15 +24,21 @@ pub trait Weighted {
 }
 
 // #[derive(Debug, PartialEq, Eq)]
-pub struct PriorityQueue<P, I> where I: Weighted<Weight=P> {
+pub struct PriorityQueue<P, I>
+where
+    I: Weighted<Weight = P>,
+{
     data: BTreeMap<P, Vec<I>>, // The values should always be non-empty.
     capacity: Capacity,
     size: usize,
     last_key: Option<P>, // largest key w.r.t. Ord
-    // pub priority: Box<Fn(&I) -> P + 'a>,
+                         // pub priority: Box<Fn(&I) -> P + 'a>,
 }
 
-impl<P, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
+impl<P, I> PriorityQueue<P, I>
+where
+    I: Weighted<Weight = P>,
+{
     pub fn size(&self) -> usize {
         self.size
     }
@@ -47,7 +53,8 @@ impl<P, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
 }
 
 impl<I, P: Ord + Clone> Agenda for PriorityQueue<P, I>
-where I: Weighted<Weight=P>
+where
+    I: Weighted<Weight = P>,
 {
     type Item = I;
 
@@ -56,10 +63,10 @@ where I: Weighted<Weight=P>
         if Capacity::Limit(self.size) < self.capacity {
             self.enqueue_unchecked(priority, item);
             None
-        } else if &priority
-            < self.last_key
-                .as_ref()
-                .expect("[ERROR] `last_key` should not be `None` when the queue is non-empty.")
+        } else if &priority <
+                   self.last_key.as_ref().expect(
+                "[ERROR] `last_key` should not be `None` when the queue is non-empty.",
+            )
         {
             self.enqueue_unchecked(priority, item);
             self.drop_last()
@@ -100,28 +107,33 @@ where I: Weighted<Weight=P>
     }
 }
 
-impl<P: Ord, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
+impl<P: Ord, I> PriorityQueue<P, I>
+where
+    I: Weighted<Weight = P>,
+{
     pub fn new(capacity: Capacity) -> PriorityQueue<P, I> {
         assert!(capacity > Capacity::Limit(0));
         PriorityQueue {
             data: BTreeMap::new(),
             capacity,
             size: 0,
-            last_key: None
+            last_key: None,
         }
     }
 }
 
-impl<P: Ord + Clone, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
+impl<P: Ord + Clone, I> PriorityQueue<P, I>
+where
+    I: Weighted<Weight = P>,
+{
     pub fn set_capacity(&mut self, capacity: usize) -> Vec<I> {
         self.capacity = Capacity::Limit(capacity);
         let mut res = Vec::new();
         while Capacity::Limit(self.size) > self.capacity {
             // TODO optimise to remove entire key-value-pairs at a time
-            res.push(
-                self.drop_last()
-                    .expect("[ERROR] `last_key` should not be `None` when the queue is non-empty."),
-            );
+            res.push(self.drop_last().expect(
+                "[ERROR] `last_key` should not be `None` when the queue is non-empty.",
+            ));
         }
         res.reverse();
         res
@@ -142,11 +154,12 @@ impl<P: Ord + Clone, I> PriorityQueue<P, I> where I: Weighted<Weight=P> {
     fn drop_last(&mut self) -> Option<I> {
         match self.last_key.clone() {
             Some(key) => {
-                let mut vec = self.data
-                    .remove(&key)
-                    .expect("[ERROR] `last_key` should only hold keys that occur in `data`.");
-                let item = vec.pop()
-                    .expect("[ERROR] `data` should not contain empty `Vec`tors.");
+                let mut vec = self.data.remove(&key).expect(
+                    "[ERROR] `last_key` should only hold keys that occur in `data`.",
+                );
+                let item = vec.pop().expect(
+                    "[ERROR] `data` should not contain empty `Vec`tors.",
+                );
 
                 if !vec.is_empty() {
                     self.data.insert(key.clone(), vec);
@@ -213,7 +226,7 @@ fn test_bounded_priority_queue() {
         type Weight = char;
         fn get_weight(&self) -> char {
             match *self {
-                Item(c) => c
+                Item(c) => c,
             }
         }
     }

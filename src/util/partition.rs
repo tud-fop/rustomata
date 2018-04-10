@@ -12,12 +12,13 @@ use serde::de::{Deserialize, Deserializer};
 pub struct Partition<T: Ord>(BTreeMap<T, Rc<BTreeSet<T>>>);
 
 impl<T> Partition<T>
-where T: Ord + Clone 
+where
+    T: Ord + Clone,
 {
     /// Takes a list of cells π₁…πₙ and returns a partition if they are pairwise distinct.
     pub fn new(cells: Vec<BTreeSet<T>>) -> Option<Self> {
         let mut partition = BTreeMap::new();
-        
+
         for cell in cells {
             let ptr = Rc::new(cell);
             for symbol in ptr.iter().cloned() {
@@ -38,7 +39,7 @@ impl<T: Ord> Partition<T> {
 
         match map.get(elem) {
             Some(ptr) => Some(ptr.deref()),
-            None => None
+            None => None,
         }
     }
 
@@ -47,7 +48,7 @@ impl<T: Ord> Partition<T> {
         let &Partition(ref map) = self;
         let mut cells: Vec<&BTreeSet<T>> = Vec::new();
         let mut alphabet: BTreeSet<&T> = BTreeSet::new();
-        
+
         for (sigma, ptr) in map.iter() {
             if !alphabet.contains(sigma) {
                 cells.push(ptr.deref());
@@ -69,14 +70,14 @@ impl<T: Ord> Partition<T> {
 impl<T: Serialize + Ord + Clone> Serialize for Partition<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.collapse().serialize(serializer)
-    } 
+    }
 }
 
 impl<'de, T: Deserialize<'de> + Ord + Clone> Deserialize<'de> for Partition<T> {
     fn deserialize<D: Deserializer<'de>>(des: D) -> Result<Self, D::Error> {
-        match Vec::deserialize(des){
+        match Vec::deserialize(des) {
             Ok(cells) => Ok(Partition::new(cells).unwrap()),
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
 }
@@ -84,22 +85,22 @@ impl<'de, T: Deserialize<'de> + Ord + Clone> Deserialize<'de> for Partition<T> {
 
 #[cfg(test)]
 mod tests {
-    
+
     #[test]
     fn partition() {
         use std::collections::BTreeSet;
-        
-        let cell1: BTreeSet<usize> = vec![ 1, 2, 3 ].into_iter().collect();
-        let cell2: BTreeSet<usize> = vec![ 4, 5, 6 ].into_iter().collect();
-        let not_cell = vec![ 3, 4, 5].into_iter().collect(); 
-        
-        let cells: Vec<BTreeSet<usize>> = vec![ cell1.clone(), cell2.clone() ];
-        let cellref: Vec<&BTreeSet<usize>> = vec![ &cell1, &cell2 ];
-        let not_cells = vec![ cell1.clone(), not_cell ];
+
+        let cell1: BTreeSet<usize> = vec![1, 2, 3].into_iter().collect();
+        let cell2: BTreeSet<usize> = vec![4, 5, 6].into_iter().collect();
+        let not_cell = vec![3, 4, 5].into_iter().collect();
+
+        let cells: Vec<BTreeSet<usize>> = vec![cell1.clone(), cell2.clone()];
+        let cellref: Vec<&BTreeSet<usize>> = vec![&cell1, &cell2];
+        let not_cells = vec![cell1.clone(), not_cell];
 
         assert!(match super::Partition::new(cells.clone()) {
             None => false,
-            Some(partition) => partition.collapse() == cellref
+            Some(partition) => partition.collapse() == cellref,
         });
         assert_eq!(super::Partition::new(not_cells), None);
     }

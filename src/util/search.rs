@@ -22,25 +22,23 @@ where
     /// Stores the set of all expanded elements to not yield them multiple times.
     pub fn uniques(self) -> Self {
         match self {
-            Search::All(agenda, succ) | Search::Uniques(agenda, succ, _) => {
-                Search::Uniques(agenda, succ, BTreeSet::new())
-            }
+            Search::All(agenda, succ) |
+            Search::Uniques(agenda, succ, _) => Search::Uniques(agenda, succ, BTreeSet::new()),
         }
     }
 
     /// Yield elements twice if there are multiple paths to them.
     pub fn all(self) -> Self {
         match self {
-            Search::All(agenda, succ) | Search::Uniques(agenda, succ, _) => {
-                Search::All(agenda, succ)
-            }
+            Search::All(agenda, succ) |
+            Search::Uniques(agenda, succ, _) => Search::All(agenda, succ),
         }
     }
 }
 
 impl<I, W, F> Search<PriorityQueue<W, I>, I, F>
 where
-    I: Clone + Ord + Weighted<Weight=W>,
+    I: Clone + Ord + Weighted<Weight = W>,
     W: Ord + Clone,
     F: FnMut(&I) -> Vec<I>,
 {
@@ -62,7 +60,8 @@ where
     pub fn beam(mut self, width: Capacity) -> Self {
         if let Capacity::Limit(b) = width {
             match &mut self {
-                &mut Search::All(ref mut a, _) | &mut Search::Uniques(ref mut a, _, _) => {
+                &mut Search::All(ref mut a, _) |
+                &mut Search::Uniques(ref mut a, _, _) => {
                     a.set_capacity(b);
                 }
             }
@@ -156,11 +155,14 @@ where
         self.0.cmp(&other.0)
     }
 }
-impl<I, W> Weighted for WeightedSearchItem<I, W> where W: Copy {
+impl<I, W> Weighted for WeightedSearchItem<I, W>
+where
+    W: Copy,
+{
     type Weight = W;
     fn get_weight(&self) -> W {
         match *self {
-            WeightedSearchItem(_, ref w) => *w
+            WeightedSearchItem(_, ref w) => *w,
         }
     }
 }

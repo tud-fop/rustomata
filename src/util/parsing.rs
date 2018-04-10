@@ -8,10 +8,10 @@ use std::str::{FromStr, from_utf8};
 ///
 /// * It is a string containing neither of the symbols `'"'`, `' '`, `'-'`, `'→'`, `','`, `';'`, `')'`, `']'`, `'%'`.
 /// * It is delimited by the symbol `'"'` on both sides and each occurrence of `'\\'` or `'"'` inside the delimiters is escaped.
-pub fn parse_token<A>(input: &[u8])
-        -> IResult<&[u8], A>
-    where A: FromStr,
-          A::Err: Debug,
+pub fn parse_token<A>(input: &[u8]) -> IResult<&[u8], A>
+where
+    A: FromStr,
+    A::Err: Debug,
 {
     named!(
         parse_token_s<&str>,
@@ -38,9 +38,15 @@ pub fn parse_token<A>(input: &[u8])
 
 /// Parses the `input` into a `Vec<A>` given an `inner_parser` for type `A`, an `opening` delimiter, a `closing` delimiter, and a `separator`.
 /// The `inner_parser` must not consume the `separator`s or the `closing` delimiter of the given `input`.
-pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, closing: &str, separator: &str)
-        -> IResult<&'a [u8], Vec<A>>
-    where P: Fn(&'a [u8]) -> IResult<&'a [u8], A>
+pub fn parse_vec<'a, A, P>(
+    input: &'a [u8],
+    inner_parser: P,
+    opening: &str,
+    closing: &str,
+    separator: &str,
+) -> IResult<&'a [u8], Vec<A>>
+where
+    P: Fn(&'a [u8]) -> IResult<&'a [u8], A>,
 {
     do_parse!(
         input,
@@ -62,10 +68,10 @@ pub fn parse_vec<'a, A, P>(input: &'a [u8], inner_parser: P, opening: &str, clos
 
 
 /// Parses a string of the form `initials: ⟨token⟩` as a the initial symbol of type `I`.
-pub fn parse_initial<I>(input: &[u8])
-                         -> IResult<&[u8], I>
-where I: FromStr,
-      I::Err: Debug,
+pub fn parse_initial<I>(input: &[u8]) -> IResult<&[u8], I>
+where
+    I: FromStr,
+    I::Err: Debug,
 {
     do_parse!(
         input,
@@ -79,10 +85,10 @@ where I: FromStr,
 
 
 /// Parses a string of the form `initials: [...]` as a vector of initial symbols of type `I`.
-pub fn parse_initials<I>(input: &[u8])
-        -> IResult<&[u8], Vec<I>>
-    where I: FromStr,
-          I::Err: Debug,
+pub fn parse_initials<I>(input: &[u8]) -> IResult<&[u8], Vec<I>>
+where
+    I: FromStr,
+    I::Err: Debug,
 {
     do_parse!(
         input,
@@ -110,12 +116,12 @@ pub fn parse_comment(input: &[u8]) -> IResult<&[u8], ()> {
 /// determined by their type.
 /// If the string contains multiple definitions of initials, then the initials of the grammar are
 /// going to be the union of all defined initials.
-pub fn initial_rule_grammar_from_str<I, R>(s: &str)
-        -> Result<((Vec<I>, Vec<R>)), String>
-    where I: FromStr,
-          I::Err: Debug,
-          R: FromStr,
-          String: From<R::Err>,
+pub fn initial_rule_grammar_from_str<I, R>(s: &str) -> Result<((Vec<I>, Vec<R>)), String>
+where
+    I: FromStr,
+    I::Err: Debug,
+    R: FromStr,
+    String: From<R::Err>,
 {
     let mut it = s.lines();
     let mut initial = Vec::new();
@@ -124,10 +130,12 @@ pub fn initial_rule_grammar_from_str<I, R>(s: &str)
     while let Some(l) = it.next() {
         if l.trim_left().starts_with("initial:") {
             match parse_initials(l.as_bytes()) {
-                IResult::Done(_, mut result) =>
-                    initial.append(&mut result),
-                _ =>
-                    return Err(format!("Malformed declaration of initial nonterminals: \'{}\'", l))
+                IResult::Done(_, mut result) => initial.append(&mut result),
+                _ => {
+                    return Err(
+                        format!("Malformed declaration of initial nonterminals: \'{}\'", l),
+                    )
+                }
             }
         } else if !l.is_empty() && !l.trim_left().starts_with("%") {
             rules.push(l.trim().parse()?);
@@ -166,8 +174,10 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_comment(illegal_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Incomplete(_) =>
-                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Done(_, _) |
+                IResult::Incomplete(_) => {
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input)
+                }
                 IResult::Error(_) => (),
             }
         }
@@ -207,9 +217,11 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_token::<String>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) =>
-                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
-                IResult::Error(_) | IResult::Incomplete(_) => (),
+                IResult::Done(_, _) => {
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input)
+                }
+                IResult::Error(_) |
+                IResult::Incomplete(_) => (),
             }
         }
 
@@ -220,9 +232,11 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_token::<u8>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) =>
-                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
-                IResult::Error(_) | IResult::Incomplete(_) => (),
+                IResult::Done(_, _) => {
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input)
+                }
+                IResult::Error(_) |
+                IResult::Incomplete(_) => (),
             }
         }
     }
@@ -235,8 +249,10 @@ pub mod tests {
 
         for incomplete_input in incomplete_inputs {
             match parse_token::<String>(incomplete_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Error(_) =>
-                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Done(_, _) |
+                IResult::Error(_) => {
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input)
+                }
                 IResult::Incomplete(_) => (),
             }
         }
@@ -272,8 +288,10 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_vec::<u8, _>(illegal_input.as_bytes(), parse_token, "[", ")", ",") {
-                IResult::Done(_, _) | IResult::Incomplete(_) =>
-                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Done(_, _) |
+                IResult::Incomplete(_) => {
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input)
+                }
                 IResult::Error(_) => (),
             }
         }
@@ -288,8 +306,10 @@ pub mod tests {
 
         for incomplete_input in incomplete_inputs {
             match parse_vec::<String, _>(incomplete_input.as_bytes(), parse_token, "[", "]", ",") {
-                IResult::Done(_, _) | IResult::Error(_) =>
-                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Done(_, _) |
+                IResult::Error(_) => {
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input)
+                }
                 IResult::Incomplete(_) => (),
             }
         }
@@ -335,8 +355,10 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_initials::<String>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Incomplete(_) =>
-                    panic!("Was able to parse the illegal input \'{}\'", illegal_input),
+                IResult::Done(_, _) |
+                IResult::Incomplete(_) => {
+                    panic!("Was able to parse the illegal input \'{}\'", illegal_input)
+                }
                 IResult::Error(_) => (),
             }
         }
@@ -351,8 +373,10 @@ pub mod tests {
 
         for incomplete_input in incomplete_inputs {
             match parse_initials::<String>(incomplete_input.as_bytes()) {
-                IResult::Done(_, _) | IResult::Error(_) =>
-                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input),
+                IResult::Done(_, _) |
+                IResult::Error(_) => {
+                    panic!("The input was not handled as incomplete: \'{}\'", incomplete_input)
+                }
                 IResult::Incomplete(_) => (),
             }
         }

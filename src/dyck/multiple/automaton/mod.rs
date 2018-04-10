@@ -4,7 +4,7 @@ use std::collections::{BinaryHeap, HashMap};
 pub use dyck::multiple::automaton::instruction::{MDTreeElem, MultipleDyckInstruction};
 use util::partition::Partition;
 use recognisable::Transition;
-use tree_stack_automaton::TreeStack;
+use automata::tree_stack_automaton::TreeStack;
 use recognisable::Configuration;
 
 use dyck::Bracket;
@@ -46,9 +46,7 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
 
         let mut map = HashMap::new();
         map.insert((), heap);
-        MultipleDyckAutomaton {
-            transitions: Rc::new(map),
-        }
+        MultipleDyckAutomaton { transitions: Rc::new(map) }
     }
 
     /// Constructs a tree-stack automaton that recognizes a sorted multiple Dyck language.
@@ -80,9 +78,7 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
 
         let mut map = HashMap::new();
         map.insert((), heap);
-        MultipleDyckAutomaton {
-            transitions: Rc::new(map),
-        }
+        MultipleDyckAutomaton { transitions: Rc::new(map) }
     }
 }
 
@@ -129,9 +125,10 @@ where
     }
 
     fn is_terminal(&self, c: &Configuration<TreeStack<MDTreeElem<T>>, Bracket<T>, u8>) -> bool {
-        c.word.is_empty() && c.storage.is_at_bottom()
-            && c.storage
-                .all(&|node: &MDTreeElem<T>| -> bool { node.is_empty() })
+        c.word.is_empty() && c.storage.is_at_bottom() &&
+            c.storage.all(
+                &|node: &MDTreeElem<T>| -> bool { node.is_empty() },
+            )
     }
 
     fn transition_map(&self) -> Rc<TransitionMap<Self::Key, Self::IInt, Self::TInt, u8>> {

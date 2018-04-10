@@ -23,13 +23,15 @@ pub struct CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
 }
 
 struct CoarseToFineParseForest<'a, Rec, Strategy, T, W>
-    where Rec: Automaton<T, W>,
-          Strategy: 'a + ApproximationStrategy<T, W>,
-          Strategy::I1: Instruction,
-          T: 'a + Clone + Eq + Ord,
-          W: 'a + Clone + MulAssign + One + Ord,
+where
+    Rec: Automaton<T, W>,
+    Strategy: 'a + ApproximationStrategy<T, W>,
+    Strategy::I1: Instruction,
+    T: 'a + Clone + Eq + Ord,
+    W: 'a + Clone + MulAssign + One + Ord,
 {
-    sublevel_parses: Box<Iterator<Item=Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> + 'a>,
+    sublevel_parses:
+        Box<Iterator<Item = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> + 'a>,
     recogniser: Rc<Rec>,
     approximation_instance: Rc<ApproximationInstance<Strategy, T, W>>,
     input_buffer: Option<Option<Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>>,
@@ -95,30 +97,34 @@ impl<'a, Rec, Strategy, T, W> Iterator for CoarseToFineParseForest<'a, Rec, Stra
     }
 }
 
-impl<Rec, SubRec, Strategy, T, W> Recognisable<T, W> for CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
-    where Rec: Automaton<T, W, I=Strategy::I1>,
-          SubRec: Recognisable<T, W, Parse=Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>,
-          Strategy: ApproximationStrategy<T, W>,
-          Strategy::I1: Instruction + Ord,
-          <Strategy::I1 as Instruction>::Storage: Ord,
-          T: Clone + Eq + Ord,
-          W: Clone + MulAssign + One + Ord,
+impl<Rec, SubRec, Strategy, T, W> Recognisable<T, W>
+    for CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
+where
+    Rec: Automaton<T, W, I = Strategy::I1>,
+    SubRec: Recognisable<T, W, Parse = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>,
+    Strategy: ApproximationStrategy<T, W>,
+    Strategy::I1: Instruction + Ord,
+    <Strategy::I1 as Instruction>::Storage: Ord,
+    T: Clone + Eq + Ord,
+    W: Clone + MulAssign + One + Ord,
 {
     type Parse = Item<<Strategy::I1 as Instruction>::Storage, Strategy::I1, T, W>;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        Box::new(
-            CoarseToFineParseForest {
-                sublevel_parses: self.sublevel.recognise(word),
-                recogniser: self.recogniser.clone(),
-                approximation_instance: self.approximation_instance.clone(),
-                input_buffer: None,
-                output_buffer: BinaryHeap::new(),
-            }
-        )
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item = Self::Parse> + 'a> {
+        Box::new(CoarseToFineParseForest {
+            sublevel_parses: self.sublevel.recognise(word),
+            recogniser: self.recogniser.clone(),
+            approximation_instance: self.approximation_instance.clone(),
+            input_buffer: None,
+            output_buffer: BinaryHeap::new(),
+        })
     }
 
-    fn recognise_beam_search<'a>(&'a self, _: usize, _: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
+    fn recognise_beam_search<'a>(
+        &'a self,
+        _: usize,
+        _: Vec<T>,
+    ) -> Box<Iterator<Item = Self::Parse> + 'a> {
         unimplemented!()
     }
 }

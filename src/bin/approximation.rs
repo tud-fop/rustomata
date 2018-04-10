@@ -1,10 +1,10 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
-use rustomata::pmcfg::PMCFG;
-use rustomata::cfg::CFG;
+use rustomata::grammars::pmcfg::PMCFG;
+use rustomata::grammars::cfg::CFG;
 use rustomata::recognisable::Recognisable;
-use rustomata::tree_stack_automaton::TreeStackAutomaton;
-use rustomata::push_down_automaton::{PushDownAutomaton, PushState};
+use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
+use rustomata::automata::push_down_automaton::{PushDownAutomaton, PushState};
 use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
@@ -116,8 +116,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
+                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(g);
 
@@ -136,9 +135,13 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let _ = io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
+                        println!(
+                            "{:?}: {}",
+                            b.recognise(
+                                sentence.split_whitespace().map(|x| x.to_string()).collect(),
+                            ).next(),
+                            sentence
+                        );
                     }
                 }
                 ("automaton", Some(parse_matches)) => {
@@ -146,8 +149,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
+                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
                     let a = PushDownAutomaton::from(g);
 
@@ -174,8 +176,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
+                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
                     let a = TreeStackAutomaton::from(g);
 
@@ -187,9 +188,13 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let _ = io::stdin().read_to_string(&mut corpus);
 
                     for sentence in corpus.lines() {
-                        println!("{:?}: {}",
-                                 b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect()).next(),
-                                 sentence);
+                        println!(
+                            "{:?}: {}",
+                            b.recognise(
+                                sentence.split_whitespace().map(|x| x.to_string()).collect(),
+                            ).next(),
+                            sentence
+                        );
                     }
                 }
                 ("automaton", Some(parse_matches)) => {
@@ -197,8 +202,7 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
                     let mut grammar_file = File::open(grammar_file_name).unwrap();
                     let mut grammar_string = String::new();
                     let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> =
-                        grammar_string.parse().unwrap();
+                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
                     let a = TreeStackAutomaton::from(g);
                     let tts = TTSElement::new();
@@ -212,4 +216,3 @@ pub fn handle_sub_matches(r_matches: &ArgMatches) {
         _ => (),
     }
 }
-

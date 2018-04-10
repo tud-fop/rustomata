@@ -3,21 +3,20 @@ use std::hash::Hash;
 use std::ops::{AddAssign, MulAssign};
 
 use approximation::*;
-use push_down_automaton::*;
+use automata::push_down_automaton::*;
 
 /// `ApproximationStrategy` that uses the `Relabel` trait to relabel internal values via an `EquivalenceClass`
 pub struct RlbElement<'a, A1, A2>
-    where A1: 'a,
-          A2: 'a,
+where
+    A1: 'a,
+    A2: 'a,
 {
-    pub mapping: &'a Fn(&A1) -> A2
+    pub mapping: &'a Fn(&A1) -> A2,
 }
 
 impl<'a, A1, A2> RlbElement<'a, A1, A2> {
     pub fn new(mapping: &'a Fn(&A1) -> A2) -> Self {
-        RlbElement {
-            mapping,
-        }
+        RlbElement { mapping }
     }
 }
 
@@ -63,12 +62,24 @@ mod tests {
         let rlb = RlbElement::new(&mapping);
 
         let pushdown = PushDown::from(vec![
-            PushState::Initial, PushState::Nt(0), PushState::Nt(1), PushState::T('a'),
-            PushState::Nt(2), PushState::Nt(3), PushState::Nt(4), PushState::Designated,
+            PushState::Initial,
+            PushState::Nt(0),
+            PushState::Nt(1),
+            PushState::T('a'),
+            PushState::Nt(2),
+            PushState::Nt(3),
+            PushState::Nt(4),
+            PushState::Designated,
         ]);
         let control_pushdown = PushDown::from(vec![
-            PushState::Initial, PushState::Nt(0), PushState::Nt(0),  PushState::T('a'),
-            PushState::Nt(1), PushState::Nt(1), PushState::Nt(2), PushState::Designated,
+            PushState::Initial,
+            PushState::Nt(0),
+            PushState::Nt(0),
+            PushState::T('a'),
+            PushState::Nt(1),
+            PushState::Nt(1),
+            PushState::Nt(2),
+            PushState::Designated,
         ]);
 
         assert_eq!(
@@ -94,7 +105,10 @@ mod tests {
 
         assert_eq!(
             control_instruction,
-            <RlbElement<_, _> as ApproximationStrategy<char, u8>>::approximate_instruction(&rlb, &instruction)
+            <RlbElement<_, _> as ApproximationStrategy<char, u8>>::approximate_instruction(
+                &rlb,
+                &instruction,
+            )
         );
     }
 }

@@ -27,12 +27,13 @@ impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I,
 }
 
 fn parse_transition<I, T, W>(input: &[u8]) -> IResult<&[u8], Transition<I, T, W>>
-    where I: FromStr,
-          I::Err: Debug,
-          T: FromStr,
-          T::Err: Debug,
-          W: FromStr + One,
-          W::Err: Debug,
+where
+    I: FromStr,
+    I::Err: Debug,
+    T: FromStr,
+    T::Err: Debug,
+    W: FromStr + One,
+    W::Err: Debug,
 {
     do_parse!(
         input,
@@ -63,8 +64,9 @@ fn parse_transition<I, T, W>(input: &[u8]) -> IResult<&[u8], Transition<I, T, W>
 }
 
 fn parse_word<T>(input: &[u8]) -> IResult<&[u8], Vec<T>>
-    where T: FromStr,
-          T::Err: Debug,
+where
+    T: FromStr,
+    T::Err: Debug,
 {
     parse_vec(input, parse_token, "[", "]", ",")
 }
@@ -73,9 +75,21 @@ fn parse_word<T>(input: &[u8]) -> IResult<&[u8], Vec<T>>
 fn test_parse_word() {
     let legal_inputs = vec![
         ("[]", "", vec![]),
-        ("[a, b, c]", "", vec![String::from("a"), String::from("b"), String::from("c")]),
-        ("[xyz, ab]", "", vec![String::from("xyz"), String::from("ab")]),
-        ("[\"xyz\", \"ab\", cd] bla", " bla", vec![String::from("xyz"), String::from("ab"), String::from("cd")]),
+        (
+            "[a, b, c]",
+            "",
+            vec![String::from("a"), String::from("b"), String::from("c")]
+        ),
+        (
+            "[xyz, ab]",
+            "",
+            vec![String::from("xyz"), String::from("ab")]
+        ),
+        (
+            "[\"xyz\", \"ab\", cd] bla",
+            " bla",
+            vec![String::from("xyz"), String::from("ab"), String::from("cd")]
+        ),
     ];
 
     for (legal_input, control_rest, control_parsed) in legal_inputs {
@@ -89,9 +103,33 @@ fn test_parse_word() {
 #[test]
 fn test_parse_transitions() {
     let legal_inputs = vec![
-        ("Transition [1, 2, 3] (1) # 2 % blub", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 2usize, instruction: 1usize }),
-        ("Transition [1, 2, 3] (1) % blub", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 1usize, instruction: 1usize }),
-        ("Transition [1, 2, 3] (1)", "", Transition { word: vec![1usize, 2usize, 3usize], weight: 1usize, instruction: 1usize }),
+        (
+            "Transition [1, 2, 3] (1) # 2 % blub",
+            "",
+            Transition {
+                word: vec![1usize, 2usize, 3usize],
+                weight: 2usize,
+                instruction: 1usize,
+            }
+        ),
+        (
+            "Transition [1, 2, 3] (1) % blub",
+            "",
+            Transition {
+                word: vec![1usize, 2usize, 3usize],
+                weight: 1usize,
+                instruction: 1usize,
+            }
+        ),
+        (
+            "Transition [1, 2, 3] (1)",
+            "",
+            Transition {
+                word: vec![1usize, 2usize, 3usize],
+                weight: 1usize,
+                instruction: 1usize,
+            }
+        ),
     ];
 
     for (legal_input, control_rest, control_parsed) in legal_inputs {

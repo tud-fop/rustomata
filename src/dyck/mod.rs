@@ -18,12 +18,16 @@ pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
             Bracket::Open(ref symbol) => {
                 stack.push(symbol);
             }
-            Bracket::Close(ref symbol) => match stack.pop() {
-                None => return false,
-                Some(symbol_) => if symbol != symbol_ {
-                    return false;
-                },
-            },
+            Bracket::Close(ref symbol) => {
+                match stack.pop() {
+                    None => return false,
+                    Some(symbol_) => {
+                        if symbol != symbol_ {
+                            return false;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -33,16 +37,13 @@ pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
 use std::fmt::{Display, Formatter, Error};
 
 impl<T> Display for Bracket<T>
-where T: Display + PartialEq
+where
+    T: Display + PartialEq,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match *self {
-            Bracket::Open(ref t) => {
-                write!(f, "⟨{}", t)
-            },
-            Bracket::Close(ref t) => {
-                write!(f, "⟩{}", t)
-            }
+            Bracket::Open(ref t) => write!(f, "⟨{}", t),
+            Bracket::Close(ref t) => write!(f, "⟩{}", t),
         }
     }
 }
@@ -62,11 +63,8 @@ mod tests {
             assert!(super::recognize(&dyckword));
         }
 
-        assert!(super::recognize(&vec![
-            Open("one"),
-            Close("one"),
-            Open("two"),
-            Close("two"),
-        ]));
+        assert!(super::recognize(
+            &vec![Open("one"), Close("one"), Open("two"), Close("two")],
+        ));
     }
 }

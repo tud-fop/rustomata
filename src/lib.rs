@@ -11,14 +11,9 @@ extern crate serde_derive;
 extern crate fnv;
 
 pub mod approximation;
+pub mod automata;
+pub mod dyck;
+pub mod grammars;
 #[macro_use]
 pub mod recognisable;
-pub mod cfg;
-pub mod nfa;
-pub mod pmcfg;
-pub mod push_down_automaton;
-pub mod tree_stack_automaton;
 pub mod util;
-pub mod mcfg;
-pub mod lcfrs;
-pub mod dyck;
