@@ -11,16 +11,21 @@ use super::{PushDownAutomaton, FiniteAutomaton};
 use log_domain::LogDomain;
 use pmcfg::PMCFGRule;
 
+mod cyk_generator;
+use self::cyk_generator::CykGenerator;
+
 pub enum GeneratorStrategy {
     Finite,
     Approx(usize),
-    PushDown
+    PushDown,
+    CykLike
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Generator<T> where T: Clone + Eq + Hash {
     Finite ( FiniteAutomaton<BracketFragment<T>, LogDomain<f64>> ),
-    PushDown ( PushDownAutomaton<BracketFragment<T>, LogDomain<f64>> )
+    PushDown ( PushDownAutomaton<BracketFragment<T>, LogDomain<f64>> ),
+    Cyk ( FiniteAutomaton<BracketFragment<T>, LogDomain<f64>> )
 }
 
 impl<T> Generator<T> where T: Clone + Eq + Hash {
@@ -67,30 +72,44 @@ impl<T> Generator<T> where T: Clone + Eq + Hash {
         )
     }
 
+    pub fn cyk<'a, N, R>(grammar_rules: R, initial: N, integeriser: &Integeriser<Item=PMCFGRule<N, T, LogDomain<f64>>>) -> Self 
+    where R: IntoIterator<Item=&'a PMCFGRule<N, T, LogDomain<f64>>>,
+          N: Eq + Clone + Hash + 'a,
+          T: 'a
+    {
+        Generator::Cyk(
+            Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(0)
+        )
+    }
+
     pub fn intersect(&self, other: FiniteAutomaton<BracketFragment<T>, ()>) -> Self {
         match *self {
             Generator::Finite(ref fsa) => Generator::Finite(fsa.intersect(&other)),
+            Generator::Cyk(ref fsa) => Generator::Cyk(fsa.intersect(&other)),
             Generator::PushDown(ref pda) => Generator::PushDown(pda.clone().intersect(&other))
         }
     }
 
-    pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item=Vec<BracketFragment<T>>> + 'a> where T: 'a{
+    pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item=Vec<Delta<T>>> + 'a> where T: 'a {
         match self {
-            Generator::Finite(fsa) => fsa.generate(beam),
-            Generator::PushDown(pda) => pda.generate(beam)
+            Generator::Finite(fsa) => Box::new(fsa.generate(beam).map(|fs| BracketFragment::concat(fs))),
+            Generator::PushDown(pda) => Box::new(pda.generate(beam).map(|fs| BracketFragment::concat(fs))),
+            Generator::Cyk(fsa) => Box::new(CykGenerator::new(fsa))
         }
     }
 
     pub fn get_integeriser(&self) -> Rc<HashIntegeriser<BracketFragment<T>>> {
         match *self {
             Generator::Finite(ref fsa) => fsa.get_integeriser(),
-            Generator::PushDown(ref pda) => pda.get_integeriser()
+            Generator::PushDown(ref pda) => pda.get_integeriser(),
+            Generator::Cyk(ref fsa) => fsa.get_integeriser(),
         }
     }
 
     pub fn size(&self) -> usize {
         match *self {
             Generator::Finite(ref fsa) => fsa.size(),
+            Generator::Cyk(ref fsa) => fsa.size(),
             Generator::PushDown(ref pda) => pda.size()
         }
     }

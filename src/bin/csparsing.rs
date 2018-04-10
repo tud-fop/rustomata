@@ -37,6 +37,11 @@ pub fn get_sub_command(name: &str) -> App {
                                         .help("Use a push-down automaton to generate candidates.")
                                         .long("pd")
                                         .group("strategy")
+                                ).arg(
+                                    Arg::with_name("cyk")
+                                        .help("Evaluate an fsa cyk-style to generate candidates.")
+                                        .long("cyk")
+                                        .group("strategy")
                                 ).group(
                                     ArgGroup::with_name("filter")
                                 ).arg(
@@ -82,6 +87,8 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             let strategy = {
                 if susbsubmatches.is_present("naive") {
                     GeneratorStrategy::Finite
+                } else if susbsubmatches.is_present("cyk") {
+                    GeneratorStrategy::CykLike
                 } else if let Some(depth) = susbsubmatches.value_of("approx") {
                     GeneratorStrategy::Approx(depth.parse().unwrap())
                 } else {

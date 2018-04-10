@@ -12,7 +12,6 @@ pub mod bracket_fragment;
 mod rule_fragments;
 
 use self::automata::*;
-use self::bracket_fragment::BracketFragment;
 use dyck::Bracket;
 use super::Lcfrs;
 
@@ -83,7 +82,8 @@ where
         let gen = match gstrat {
             GeneratorStrategy::Finite => Generator::naive(irules.values(), initial, &irules),
             GeneratorStrategy::Approx(d) => Generator::approx(irules.values(), initial, &irules, d),
-            GeneratorStrategy::PushDown => Generator::push_down(irules.values(), initial, &irules)
+            GeneratorStrategy::PushDown => Generator::push_down(irules.values(), initial, &irules),
+            GeneratorStrategy::CykLike => Generator::cyk(irules.values(), initial, &irules)
         };
         
         let fil = match fstrat {
@@ -133,7 +133,6 @@ where
         let (cans, ptime) = with_time(|| {
             match g_.generate(beam)
                 .enumerate()
-                .map(|(i, frag)| (i, BracketFragment::concat(frag)))
                 .filter(|&(_, ref candidate)| dyck::recognize(candidate))
                 .filter_map(|(i, candidate)| toderiv(&self.rules, &candidate).map(|_| (i + 1)))
                 .next()
@@ -187,7 +186,7 @@ where
     T: 'a + PartialEq + Hash + Clone + Eq + Ord,
     N: 'a + Hash + Eq,
 {
-    candidates: Box<Iterator<Item = Vec<BracketFragment<T>>> + 'a>,
+    candidates: Box<Iterator<Item = Vec<Delta<T>>> + 'a>,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
     checker: &'a MultipleDyckLanguage<BracketContent<T>>
 }
@@ -205,8 +204,8 @@ where
             rules,
             checker
         } = self;
-        for fragments in candidates {
-            let candidate: Vec<Delta<T>> = BracketFragment::concat(fragments).into_iter().filter(|b| match *b {
+        for candidate in candidates {
+            let candidate: Vec<_> = candidate.into_iter().filter(|b| match *b {
                 Bracket::Open(BracketContent::Terminal(_)) | Bracket::Close(BracketContent::Terminal(_)) => false,
                 _ => true
             }).collect();

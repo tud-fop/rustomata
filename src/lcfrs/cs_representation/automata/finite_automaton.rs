@@ -179,10 +179,7 @@ where
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
-    pub fn generate<'a>(self, beamwidth: Capacity) -> Box<Iterator<Item = Vec<T>> + 'a>
-    where
-        T: 'a,
-    {
+    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item=Vec<T>> {
         let heuristics = self.heuristics();
 
         let FiniteAutomaton {
