@@ -5,7 +5,7 @@ use log_domain::LogDomain;
 use num_traits::{One, Zero};
 use integeriser::{HashIntegeriser, Integeriser};
 
-use recognisable::{Search, WeightedSearchItem};
+use util::search::{Search, WeightedSearchItem};
 use super::{StateInstruction, FiniteAutomaton};
 use std::rc::Rc;
 use util::agenda::Capacity;

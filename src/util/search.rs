@@ -1,53 +1,5 @@
-use std::collections::{BTreeSet, BinaryHeap, HashMap};
-use std::hash::Hash;
-use std::rc::Rc;
+use std::collections::BTreeSet;
 use util::agenda::{Agenda, Capacity, PriorityQueue};
-use util::push_down::Pushdown;
-
-/// Iterator for `recognise` that creates new solutions with every step
-pub struct Recogniser<'a, A, C, R: Ord, K: Hash, O> {
-    // TODO rename to ParseForest
-    pub agenda: A,
-    pub configuration_characteristic: Box<Fn(&C) -> &K>,
-    pub filtered_rules: Rc<HashMap<K, BinaryHeap<R>>>,
-    pub apply: Box<Fn(&C, &R) -> Vec<C>>,
-    pub accepting: Box<Fn(&C) -> bool + 'a>,
-    pub item_map: Box<Fn(&(C, Pushdown<R>)) -> O + 'a>,
-    pub already_found: Option<BTreeSet<C>>,
-}
-
-impl<'a, A, C, R, K, O> Iterator for Recogniser<'a, A, C, R, K, O>
-where
-    A: Agenda<Item = (C, Pushdown<R>)>,
-    C: Clone + Ord,
-    R: Clone + Ord,
-    K: Eq + Hash,
-{
-    type Item = O;
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some((c, run)) = self.agenda.dequeue() {
-            let founds = &mut self.already_found;
-            if let Some(rs) = self.filtered_rules
-                .get((self.configuration_characteristic)(&c))
-            {
-                for r in rs {
-                    for c1 in (self.apply)(&c, r).into_iter().filter(|c1| match *founds {
-                        None => true,
-                        Some(ref mut set) => set.insert(c1.clone()),
-                    }) {
-                        let run1 = run.clone().push(r.clone());
-                        self.agenda.enqueue((c1, run1));
-                    }
-                }
-            }
-            if (self.accepting)(&c) {
-                return Some((self.item_map)(&(c, run)));
-            }
-        }
-
-        None
-    }
-}
 
 /// Implements a `Search` in a graph that is defined by a set of elements and a successor function.
 pub enum Search<A, I, F>

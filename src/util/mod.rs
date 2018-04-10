@@ -3,6 +3,7 @@ pub mod partition;
 pub mod push_down;
 pub mod integerisable;
 pub mod parsing;
+pub mod search;
 pub mod tree;
 
 use fnv::{FnvHashMap, FnvHashSet};

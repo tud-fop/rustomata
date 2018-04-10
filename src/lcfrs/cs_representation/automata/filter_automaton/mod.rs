@@ -11,7 +11,7 @@ use std::rc::Rc;
 use recognisable::Transition;
 use lcfrs::cs_representation::rule_fragments::fragments;
 use util::IntMap;
-use recognisable::Search;
+use util::search::Search;
 
 pub enum FilterStrategy { Naive, Inside }
 

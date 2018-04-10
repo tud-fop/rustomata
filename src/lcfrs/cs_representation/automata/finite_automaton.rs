@@ -5,7 +5,7 @@ use std::hash::Hash;
 use num_traits::{One, Zero};
 use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
-use recognisable::{Search, WeightedSearchItem};
+use util::search::{Search, WeightedSearchItem};
 use recognisable::Instruction;
 
 /// The instruction for state transitions.

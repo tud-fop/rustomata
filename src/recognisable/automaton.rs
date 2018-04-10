@@ -1,14 +1,14 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::Hash;
-use std::iter::empty;
 use std::ops::MulAssign;
 use std::rc::Rc;
 
 use num_traits::One;
 
-use recognisable::{Configuration, Instruction, Item, Recogniser, Transition};
-use util::agenda::{Agenda, PriorityQueue, Capacity};
+use recognisable::{Configuration, Instruction, Item, Transition};
+use util::agenda::Capacity;
 use util::push_down::Pushdown;
+use util::search::Search;
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
@@ -106,80 +106,75 @@ pub trait Automaton<T, W>
 
 
 pub fn recognise<'a, A, T, W>(a: &'a A, word: Vec<T>)
-                              -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
+                              -> impl Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a
     where A: Automaton<T, W>,
           A::I: Clone + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Eq,
-          A::IInt: 'a + Ord,
-          A::Key: 'a,
+          A::IInt: Ord + 'a,
           <A::IInt as Instruction>::Storage: Clone + Eq + Ord,
-          T: Clone + Eq + Ord + 'a,
-          A::TInt: Clone + Eq + Ord,
+          T: Clone + Eq + Ord,
+          A::TInt: Clone + Eq + Ord + 'a,
           W: Copy + MulAssign + One + Ord + 'a,
 {
-    if let Some(the_word) = word.iter().map(|t| a.terminal_to_int(t)).collect() {
-        let i = Configuration {
+    let the_words: Option<_> = word.iter().map(|t| a.terminal_to_int(t)).collect();
+
+    let init_confs = the_words.map(
+        |the_word|
+        (Configuration {
             word: the_word,
             storage: a.initial_int(),
             weight: W::one(),
-        };
+        }, Pushdown::new())
+    );
 
-        let mut init_heap = BinaryHeap::new();
-        init_heap.enqueue((i, Pushdown::new()));
-
-        Box::new(
-            Recogniser {
-                agenda: init_heap,
-                configuration_characteristic: Box::new(|c| A::extract_key(c)),
-                filtered_rules: a.transition_map(),
-                apply: Box::new(|c, r| r.apply(c)),
-                accepting: Box::new(move |c| a.is_terminal(c)),
-                item_map: Box::new(move |i| a.item_map(&i)),
-                already_found: None
-            }
-        )
-    } else {
-        Box::new(empty())
-    }
+    Search::weighted(
+        init_confs,
+        move |(conf, run)| {
+            let key = A::extract_key(conf);
+            let trans_map = a.transition_map();
+            let bh = BinaryHeap::new();
+            let rules = trans_map.get(key).unwrap_or(&bh);
+            rules.iter().flat_map(|r| {
+                r.apply(conf).into_iter().map(move |conf1| (conf1, run.clone().push(r.clone())))
+            }).collect()
+        }
+    ).filter(move |(c, _)| a.is_terminal(c)).map(move |i| a.item_map(&i))
 }
 
 
 pub fn recognise_beam<'a, A, T, W>(a: &'a A, beam: usize, word: Vec<T>)
-                               -> Box<Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a>
+                               -> impl Iterator<Item=Item<<A::I as Instruction>::Storage, A::I, T, W>> + 'a
     where A: Automaton<T, W>,
           A::I: Clone + Eq + Instruction,
           <A::I as Instruction>::Storage: Clone + Eq,
-          A::IInt: 'a + Ord,
-          A::Key: 'a,
+          A::IInt: Ord + 'a,
           <A::IInt as Instruction>::Storage: Clone + Eq + Ord,
-          T: Clone + Eq + Ord + 'a,
-          A::TInt: Clone + Eq + Ord,
+          T: Clone + Eq + Ord,
+          A::TInt: Clone + Eq + Ord + 'a,
           W: Copy + MulAssign + One + Ord + 'a,
 {
-    if let Some(the_word) = word.iter().map(|t| a.terminal_to_int(t)).collect() {
-        let i = Configuration {
+    let the_words: Option<_> = word.iter().map(|t| a.terminal_to_int(t)).collect();
+
+    let init_confs = the_words.map(
+        |the_word|
+        (Configuration {
             word: the_word,
             storage: a.initial_int(),
             weight: W::one(),
-        };
-        let mut init_heap = PriorityQueue::new(
-            Capacity::Limit(beam)
-        );
-        init_heap.enqueue((i, Pushdown::new()));
+        }, Pushdown::new())
+    );
 
-        Box::new(
-            Recogniser {
-                agenda: init_heap,
-                configuration_characteristic: Box::new(|c| A::extract_key(c)),
-                filtered_rules: a.transition_map(),
-                apply: Box::new(|c, r| r.apply(c)),
-                accepting: Box::new(move |c| a.is_terminal(c)),
-                item_map: Box::new(move |i| a.item_map(&i)),
-                already_found: None
-            }
-        )
-    } else {
-        Box::new(empty())
-    }
+    Search::weighted(
+        init_confs,
+        move |(conf, run)| {
+            let key = A::extract_key(conf);
+            let trans_map = a.transition_map();
+            let bh = BinaryHeap::new();
+            let rules = trans_map.get(key).unwrap_or(&bh);
+            rules.iter().flat_map(|r| {
+                r.apply(conf).into_iter().map(move |conf1| (conf1, run.clone().push(r.clone())))
+            }).collect()
+        }
+    ).beam(Capacity::Limit(beam)).filter(move |(c, _)| a.is_terminal(c)).map(move |i| a.item_map(&i))
 }
 

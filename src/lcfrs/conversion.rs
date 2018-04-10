@@ -16,7 +16,7 @@ where
     W: Copy
 {
     fn from(mcfg: Mcfg<N, T, W>) -> Self {
-        use recognisable::Search;
+        use util::search::Search;
 
         let (mcfg_rules, mcfg_initial) = mcfg.destruct();
 

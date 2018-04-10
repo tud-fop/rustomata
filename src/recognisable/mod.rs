@@ -1,5 +1,4 @@
 mod configuration;
-mod recogniser;
 mod transition;
 
 pub mod automaton;
@@ -12,7 +11,6 @@ use util::agenda::Weighted;
 use util::push_down::Pushdown;
 
 pub use self::configuration::Configuration;
-pub use self::recogniser::{Recogniser, Search, WeightedSearchItem};
 pub use self::transition::Transition;
 
 

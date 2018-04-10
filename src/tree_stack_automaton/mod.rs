@@ -122,11 +122,11 @@ impl<A, T, W> Recognisable<T, W> for TreeStackAutomaton<A, T, W>
     type Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>;
 
     fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognise(self, word)
+        Box::new(recognise(self, word))
     }
 
     fn recognise_beam_search<'a>(&'a self, beam: usize, word: Vec<T>) -> Box<Iterator<Item=Self::Parse> + 'a> {
-        recognise_beam(self, beam, word)
+        Box::new(recognise_beam(self, beam, word))
     }
 }
 
