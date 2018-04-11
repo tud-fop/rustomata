@@ -8,11 +8,13 @@ use util::agenda::Capacity;
 use super::super::rule_fragments::fragments;
 use super::super::bracket_fragment::BracketFragment;
 use super::{PushDownAutomaton, FiniteAutomaton};
-use log_domain::LogDomain;
 use grammars::pmcfg::PMCFGRule;
 
 mod cyk_generator;
 use self::cyk_generator::CykGenerator;
+use util::factorizable::Factorizable;
+use num_traits::{One, Zero};
+use std::ops::Mul;
 
 pub enum GeneratorStrategy {
     Finite,
@@ -22,28 +24,29 @@ pub enum GeneratorStrategy {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum Generator<T>
+pub enum Generator<T, W>
 where
     T: Clone + Eq + Hash,
 {
-    Finite(FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>),
-    PushDown(PushDownAutomaton<BracketFragment<T>, LogDomain<f64>>),
-    Cyk(FiniteAutomaton<BracketFragment<T>, LogDomain<f64>>),
+    Finite(FiniteAutomaton<BracketFragment<T>, W>),
+    PushDown(PushDownAutomaton<BracketFragment<T>, W>),
+    Cyk(FiniteAutomaton<BracketFragment<T>, W>),
 }
 
-impl<T> Generator<T>
+impl<T, W> Generator<T, W>
 where
     T: Clone + Eq + Hash,
 {
     fn unboxed_push_down<'a, N, R>(
         grammar_rules: R,
         initial: N,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
-    ) -> PushDownAutomaton<BracketFragment<T>, LogDomain<f64>>
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
+    ) -> PushDownAutomaton<BracketFragment<T>, W>
     where
-        R: IntoIterator<Item = &'a PMCFGRule<N, T, LogDomain<f64>>>,
+        R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
         N: Eq + Clone + Hash + 'a,
         T: 'a,
+        W: 'a + Factorizable + One + Copy
     {
         let mut transitions = Vec::new();
         for rule in grammar_rules {
@@ -60,12 +63,13 @@ where
     pub fn push_down<'a, N, R>(
         grammar_rules: R,
         initial: N,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
     ) -> Self
     where
-        R: IntoIterator<Item = &'a PMCFGRule<N, T, LogDomain<f64>>>,
+        R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
         N: Eq + Clone + Hash + 'a,
         T: 'a,
+        W: 'a + One + Factorizable + Copy
     {
         Generator::PushDown(Generator::unboxed_push_down(
             grammar_rules,
@@ -77,12 +81,13 @@ where
     pub fn naive<'a, N, R>(
         grammar_rules: R,
         initial: N,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
     ) -> Self
     where
-        R: IntoIterator<Item = &'a PMCFGRule<N, T, LogDomain<f64>>>,
+        R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
         N: Eq + Clone + Hash + 'a,
         T: 'a,
+        W: 'a + One + Factorizable + Copy
     {
         Generator::Finite(
             Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(0),
@@ -92,13 +97,14 @@ where
     pub fn approx<'a, N, R>(
         grammar_rules: R,
         initial: N,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
         d: usize,
     ) -> Self
     where
-        R: IntoIterator<Item = &'a PMCFGRule<N, T, LogDomain<f64>>>,
+        R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
         N: Eq + Clone + Hash + 'a,
         T: 'a,
+        W: 'a + One + Factorizable + Copy
     {
         Generator::Finite(
             Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(d),
@@ -108,19 +114,23 @@ where
     pub fn cyk<'a, N, R>(
         grammar_rules: R,
         initial: N,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
     ) -> Self
     where
-        R: IntoIterator<Item = &'a PMCFGRule<N, T, LogDomain<f64>>>,
+        R: IntoIterator<Item = &'a PMCFGRule<N, T, W>>,
         N: Eq + Clone + Hash + 'a,
         T: 'a,
+        W: 'a + Copy + One + Factorizable
     {
         Generator::Cyk(
             Generator::unboxed_push_down(grammar_rules, initial, integeriser).approximate(0),
         )
     }
 
-    pub fn intersect(&self, other: FiniteAutomaton<BracketFragment<T>, ()>) -> Self {
+    pub fn intersect(&self, other: FiniteAutomaton<BracketFragment<T>, ()>) -> Self
+    where
+        W: Copy
+    {
         match *self {
             Generator::Finite(ref fsa) => Generator::Finite(fsa.intersect(&other)),
             Generator::Cyk(ref fsa) => Generator::Cyk(fsa.intersect(&other)),
@@ -131,6 +141,7 @@ where
     pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<Delta<T>>> + 'a>
     where
         T: 'a,
+        W: 'a +  Copy + Ord + One + Zero + Mul<Output=W>
     {
         match self {
             Generator::Finite(fsa) => Box::new(

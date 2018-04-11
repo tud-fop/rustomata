@@ -4,7 +4,6 @@ use integeriser::{HashIntegeriser, Integeriser};
 use std::collections::BTreeMap;
 
 use grammars::pmcfg::PMCFGRule;
-use log_domain::LogDomain;
 use dyck;
 
 pub mod automata;
@@ -21,6 +20,10 @@ use util::tree::GornTree;
 
 use dyck::multiple::MultipleDyckLanguage;
 mod mdl;
+use self::automata::GeneratorStrategy;
+use util::factorizable::Factorizable;
+use std::ops::Mul;
+use num_traits::{Zero, One};
 
 /// The indices of a bracket in a CS representation for MCFG.
 /// Assumes integerized rules.
@@ -47,29 +50,30 @@ where
 /// A CS representation of an LCFRS contains a `GeneratorAutomaton`, a ´FilterAutomaton`,
 /// and a `MultipleDyckLanguage` over the same bracket alphabet.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CSRepresentation<N, T>
+pub struct CSRepresentation<N, T, W>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
+    W: Ord + Clone
 {
-    generator: Generator<T>,
+    generator: Generator<T, W>,
     filter: Filter<T>,
     checker: MultipleDyckLanguage<BracketContent<T>>,
 
-    rules: HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
+    rules: HashIntegeriser<PMCFGRule<N, T, W>>,
 }
 
-use self::automata::GeneratorStrategy;
-
-impl<N, T> CSRepresentation<N, T>
+impl<N, T, W> CSRepresentation<N, T, W>
 where
     N: Ord + Hash + Clone,
     T: Ord + Hash + Clone,
+    W: Ord + Clone
 {
     /// Instantiates a CS representation for an `LCFRS` and `GeneratorStrategy`.
     pub fn new<M>(grammar: M, fstrat: FilterStrategy, gstrat: GeneratorStrategy) -> Self
     where
-        M: Into<Lcfrs<N, T, LogDomain<f64>>>,
+        M: Into<Lcfrs<N, T, W>>,
+        W: Copy + One + Factorizable + Mul<Output=W>
     {
         let (rules, initial) = grammar.into().destruct();
         let mut irules = HashIntegeriser::new();
@@ -100,7 +104,10 @@ where
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N> {
+    pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N, W>
+    where
+        W: One + Zero + Mul<Output=W> + Copy + Ord
+    {
         let f = self.filter.fsa(word, &self.generator);
         let g = self.generator.intersect(f).generate(beam);
 
@@ -112,7 +119,10 @@ where
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
-    pub fn debug(&self, word: &[T], beam: Capacity) {
+    pub fn debug(&self, word: &[T], beam: Capacity) 
+    where
+        W: One + Zero + Mul<Output=W> + Copy + Ord
+    {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
 
@@ -147,12 +157,12 @@ where
     }
 }
 
-fn toderiv<'a, 'b, N, T, I>(
+fn toderiv<'a, 'b, N, T, W, I>(
     rules: &'a I,
     word: &'b [Delta<T>],
-) -> Option<GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>>
+) -> Option<GornTree<&'a PMCFGRule<N, T, W>>>
 where
-    I: Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
+    I: Integeriser<Item = PMCFGRule<N, T, W>>,
     T: PartialEq,
 {
     let mut tree = BTreeMap::new();
@@ -185,24 +195,26 @@ where
 
 /// Iterates Dyck words that represent a derivation for a word according to
 /// the Chomsky-Schützenberger characterization of an MCFG.
-pub struct CSGenerator<'a, T, N>
+pub struct CSGenerator<'a, T, N, W>
 where
     T: 'a + PartialEq + Hash + Clone + Eq + Ord,
     N: 'a + Hash + Eq,
+    W: 'a + Eq
 {
     candidates: Box<Iterator<Item = Vec<Delta<T>>> + 'a>,
-    rules: &'a HashIntegeriser<PMCFGRule<N, T, LogDomain<f64>>>,
+    rules: &'a HashIntegeriser<PMCFGRule<N, T, W>>,
     checker: &'a MultipleDyckLanguage<BracketContent<T>>,
 }
 
-impl<'a, N, T> Iterator for CSGenerator<'a, T, N>
+impl<'a, N, T, W> Iterator for CSGenerator<'a, T, N, W>
 where
     T: PartialEq + Hash + Clone + Eq + Ord,
     N: Hash + Eq + Clone,
+    W: Eq + Clone
 {
-    type Item = GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>;
+    type Item = GornTree<&'a PMCFGRule<N, T, W>>;
 
-    fn next(&mut self) -> Option<GornTree<&'a PMCFGRule<N, T, LogDomain<f64>>>> {
+    fn next(&mut self) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
         let &mut CSGenerator {
             ref mut candidates,
             rules,
@@ -231,7 +243,9 @@ where
 #[cfg(test)]
 mod test {
     use grammars::pmcfg::{VarT, PMCFGRule, Composition};
-    use super::{FilterStrategy, Capacity, CSRepresentation, LogDomain, Lcfrs, GeneratorStrategy};
+    use super::{FilterStrategy, Capacity, CSRepresentation, Lcfrs, GeneratorStrategy};
+    use util::reverse::Reverse;
+    use log_domain::LogDomain;
 
     #[test]
     fn csrep() {
@@ -244,7 +258,7 @@ mod test {
         ].into_iter()
             .collect();
 
-        let cs = CSRepresentation::<&str, char>::new(
+        let cs = CSRepresentation::new(
             grammar.clone(),
             FilterStrategy::Naive,
             GeneratorStrategy::Finite,
@@ -256,7 +270,7 @@ mod test {
         );
     }
 
-    fn lcfrs() -> Lcfrs<&'static str, char, LogDomain<f64>> {
+    fn lcfrs() -> Lcfrs<&'static str, char, Reverse<LogDomain<f64>>> {
         Lcfrs {
             init: "S",
             rules: vec![
@@ -266,13 +280,13 @@ mod test {
                     composition: Composition {
                         composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0)]],
                     },
-                    weight: LogDomain::new(0.3f64).unwrap(),
+                    weight: LogDomain::new(0.3f64).unwrap().into(),
                 },
                 PMCFGRule {
                     head: "S",
                     tail: vec![],
                     composition: Composition { composition: vec![vec![VarT::T('A')]] },
-                    weight: LogDomain::new(0.7f64).unwrap(),
+                    weight: LogDomain::new(0.7f64).unwrap().into(),
                 },
             ],
         }

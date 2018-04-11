@@ -10,8 +10,9 @@ use std::rc::Rc;
 
 use recognisable::Transition;
 use grammars::lcfrs::cs_representation::rule_fragments::fragments;
-use util::IntMap;
+use util::{IntMap, factorizable::Factorizable};
 use util::search::Search;
+use std::ops::Mul;
 
 pub enum FilterStrategy {
     Naive,
@@ -44,10 +45,10 @@ impl<'a, T> Filter<T>
 where
     T: Hash + Eq + Clone + 'a,
 {
-    pub fn naive<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T>) -> Self
+    pub fn naive<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T, W>) -> Self
     where
         N: Hash + Eq + Clone + 'a,
-        W: Eq + Clone + 'a,
+        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable,
         R: Iterator<Item = &'a PMCFGRule<N, T, W>>,
         I: Integeriser<Item = PMCFGRule<N, T, W>>,
     {
@@ -81,10 +82,10 @@ where
         }
     }
 
-    pub fn inside<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T>) -> Self
+    pub fn inside<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T, W>) -> Self
     where
         N: Hash + Eq + Clone + 'a,
-        W: Eq + Clone + 'a,
+        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable,
         R: Iterator<Item = &'a PMCFGRule<N, T, W>>,
         I: Integeriser<Item = PMCFGRule<N, T, W>>,
     {
@@ -154,10 +155,10 @@ where
     }
 
     /// Extracts an unweighted finite state automaton from the object.
-    pub fn fsa(
+    pub fn fsa<W>(
         &self,
         word: &[T],
-        reference_automaton: &Generator<T>,
+        reference_automaton: &Generator<T, W>,
     ) -> FiniteAutomaton<BracketFragment<T>, ()> {
         match *self {
             Filter::Naive {

@@ -6,6 +6,7 @@ pub mod parsing;
 pub mod reverse;
 pub mod search;
 pub mod tree;
+pub mod factorizable;
 
 use fnv::{FnvHashMap, FnvHashSet};
 

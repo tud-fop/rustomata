@@ -3,6 +3,7 @@
 ///       * weighted
 ///       * heuristic using shorted paths - from state to final
 ///                                       - from initial to state
+///       * this should not need terminal-separated rules
 
 use dyck::Bracket;
 use grammars::lcfrs::cs_representation::BracketContent;

@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::hash::Hash;
 
-use log_domain::LogDomain;
 use num_traits::{One, Zero};
 use integeriser::{HashIntegeriser, Integeriser};
 
@@ -12,6 +11,7 @@ use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 
 use recognisable::Transition;
+use std::ops::Mul;
 
 /// An operation on a push-down.
 /// The set of ops is limited to removal, addition and replacement of a single symbol.
@@ -130,7 +130,6 @@ where
 impl<T, W> PushDownAutomaton<T, W>
 where
     T: Hash + Eq + Clone,
-    W: Copy + Ord,
 {
     /// Creates a deterministic `PushDownAutomaton` using a sequence of transisitons.
     /// If there are multiple transitions from the same state with the same label,
@@ -139,6 +138,7 @@ where
     where
         Q: Hash + Eq + Clone,
         S: Hash + Eq + Clone,
+        W: Clone
     {
         let mut labels = HashIntegeriser::new();
         let mut pd_symbols = HashIntegeriser::new();
@@ -197,7 +197,7 @@ where
     /// of the `PushDownAutomaton`s language.
     /// The approximation limits each push-down of a run to a given depth.
     /// The set of all resulting runs is used to read off a set of `FiniteArcs`.
-    pub fn approximate(self, depth: usize) -> FiniteAutomaton<T, W> {
+    pub fn approximate(self, depth: usize) -> FiniteAutomaton<T, W> where W: Copy {
         let mut new_states = HashIntegeriser::new();
 
         let mut agenda = Vec::new();
@@ -206,22 +206,26 @@ where
         {
             let pd = Vec::new();
             if let Some(pd_) = op.apply_with_capacity(&pd, depth) {
-                agenda.push((self.initial, pd, *label, pd_, to, weight))
+                agenda.push(
+                    WeightedSearchItem((self.initial, pd, *label, pd_, to), weight)
+                );
             }
         }
 
-        let transitions = Search::unweighted(agenda, |&(_, _, _, ref pd, from, _)| {
+        let transitions = Search::unweighted(agenda, |&WeightedSearchItem((_, _, _, ref pd, from), _)| {
             let mut succ = Vec::new();
             for (label, &(to, weight, ref op)) in
                 self.arcs.get(from).unwrap_or(&IntMap::default())
             {
                 if let Some(pd_) = op.apply_with_capacity(pd, depth) {
-                    succ.push((from, pd.clone(), *label, pd_, to, weight));
+                    succ.push(
+                        WeightedSearchItem((from, pd.clone(), *label, pd_, to), weight)
+                    );
                 }
             }
             succ
         }).uniques()
-            .map(|(q, pd, s, pd_, q_, weight)| {
+            .map(|WeightedSearchItem((q, pd, s, pd_, q_), weight)| {
                 Transition {
                     instruction: StateInstruction(
                         new_states.integerise((q, pd)),
@@ -247,39 +251,43 @@ where
     }
 }
 
-impl<T> PushDownAutomaton<T, LogDomain<f64>>
+impl<T, W> PushDownAutomaton<T, W>
 where
     T: Hash + Eq + Clone,
 {
     /// Computes the Hadamard product of a deterministic `PushDownAutomaton` and
     /// a deterministic `FiniteAutomaton`.
-    pub fn intersect<W>(self, other: &FiniteAutomaton<T, W>) -> Self {
+    pub fn intersect(self, other: &FiniteAutomaton<T, ()>) -> Self where W: Copy {
         let mut agenda = Vec::new();
 
         for (label, &(to, weight, op)) in
             self.arcs.get(self.initial).unwrap_or(&IntMap::default())
         {
             if let Some(&(fto, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
-                agenda.push((self.initial, other.initial, op, *label, to, fto, weight));
+                agenda.push(
+                    WeightedSearchItem((self.initial, other.initial, op, *label, to, fto), weight)
+                );
             }
         }
 
         let mut new_arcs = Vec::new();
         let mut states = HashIntegeriser::new();
-        for (from1, from2, i, s, to1, to2, weight) in
-            Search::unweighted(agenda, |&(_, _, _, _, kq, fq, _)| {
+        for WeightedSearchItem((from1, from2, i, s, to1, to2), weight) in
+            Search::unweighted(agenda, |&WeightedSearchItem((_, _, _, _, kq, fq), _)| {
                 let mut succ = Vec::new();
 
                 for (label, &(to, weight, op)) in self.arcs.get(kq).unwrap_or(&IntMap::default()) {
                     if let Some(&(fto, _)) = other.arcs.get(fq).and_then(|m| m.get(label)) {
-                        succ.push((kq, fq, op, *label, to, fto, weight));
+                        succ.push(
+                            WeightedSearchItem((kq, fq, op, *label, to, fto), weight)
+                        );
                     }
                 }
 
                 succ
             }).uniques()
         {
-            vec_entry::<IntMap<(usize, LogDomain<f64>, PushDownInstruction<usize>)>>(
+            vec_entry::<IntMap<(usize, W, PushDownInstruction<usize>)>>(
                 &mut new_arcs,
                 states.integerise((from1, from2)),
             ).insert(s, (states.integerise((to1, to2)), weight, i));
@@ -303,7 +311,7 @@ where
     }
 
     /// Creates an `Iterator` over all words accepted by a `PushDownAutomaton`.
-    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>> {
+    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>> where W: Ord + Copy + Mul<Output=W> + One + Zero {
         let heuristics = self.heuristics();
 
         let PushDownAutomaton {
@@ -317,8 +325,8 @@ where
         let initial_agenda = if !finals.is_empty() {
             vec![
                 WeightedSearchItem(
-                    (LogDomain::one(), initial, vec![], vec![]),
-                    heuristics.get(&initial).unwrap().1.pow(-1.0)
+                    (W::one(), initial, vec![], vec![]),
+                    heuristics.get(&initial).unwrap().1
                 ),
             ]
         } else {
@@ -346,17 +354,17 @@ where
                                     heuristics
                                         .get(&to)
                                         .and_then(|&(ref m, _)| m.get(pds).cloned())
-                                        .unwrap_or_else(LogDomain::zero)
+                                        .unwrap_or_else(W::zero)
                                 })
                                 .min()
                                 .unwrap_or(heuristics.get(&to).map(|&(_, w)| w).unwrap_or_else(
-                                    LogDomain::zero,
+                                    W::zero,
                                 )) * successorweight;
 
-                            if priority > LogDomain::zero() {
+                            if !priority.is_zero() {
                                 results.push(WeightedSearchItem(
                                     (successorweight, to, word_, pd_),
-                                    priority.pow(-1.0),
+                                    priority,
                                 ));
                             }
                         }
@@ -377,15 +385,15 @@ where
         )
     }
 
-    fn heuristics(&self) -> IntMap<(IntMap<LogDomain<f64>>, LogDomain<f64>)> {
+    fn heuristics(&self) -> IntMap<(IntMap<W>, W)> where W: Ord + Copy + Mul<Output=W> + One {
         let starts = self.finals.iter().map(|q| {
-            WeightedSearchItem((*q, BTreeSet::new()), LogDomain::one())
+            WeightedSearchItem((*q, BTreeSet::new()), W::one())
         });
 
         let mut bwtransitions: Vec<
             Vec<
                 (usize,
-                 LogDomain<f64>,
+                 W,
                  PushDownInstruction<usize>),
             >,
         > = Vec::new();
@@ -413,16 +421,16 @@ where
                         }
                         _ => (),
                     }
-                    succ.push(WeightedSearchItem((from, removeables_), w / weight));
+                    succ.push(WeightedSearchItem((from, removeables_), w * weight));
                 }
                 succ
             }).uniques()
         {
             let map = heuristics.entry(q).or_insert(
-                (IntMap::default(), w.pow(-1.0)),
+                (IntMap::default(), w),
             );
             for rem in removeables {
-                map.0.entry(rem).or_insert(w.pow(-1.0));
+                map.0.entry(rem).or_insert(w);
             }
         }
         heuristics
@@ -649,29 +657,31 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use util::reverse::Reverse;
+    use log_domain::LogDomain;
 
     #[test]
     fn pda() {
-        let arcs = vec![
+        let arcs: Vec<PDSTransition<usize, usize, &str, Reverse<LogDomain<f64>>>> = vec![
             Transition {
                 instruction: (StateInstruction(0, 0), PushDownInstruction::Add(0)),
                 word: vec!["A"],
-                weight: LogDomain::new(1.0).unwrap(),
+                weight: LogDomain::new(1.0).unwrap().into(),
             },
             Transition {
                 instruction: (StateInstruction(0, 1), PushDownInstruction::Remove(0)),
                 word: vec!["B"],
-                weight: LogDomain::new(0.5).unwrap(),
+                weight: LogDomain::new(0.5).unwrap().into(),
             },
             Transition {
                 instruction: (StateInstruction(1, 1), PushDownInstruction::Remove(0)),
                 word: vec!["B"],
-                weight: LogDomain::new(1.0).unwrap(),
+                weight: LogDomain::new(1.0).unwrap().into(),
             },
             Transition {
                 instruction: (StateInstruction(0, 0), PushDownInstruction::Add(1)),
                 word: vec!["C"],
-                weight: LogDomain::new(1.0).unwrap(),
+                weight: LogDomain::new(1.0).unwrap().into(),
             },
         ];
 

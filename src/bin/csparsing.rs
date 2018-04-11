@@ -1,16 +1,14 @@
-use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
-use std::io::{stdin, stdout, Read};
-use std::fs::File;
 extern crate bincode;
-
-use rustomata::grammars::lcfrs::Lcfrs;
-use log_domain::LogDomain;
-use rustomata::grammars::lcfrs::cs_representation::CSRepresentation;
-use rustomata::grammars::lcfrs::cs_representation::automata::{FilterStrategy, GeneratorStrategy};
-use rustomata::util::agenda::Capacity;
-use rustomata::grammars::pmcfg::negra::to_negra;
-
+use clap::{SubCommand, App, Arg, ArgMatches, ArgGroup};
 use flate2::{read, write, Compression};
+use log_domain::LogDomain;
+use std::{ fs::File, io::{stdin, stdout, Read} };
+
+use rustomata::grammars::{ pmcfg::negra::to_negra, 
+                           lcfrs::{ Lcfrs, cs_representation::{ CSRepresentation, automata::{FilterStrategy, GeneratorStrategy} } } 
+                         };
+use rustomata::util::{ agenda::Capacity, reverse::Reverse };
+
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -164,13 +162,13 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             stdin().read_to_string(&mut grammar_string).expect(
                 "Could not read from stdin. Be sure to provide the gramar file as input.",
             );
-            let grammar: Lcfrs<String, String, LogDomain<f64>> = grammar_string.parse().expect(
+            let grammar: Lcfrs<String, String, Reverse<LogDomain<f64>>> = grammar_string.parse().expect(
                 "Could not decode the grammar provided via stdin.",
             );
 
             bincode::serialize_into(
                 &mut write::GzEncoder::new(stdout(), Compression::best()),
-                &CSRepresentation::<_, _>::new(grammar, filter, strategy),
+                &CSRepresentation::new(grammar, filter, strategy),
                 bincode::Infinite,
             ).unwrap()
         }
@@ -190,7 +188,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             };
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
 
-            let csrep: CSRepresentation<String, String> =
+            let csrep: CSRepresentation<String, String, Reverse<LogDomain<f64>>> =
                 bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite)
                     .unwrap();
             for sentence in word_strings.lines() {

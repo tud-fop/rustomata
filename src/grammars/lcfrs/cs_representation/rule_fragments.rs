@@ -3,6 +3,7 @@ use integeriser::Integeriser;
 use super::BracketContent;
 use super::bracket_fragment::BracketFragment;
 use dyck::Bracket;
+use util::factorizable::Factorizable;
 
 /// Represents a part either
 /// * before the first variable,
@@ -16,23 +17,29 @@ where
     T: 'a,
     W: 'a,
 {
-    Start(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>, (usize, usize)),
+    Start(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>, (usize, usize), W),
     Intermediate(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>, (usize, usize)),
-    End(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>),
-    Whole(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>),
+    End(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>, W),
+    Whole(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>, W),
 }
 
 /// Iterates over all `RuleFragment`s in a `PMCFGRule`.
-pub struct FragmentIterator<'a, N: 'a, T: 'a, W: 'a>(&'a PMCFGRule<N, T, W>, usize, i64);
+pub struct FragmentIterator<'a, N: 'a, T: 'a, W: 'a>(&'a PMCFGRule<N, T, W>, usize, i64, Vec<W>);
 
 /// Constructs a `FragmentIterator` for each `PMCFGRule`
-pub fn fragments<'a, N: 'a, T: 'a, W: 'a>(
+pub fn fragments<'a, N: 'a, T: 'a, W: 'a + Factorizable>(
     rule: &'a PMCFGRule<N, T, W>,
-) -> FragmentIterator<'a, N, T, W> {
-    FragmentIterator(rule, 0, -1)
+) -> FragmentIterator<'a, N, T, W>
+where
+    W: Copy
+{
+    FragmentIterator(rule, 0, -1, rule.weight.factorize(2 * rule.composition.composition.len()))
 }
 
-impl<'a, N, T, W> Iterator for FragmentIterator<'a, N, T, W> {
+impl<'a, N, T, W> Iterator for FragmentIterator<'a, N, T, W>
+where
+    W: Mul<Output=W>
+{
     type Item = RuleFragment<'a, N, T, W>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -62,7 +69,7 @@ impl<'a, N, T, W> Iterator for FragmentIterator<'a, N, T, W> {
                         return Some(Intermediate(self.0, self.1, (i_, j_), terminals, (i, j)));
                     } else {
                         self.2 = index as i64;
-                        return Some(Start(self.0, self.1, terminals, (i, j)));
+                        return Some(Start(self.0, self.1, terminals, (i, j), self.3.remove(0)));
                     }
                 }
             }
@@ -71,9 +78,9 @@ impl<'a, N, T, W> Iterator for FragmentIterator<'a, N, T, W> {
         self.1 += 1;
         self.2 = -1;
         if let Some((i, j)) = start_var {
-            return Some(End(self.0, comp, (i, j), terminals));
+            return Some(End(self.0, comp, (i, j), terminals, self.3.remove(0)));
         } else {
-            return Some(Whole(self.0, comp, terminals));
+            return Some(Whole(self.0, comp, terminals, self.3.remove(0) * self.3.remove(0)));
         }
     }
 }
@@ -87,10 +94,10 @@ where
 {
     fn rule(&self) -> &'a PMCFGRule<N, T, W> {
         match *self {
-            Start(r, _, _, _) |
+            Start(r, _, _, _, _) |
             Intermediate(r, _, _, _, _) |
-            End(r, _, _, _) |
-            Whole(r, _, _) => r,
+            End(r, _, _, _, _) |
+            Whole(r, _, _, _) => r,
         }
     }
 
@@ -103,12 +110,12 @@ where
         let r = integerizer.find_key(self.rule()).unwrap();
 
         match *self {
-            Start(_, j, _, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
+            Start(_, j, _, _, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
             Intermediate(_, _, (i, j), _, _) => {
                 bracks.push(Bracket::Close(BracketContent::Variable(r, i, j)))
             }
-            End(_, _, (i, j), _) => bracks.push(Bracket::Close(BracketContent::Variable(r, i, j))),
-            Whole(_, j, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
+            End(_, _, (i, j), _, _) => bracks.push(Bracket::Close(BracketContent::Variable(r, i, j))),
+            Whole(_, j, _, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
         };
 
         for symbol in self.terminals() {
@@ -117,12 +124,12 @@ where
         }
 
         match *self {
-            Start(_, _, _, (i, j)) => bracks.push(Bracket::Open(BracketContent::Variable(r, i, j))),
+            Start(_, _, _, (i, j), _) => bracks.push(Bracket::Open(BracketContent::Variable(r, i, j))),
             Intermediate(_, _, _, _, (i, j)) => {
                 bracks.push(Bracket::Open(BracketContent::Variable(r, i, j)))
             }
-            End(_, j, _, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
-            Whole(_, j, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
+            End(_, j, _, _, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
+            Whole(_, j, _, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
         };
 
         BracketFragment(bracks)
@@ -131,28 +138,28 @@ where
     /// Lists the terminals in a `RuleFragment`.
     pub fn terminals(&self) -> &[&'a T] {
         match *self {
-            Start(_, _, ref ts, _) |
+            Start(_, _, ref ts, _, _) |
             Intermediate(_, _, _, ref ts, _) |
-            End(_, _, _, ref ts) |
-            Whole(_, _, ref ts) => ts,
+            End(_, _, _, ref ts, _) |
+            Whole(_, _, ref ts, _) => ts,
         }
     }
 
     fn from(&self) -> Bracket<(N, usize)> {
         match *self {
-            Start(r, j, _, _) => Bracket::Open((r.head.clone(), j)),
+            Start(r, j, _, _, _) => Bracket::Open((r.head.clone(), j)),
             Intermediate(r, _, (i, j), _, _) => Bracket::Close((r.tail[i].clone(), j)),
-            End(r, _, (i, j), _) => Bracket::Close((r.tail[i].clone(), j)),
-            Whole(r, j, _) => Bracket::Open((r.head.clone(), j)),
+            End(r, _, (i, j), _, _) => Bracket::Close((r.tail[i].clone(), j)),
+            Whole(r, j, _, _) => Bracket::Open((r.head.clone(), j)),
         }
     }
 
     fn to(&self) -> Bracket<(N, usize)> {
         match *self {
-            Start(r, _, _, (i, j)) => Bracket::Open((r.tail[i].clone(), j)),
+            Start(r, _, _, (i, j), _) => Bracket::Open((r.tail[i].clone(), j)),
             Intermediate(r, _, _, _, (i, j)) => Bracket::Open((r.tail[i].clone(), j)),
-            End(r, j, _, _) => Bracket::Close((r.head.clone(), j)),
-            Whole(r, j, _) => Bracket::Close((r.head.clone(), j)),
+            End(r, j, _, _, _) => Bracket::Close((r.head.clone(), j)),
+            Whole(r, j, _, _) => Bracket::Close((r.head.clone(), j)),
         }
     }
 
@@ -161,14 +168,14 @@ where
         integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
     ) -> PushDownInstruction<(usize, usize, usize)> {
         match *self {
-            Start(r, _, _, (i, j)) => {
+            Start(r, _, _, (i, j), _) => {
                 PushDownInstruction::Add((integeriser.find_key(r).unwrap(), i, j))
             }
             Intermediate(r, _, (i1, j1), _, (i2, j2)) => {
                 let i = integeriser.find_key(r).unwrap();
                 PushDownInstruction::Replace((i, i1, j1), (i, i2, j2))
             }
-            End(r, _, (i, j), _) => {
+            End(r, _, (i, j), _, _) => {
                 PushDownInstruction::Remove((integeriser.find_key(r).unwrap(), i, j))
             }
             _ => PushDownInstruction::Nothing,
@@ -178,8 +185,8 @@ where
 
 use super::automata::{PushDownInstruction, StateInstruction};
 use recognisable::Transition;
-use log_domain::LogDomain;
 use num_traits::One;
+use std::ops::Mul;
 
 type Trans<N, T, W> = Transition<
     (StateInstruction<Bracket<(N, usize)>>,
@@ -188,25 +195,25 @@ type Trans<N, T, W> = Transition<
     W,
 >;
 
-impl<'a, N, T> RuleFragment<'a, N, T, LogDomain<f64>>
+impl<'a, N, T, W> RuleFragment<'a, N, T, W>
 where
     N: Clone + PartialEq,
     T: Clone + PartialEq,
+    W: One
 {
     /// Extracts the transition of the push-down automaton for the construction of the `PushDownGenerator`.
     pub fn pds(
         &self,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, LogDomain<f64>>>,
-    ) -> Trans<N, T, LogDomain<f64>> {
+        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
+    ) -> Trans<N, T, W>
+    where
+        W: Copy
+    {
         let weight = match *self {
-            Start(r, _, _, _) |
-            End(r, _, _, _) => {
-                r.weight.pow(
-                    1f64 / (2 * r.composition.composition.len()) as f64,
-                )
-            }
-            Whole(r, _, _) => r.weight.pow(1f64 / r.composition.composition.len() as f64),
-            _ => LogDomain::one(),
+            Start(_, _, _, _, weight)
+            | End(_, _, _, _, weight)
+            | Whole(_, _, _, weight) => weight,
+            Intermediate(_, _, _, _, _) => W::one()
         };
 
         Transition {

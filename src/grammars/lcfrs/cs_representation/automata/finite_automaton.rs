@@ -1,5 +1,4 @@
 use integeriser::{HashIntegeriser, Integeriser};
-use log_domain::LogDomain;
 use std::rc::Rc;
 use std::hash::Hash;
 use num_traits::{One, Zero};
@@ -7,6 +6,8 @@ use util::agenda::Capacity;
 use util::{vec_entry, IntMap};
 use util::search::{Search, WeightedSearchItem};
 use recognisable::Instruction;
+
+use std::ops::{Mul};
 
 /// The instruction for state transitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -115,31 +116,36 @@ where
     }
 }
 
-impl<T> FiniteAutomaton<T, LogDomain<f64>>
+impl<T, W> FiniteAutomaton<T, W>
 where
     T: Eq + Hash + Clone,
 {
     /// Constructs the intersection of two deterministic `FiniteAutomata`.
-    pub fn intersect<W>(&self, other: &FiniteAutomaton<T, W>) -> Self {
+    pub fn intersect(&self, other: &FiniteAutomaton<T, ()>) -> Self where W: Copy {
         let mut new_states = HashIntegeriser::new();
 
         let mut initial_arcs = Vec::new();
         for (label, &(to, weight)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
             if let Some(&(to_, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
-                initial_arcs.push((self.initial, other.initial, *label, to, to_, weight));
+                initial_arcs.push(
+                    WeightedSearchItem(
+                        (self.initial, other.initial, *label, to, to_), weight)
+                    );
             }
         }
 
-        let intersect_arcs = Search::unweighted(initial_arcs, |&(_, _, _, sto, oto, _)| {
+        let intersect_arcs = Search::unweighted(initial_arcs, |&WeightedSearchItem((_, _, _, sto, oto), _)| {
             let mut successors = Vec::new();
             for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
                 if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
-                    successors.push((sto, oto, *label, to, to_, weight));
+                    successors.push(
+                        WeightedSearchItem((sto, oto, *label, to, to_), weight)
+                    );
                 }
             }
             successors
         }).uniques()
-            .map(|(from1, from2, label, to1, to2, weight)| {
+            .map(|WeightedSearchItem((from1, from2, label, to1, to2), weight)| {
                 Transition {
                     instruction: StateInstruction(
                         new_states.integerise((from1, from2)),
@@ -169,7 +175,7 @@ where
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
-    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>> {
+    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>> where W: Copy + Mul<Output=W> + One + Zero + Ord {
         let heuristics = self.heuristics();
 
         let FiniteAutomaton {
@@ -182,8 +188,8 @@ where
         let initial_agenda = if !finals.is_empty() {
             vec![
                 WeightedSearchItem(
-                    (initial, Vec::new(), LogDomain::one()),
-                    (*heuristics.get(&initial).unwrap()).pow(-1.0)
+                    (initial, Vec::new(), W::one()),
+                    *heuristics.get(&initial).unwrap()
                 ),
             ]
         } else {
@@ -202,13 +208,13 @@ where
                     word_.push(label.clone());
 
                     let successorweight = weight * w;
-                    let priority = *heuristics.get(&to).unwrap_or(&LogDomain::zero()) *
+                    let priority = *heuristics.get(&to).unwrap_or(&W::zero()) *
                         successorweight;
 
-                    if priority > LogDomain::zero() {
+                    if !priority.is_zero() {
                         successors.push(WeightedSearchItem(
                             (to, word_, successorweight),
-                            priority.pow(-1.0),
+                            priority,
                         ))
                     }
                 }
@@ -226,11 +232,11 @@ where
         )
     }
 
-    fn heuristics(&self) -> IntMap<LogDomain<f64>> {
+    fn heuristics(&self) -> IntMap<W> where W: Ord + One + Mul<Output=W> + Copy {
         // index of first vector are states,
         // the second is unordered and holds all transitions targeting the state
         // without alphabet symbols
-        let mut bwtrans: Vec<Vec<(usize, LogDomain<f64>)>> = Vec::new();
+        let mut bwtrans: Vec<Vec<(usize, W)>> = Vec::new();
         for (from, arcs_from) in self.arcs.iter().enumerate() {
             for &(to, weight) in arcs_from.values() {
                 vec_entry(&mut bwtrans, to).push((from, weight));
@@ -239,18 +245,18 @@ where
 
         Search::weighted(
             self.finals.iter().map(|q| {
-                WeightedSearchItem(*q, LogDomain::one())
+                WeightedSearchItem(*q, W::one())
             }),
             move |&WeightedSearchItem(to, w)| if let Some(arcs_to) = bwtrans.get(to) {
                 arcs_to
                     .iter()
-                    .map(|&(from, w_)| WeightedSearchItem(from, w * w_.pow(-1.0)))
+                    .map(|&(from, w_)| WeightedSearchItem(from, w * w_))
                     .collect()
             } else {
                 Vec::new()
             },
         ).uniques()
-            .map(|WeightedSearchItem(q, w)| (q, w.pow(-1.0)))
+            .map(|WeightedSearchItem(q, w)| (q, w))
             .collect()
     }
 

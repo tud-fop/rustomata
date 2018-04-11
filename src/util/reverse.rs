@@ -3,9 +3,10 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Error, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign, Rem, RemAssign};
 use std::str::FromStr;
+use super::factorizable::Factorizable;
 
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Reverse<W>(W);
 
 impl<W> PartialOrd for Reverse<W>
@@ -131,4 +132,14 @@ where W: RemAssign {
     }
 }
 
+impl<W: Factorizable> Factorizable for Reverse<W> {
+    fn factorize(self, n: usize) -> Vec<Self> {
+        self.0.factorize(n).into_iter().map(|v| Reverse(v)).collect()
+    }
+}
 
+impl<W> From<W> for Reverse<W> {
+    fn from(v: W) -> Self {
+        Reverse(v)
+    }
+}
