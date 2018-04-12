@@ -11,7 +11,6 @@ use super::{PushDownAutomaton, FiniteAutomaton};
 use grammars::pmcfg::PMCFGRule;
 
 mod cyk_generator;
-use self::cyk_generator::CykGenerator;
 use util::factorizable::Factorizable;
 use num_traits::{One, Zero};
 use std::ops::Mul;
@@ -140,7 +139,7 @@ where
 
     pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<Delta<T>>> + 'a>
     where
-        T: 'a,
+        T: 'a + Ord,
         W: 'a +  Copy + Ord + One + Zero + Mul<Output=W>
     {
         match self {
@@ -150,7 +149,7 @@ where
             Generator::PushDown(pda) => Box::new(
                 pda.generate(beam).map(|fs| BracketFragment::concat(fs)),
             ),
-            Generator::Cyk(fsa) => Box::new(CykGenerator::new(fsa)),
+            Generator::Cyk(fsa) => Box::new(cyk_generator::cyk_generator(fsa, beam)),
         }
     }
 

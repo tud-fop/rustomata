@@ -73,7 +73,7 @@ where
 
 impl<I, F> Search<Vec<I>, I, F>
 where
-    I: Clone + Ord,
+    I: Clone,
     F: FnMut(&I) -> Vec<I>,
 {
     /// Initialize an unweighted `Search` using a `Vec` as `Agenda`.

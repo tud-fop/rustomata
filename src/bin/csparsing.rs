@@ -78,61 +78,8 @@ pub fn get_sub_command(name: &str) -> App {
                         .takes_value(true)
                         .help("Beam with during search."),
                 )
-                .arg(Arg::with_name("debugmode").short("d").long("debug")),
-        )
-        .group(ArgGroup::with_name("strategy"))
-        .arg(
-            Arg::with_name("naive")
-                .help("Use a naive Generator automaton.")
-                .long("naive")
-                .group("strategy"),
-        )
-        .arg(
-            Arg::with_name("approx")
-                .help("Use a regular approximation the push-down generator.")
-                .long("approx")
-                .group("strategy")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("pd")
-                .help("Use a push-down automaton to generate candidates.")
-                .long("pd")
-                .group("strategy"),
-        )
-        .group(ArgGroup::with_name("filter"))
-        .arg(
-            Arg::with_name("naive-filter")
-                .help("Use a naive filter automaton.")
-                .long("naive-filter")
-                .group("filter"),
-        )
-        .arg(
-            Arg::with_name("inside-filter")
-                .help("Use the inside filter automaton.")
-                .long("inside-filter")
-                .group("filter"),
-        )
-        .subcommand(
-            SubCommand::with_name("parse")
-                .about(
-                    "Reads a list of words from stdin and parses them
-                                       using the CS representation of a grammar.",
-                )
-                .arg(Arg::with_name("csfile").required(true).index(1).help(
-                    "The file that contains the CS representation of a grammar.",
-                ))
-                .arg(Arg::with_name("k").short("k").takes_value(true).help(
-                    "Puts the `k` in k-best parsing.",
-                ))
-                .arg(
-                    Arg::with_name("beam")
-                        .short("b")
-                        .long("beam")
-                        .takes_value(true)
-                        .help("Beam with during search."),
-                )
-                .arg(Arg::with_name("debugmode").short("d").long("debug")),
+                .arg(Arg::with_name("with-lines").short("l").long("with-lines").help("The first symbol denotes the id of the parse tree."))
+                .arg(Arg::with_name("debugmode").short("d").long("debug").help("Prints debug information instead of parse trees.")),
         )
 }
 
@@ -191,9 +138,14 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             let csrep: CSRepresentation<String, String, Reverse<LogDomain<f64>>> =
                 bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite)
                     .unwrap();
-            for sentence in word_strings.lines() {
-                let words: Vec<String> =
-                    sentence.split_whitespace().map(|s| s.to_string()).collect();
+            
+            for (i, sentence) in word_strings.lines().enumerate() {
+                let (i, words): (usize, Vec<String>) = if params.is_present("with-lines") {
+                    let mut it = sentence.split_whitespace();
+                    (it.next().expect("missing line number").parse().expect("invalid line numer"), it.map(|s| s.to_string()).collect())
+                } else {
+                    (i, sentence.split_whitespace().map(|s| s.to_string()).collect())
+                };
 
                 if params.is_present("debugmode") {
                     csrep.debug(words.as_slice(), beam);
@@ -206,7 +158,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                                     .into_iter()
                                     .map(|(k, v)| (k, v.clone()))
                                     .collect(),
-                                0,
+                                i,
                             )
                         );
                     }
