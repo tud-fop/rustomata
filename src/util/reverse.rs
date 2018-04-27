@@ -143,3 +143,9 @@ impl<W> From<W> for Reverse<W> {
         Reverse(v)
     }
 }
+
+impl<W> Reverse<W> {
+    pub fn unwrap(self) -> W {
+        self.0
+    }
+}

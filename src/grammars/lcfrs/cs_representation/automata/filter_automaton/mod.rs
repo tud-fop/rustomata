@@ -43,12 +43,12 @@ pub enum Filter<T: Eq + Hash> {
 
 impl<'a, T> Filter<T>
 where
-    T: Hash + Eq + Clone + 'a,
+    T: Hash + Eq + Clone + 'a + ::std::fmt::Debug,
 {
     pub fn naive<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T, W>) -> Self
     where
         N: Hash + Eq + Clone + 'a,
-        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable,
+        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable + ::std::fmt::Debug,
         R: Iterator<Item = &'a PMCFGRule<N, T, W>>,
         I: Integeriser<Item = PMCFGRule<N, T, W>>,
     {
@@ -85,7 +85,7 @@ where
     pub fn inside<R, I, N, W>(grammar_rules: R, integeriser: &I, reference: &Generator<T, W>) -> Self
     where
         N: Hash + Eq + Clone + 'a,
-        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable,
+        W: Eq + Copy + 'a + Mul<Output=W> + Factorizable + ::std::fmt::Debug,
         R: Iterator<Item = &'a PMCFGRule<N, T, W>>,
         I: Integeriser<Item = PMCFGRule<N, T, W>>,
     {
@@ -159,7 +159,7 @@ where
         &self,
         word: &[T],
         reference_automaton: &Generator<T, W>,
-    ) -> FiniteAutomaton<BracketFragment<T>, ()> {
+    ) -> FiniteAutomaton<BracketFragment<T>, ()> where W:  ::std::fmt::Debug {
         match *self {
             Filter::Naive {
                 ref brackets_with,

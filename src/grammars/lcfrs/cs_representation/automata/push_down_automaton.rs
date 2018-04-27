@@ -333,9 +333,7 @@ where
             Vec::new()
         };
 
-
-        Box::new(
-            Search::weighted(initial_agenda, move |&WeightedSearchItem((weight_,
+        Search::weighted(initial_agenda, move |&WeightedSearchItem((weight_,
                                        q,
                                        ref word,
                                        ref pd),
@@ -381,8 +379,7 @@ where
                         .map(|i| labels.find_value(i).unwrap())
                         .cloned()
                         .collect()
-                }),
-        )
+                })
     }
 
     fn heuristics(&self) -> IntMap<(IntMap<W>, W)> where W: Ord + Copy + Mul<Output=W> + One {

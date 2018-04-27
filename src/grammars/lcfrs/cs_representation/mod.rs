@@ -66,8 +66,8 @@ where
 impl<N, T, W> CSRepresentation<N, T, W>
 where
     N: Ord + Hash + Clone,
-    T: Ord + Hash + Clone,
-    W: Ord + Clone
+    T: Ord + Hash + Clone + ::std::fmt::Debug,
+    W: Ord + Clone + ::std::fmt::Debug
 {
     /// Instantiates a CS representation for an `LCFRS` and `GeneratorStrategy`.
     pub fn new<M>(grammar: M, fstrat: FilterStrategy, gstrat: GeneratorStrategy) -> Self
@@ -104,7 +104,7 @@ where
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate(&self, word: &[T], beam: Capacity) -> CSGenerator<T, N, W>
+    pub fn generate(&self, word: &[T], beam: Capacity) -> impl Iterator<Item=GornTree<&PMCFGRule<N, T, W>>>
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord
     {
@@ -121,7 +121,8 @@ where
     /// Produces additional output to stderr that logs construction times and the parsing time.
     pub fn debug(&self, word: &[T], beam: Capacity) 
     where
-        W: One + Zero + Mul<Output=W> + Copy + Ord
+        W: One + Zero + Mul<Output=W> + Copy + Ord,
+        T: ::std::fmt::Debug
     {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
@@ -195,22 +196,24 @@ where
 
 /// Iterates Dyck words that represent a derivation for a word according to
 /// the Chomsky-Schützenberger characterization of an MCFG.
-pub struct CSGenerator<'a, T, N, W>
+struct CSGenerator<'a, T, N, W, G>
 where
     T: 'a + PartialEq + Hash + Clone + Eq + Ord,
     N: 'a + Hash + Eq,
-    W: 'a + Eq
+    W: 'a + Eq,
+    G: Iterator<Item=Vec<Delta<T>>> + 'a
 {
-    candidates: Box<Iterator<Item = Vec<Delta<T>>> + 'a>,
+    candidates: G,
     rules: &'a HashIntegeriser<PMCFGRule<N, T, W>>,
     checker: &'a MultipleDyckLanguage<BracketContent<T>>,
 }
 
-impl<'a, N, T, W> Iterator for CSGenerator<'a, T, N, W>
+impl<'a, N, T, W, G> Iterator for CSGenerator<'a, T, N, W, G>
 where
     T: PartialEq + Hash + Clone + Eq + Ord,
     N: Hash + Eq + Clone,
-    W: Eq + Clone
+    W: Eq + Clone,
+    G: Iterator<Item=Vec<Delta<T>>>
 {
     type Item = GornTree<&'a PMCFGRule<N, T, W>>;
 

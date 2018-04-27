@@ -196,40 +196,38 @@ where
             Vec::new()
         };
 
-        Box::new(
-            Search::weighted(initial_agenda, move |&WeightedSearchItem((q,
-                                       ref word,
-                                       weight),
-                                      _)| {
-                let mut successors = Vec::new();
+        Search::weighted(initial_agenda, move |&WeightedSearchItem((q,
+                                    ref word,
+                                    weight),
+                                    _)| {
+            let mut successors = Vec::new();
 
-                for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
-                    let mut word_: Vec<usize> = word.clone();
-                    word_.push(label.clone());
+            for (label, &(to, w)) in arcs.get(q).unwrap_or(&IntMap::default()) {
+                let mut word_: Vec<usize> = word.clone();
+                word_.push(label.clone());
 
-                    let successorweight = weight * w;
-                    let priority = *heuristics.get(&to).unwrap_or(&W::zero()) *
-                        successorweight;
+                let successorweight = weight * w;
+                let priority = *heuristics.get(&to).unwrap_or(&W::zero()) *
+                    successorweight;
 
-                    if !priority.is_zero() {
-                        successors.push(WeightedSearchItem(
-                            (to, word_, successorweight),
-                            priority,
-                        ))
-                    }
+                if !priority.is_zero() {
+                    successors.push(WeightedSearchItem(
+                        (to, word_, successorweight),
+                        priority,
+                    ))
                 }
-                successors
-            }).beam(beamwidth)
-                .filter(move |&WeightedSearchItem((ref q, _, _), _)| {
-                    finals.contains(q)
-                })
-                .map(move |WeightedSearchItem((_, wi, _), _)| {
-                    wi.into_iter()
-                        .map(|i| labels.find_value(i).unwrap())
-                        .cloned()
-                        .collect()
-                }),
-        )
+            }
+            successors
+        }).beam(beamwidth)
+            .filter(move |&WeightedSearchItem((ref q, _, _), _)| {
+                finals.contains(q)
+            })
+            .map(move |WeightedSearchItem((_, wi, _), _)| {
+                wi.into_iter()
+                    .map(|i| labels.find_value(i).unwrap())
+                    .cloned()
+                    .collect()
+            })
     }
 
     fn heuristics(&self) -> IntMap<W> where W: Ord + One + Mul<Output=W> + Copy {

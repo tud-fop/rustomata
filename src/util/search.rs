@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use util::agenda::{Agenda, Capacity, PriorityQueue};
+use util::agenda::{Agenda, Capacity, PriorityQueue, Queue};
 
 /// Implements a `Search` in a graph that is defined by a set of elements and a successor function.
 pub enum Search<A, I, F>
@@ -85,6 +85,33 @@ where
     }
 }
 
+impl<I, F> Search<Queue<I>, I, F>
+where
+    I: Clone,
+    F: FnMut(&I) -> Vec<I>,
+{
+    /// Initialize an unweighted `Search` using a `Vec` as `Agenda`.
+    pub fn unweighted_q<C>(init: C, successors: F) -> Self
+    where
+        C: IntoIterator<Item = I>,
+    {
+        Search::All(init.into_iter().collect(), successors)
+    }
+
+    pub fn beam(mut self, width: Capacity) -> Self {
+        if let Capacity::Limit(b) = width {
+            match &mut self {
+                &mut Search::All(ref mut a, _) |
+                &mut Search::Uniques(ref mut a, _, _) => {
+                    a.set_capacity(b);
+                }
+            }
+        }
+
+        self
+    }
+}
+
 impl<A, I, F> Iterator for Search<A, I, F>
 where
     I: Clone + Ord,
@@ -161,8 +188,6 @@ where
 {
     type Weight = W;
     fn get_weight(&self) -> W {
-        match *self {
-            WeightedSearchItem(_, ref w) => *w,
-        }
+        self.1
     }
 }

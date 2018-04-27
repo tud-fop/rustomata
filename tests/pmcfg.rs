@@ -13,7 +13,7 @@ use rustomata::approximation::equivalence_classes::EquivalenceRelation;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
 use rustomata::grammars::pmcfg::*;
-use rustomata::grammars::pmcfg::negra::to_negra;
+use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
 use rustomata::recognisable::*;
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
 use rustomata::automata::tree_stack_automaton::*;
@@ -42,7 +42,7 @@ fn test_example_pmcfg_to_negra() {
     let syntax_tree = to_abstract_syntax_tree(tree_stack.storage.to_tree());
     let separated_syntax_tree = separate_terminal_rules(&syntax_tree);
 
-    let negra_string = to_negra(&separated_syntax_tree, 0);
+    let negra_string = to_negra(&separated_syntax_tree, 0, DumpMode::Default);
     let negra_control_string = String::from(
         "#BOS 0\n\
          a\ta\t--\t--\t500\n\

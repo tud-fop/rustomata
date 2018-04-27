@@ -67,9 +67,15 @@ where
     (identified_tree_map, terminal_map)
 }
 
+#[derive(Clone, Debug)]
+pub enum DumpMode<T> {
+    FromPos(Vec<T>),
+    Default
+}
+
 /// Takes a tree stack _(encoded in a Gorn tree)_ of PMCFG rules and transforms it into a
 /// corresponding _NEGRA_ string.
-pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: usize) -> String
+pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: usize, mode: DumpMode<T>) -> String
 where
     H: Clone + ToString,
     T: Clone + ToString,
@@ -81,7 +87,7 @@ where
         );
     }
 
-    let negra_vector = to_negra_vector(&tree_map);
+    let negra_vector = to_negra_vector(&tree_map, mode);
     let mut output = format!("#BOS {}\n", sentence_id);
 
     for (word, tag, parent) in negra_vector {
@@ -128,7 +134,7 @@ pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>) ->
     true
 }
 
-fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>) -> Vec<(String, String, usize)>
+fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, mut mode: DumpMode<T>) -> Vec<(String, String, usize)>
 where
     H: Clone + ToString,
     T: Clone + ToString,
@@ -149,7 +155,12 @@ where
                     panic!("Nonterminals must not appear in a fully evaluated configuration!");
                 }
                 VarT::T(terminal_id) => {
-                    let terminal_symbol = terminal_map.get(&terminal_id).unwrap();
+                    let terminal_string = if let &mut DumpMode::FromPos(ref mut words) = &mut mode {
+                        words.remove(0).to_string()
+                    } else {
+                        terminal_map.get(&terminal_id).unwrap().to_string()
+                    };
+                    
                     let address = terminal_id.address;
                     let rule_label = nonterminal_map.get(&address).unwrap();
 
@@ -165,7 +176,7 @@ where
                         )
                     };
                     negra_vector.push((
-                        terminal_symbol.to_string(),
+                        terminal_string,
                         rule_label.to_string(),
                         parent_number,
                     ));
@@ -325,7 +336,33 @@ mod tests {
             (String::from("#502"), String::from("B"), 0),
         ];
 
-        assert_eq!(negra_vector, to_negra_vector(&tree_map));
+        assert_eq!(negra_vector, to_negra_vector(&tree_map, DumpMode::Default));
+    }
+
+    #[test]
+    fn test_to_negra_vector_with_pos() {
+        let tree_map = example_tree_map();
+        let negra_vector = vec![
+            (String::from("Ah"), String::from("a"), 500),
+            (String::from("Ah"), String::from("a"), 501),
+            (String::from("Beh"), String::from("b"), 502),
+            (String::from("Zeh"), String::from("c"), 500),
+            (String::from("Zeh"), String::from("c"), 501),
+            (String::from("Deh"), String::from("d"), 502),
+            (String::from("#500"), String::from("A"), 0),
+            (String::from("#501"), String::from("A"), 500),
+            (String::from("#502"), String::from("B"), 0),
+        ];
+
+        assert_eq!(
+            negra_vector, 
+            to_negra_vector(
+                &tree_map,
+                DumpMode::FromPos(
+                    vec!["Ah".to_string(), "Ah".to_string(), "Beh".to_string(), "Zeh".to_string(), "Zeh".to_string(), "Deh".to_string()]
+                )
+            )
+        );
     }
 
     #[test]
@@ -364,6 +401,6 @@ mod tests {
             PMCFGRule::from_str("S -> [[T a, T b]] () #1").unwrap(),
         );
 
-        to_negra(&tree_map, 0);
+        to_negra(&tree_map, 0, DumpMode::Default);
     }
 }

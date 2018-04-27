@@ -1,7 +1,7 @@
 use clap::{Arg, ArgMatches, App, SubCommand};
 use log_domain::LogDomain;
 use rustomata::grammars::pmcfg::PMCFG;
-use rustomata::grammars::pmcfg::negra::to_negra;
+use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
 use rustomata::recognisable::Recognisable;
 use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
 use rustomata::automata::tree_stack_automaton::to_abstract_syntax_tree;
@@ -89,7 +89,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                         {
                             let ast = to_abstract_syntax_tree(parse.0.storage.to_tree());
                             if mcfg_parse_matches.is_present("negra") {
-                                println!("{}", to_negra(&ast, i + 1));
+                                println!("{}", to_negra(&ast, i + 1, DumpMode::Default));
                             } else {
                                 println!("{}", parse.0);
                             }
@@ -99,7 +99,7 @@ pub fn handle_sub_matches(mcfg_matches: &ArgMatches) {
                         for parse in automaton.recognise(word).take(n) {
                             let ast = to_abstract_syntax_tree(parse.0.storage.to_tree());
                             if mcfg_parse_matches.is_present("negra") {
-                                println!("{}", to_negra(&ast, i + 1));
+                                println!("{}", to_negra(&ast, i + 1, DumpMode::Default));
                             } else {
                                 println!("{}", parse.0);
                             }

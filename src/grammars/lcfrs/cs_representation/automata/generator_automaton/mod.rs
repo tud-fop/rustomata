@@ -32,9 +32,38 @@ where
     Cyk(FiniteAutomaton<BracketFragment<T>, W>),
 }
 
+enum GeneratorImpl<T, I1, I2, I3>
+where
+    I1: Iterator<Item=T>,
+    I2: Iterator<Item=T>,
+    I3: Iterator<Item=T>
+{
+    Finite(I1),
+    PushDown(I2),
+    Cyk(I3)
+}
+
+impl<T, I1, I2, I3> Iterator for GeneratorImpl<T, I1, I2, I3>
+where
+    I1: Iterator<Item=T>,
+    I2: Iterator<Item=T>,
+    I3: Iterator<Item=T>
+{
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            &mut GeneratorImpl::Finite(ref mut i) => i.next(),
+            &mut GeneratorImpl::PushDown(ref mut i) => i.next(),
+            &mut GeneratorImpl::Cyk(ref mut i) => i.next(),
+        }
+    }
+}
+
+
 impl<T, W> Generator<T, W>
 where
-    T: Clone + Eq + Hash,
+    T: Clone + Eq + Hash + ::std::fmt::Debug,
+    W: ::std::fmt::Debug
 {
     fn unboxed_push_down<'a, N, R>(
         grammar_rules: R,
@@ -137,19 +166,21 @@ where
         }
     }
 
-    pub fn generate<'a>(self, beam: Capacity) -> Box<Iterator<Item = Vec<Delta<T>>> + 'a>
+    pub fn generate(self, beam: Capacity) -> impl Iterator<Item = Vec<Delta<T>>>
     where
-        T: 'a + Ord,
-        W: 'a +  Copy + Ord + One + Zero + Mul<Output=W>
+        T: Ord,
+        W: Copy + Ord + One + Zero + Mul<Output=W>
     {
         match self {
-            Generator::Finite(fsa) => Box::new(
+            Generator::Finite(fsa) => GeneratorImpl::Finite(
                 fsa.generate(beam).map(|fs| BracketFragment::concat(fs)),
             ),
-            Generator::PushDown(pda) => Box::new(
+            Generator::PushDown(pda) => GeneratorImpl::PushDown(
                 pda.generate(beam).map(|fs| BracketFragment::concat(fs)),
             ),
-            Generator::Cyk(fsa) => Box::new(cyk_generator::cyk_generator(fsa, beam)),
+            Generator::Cyk(fsa) => GeneratorImpl::Cyk(
+                cyk_generator::cyk_generator(fsa, beam)
+            ),
         }
     }
 
