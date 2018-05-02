@@ -127,16 +127,20 @@ where
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
 
-        let (g_, intersection_time) = with_time(|| self.generator.intersect(f));
-        let intersection_size = g_.size();
-
         eprint!(
-            "{} {} {} {} {} {} {}",
+            "{} {} {} {} {}",
             self.rules.size(),
             word.len(),
             filter_const.num_nanoseconds().unwrap(),
             filter_size,
             self.generator.size(),
+        );
+
+        let (g_, intersection_time) = with_time(|| self.generator.intersect(f));
+        let intersection_size = g_.size();
+
+        eprint!(
+            " {} {}",
             intersection_time.num_nanoseconds().unwrap(),
             intersection_size
         );

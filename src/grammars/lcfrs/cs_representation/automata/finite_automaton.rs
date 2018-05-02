@@ -39,6 +39,19 @@ where
     pub labels: Rc<HashIntegeriser<T>>,
 }
 
+impl<T, W> FiniteAutomaton<T, W> where T: Eq + Hash {
+    fn to_unweighted(self) -> FiniteAutomaton<T, ()> {
+        let FiniteAutomaton{ initial, finals, arcs, labels } = self;
+
+        FiniteAutomaton {
+            initial,
+            finals,
+            arcs: arcs.into_iter().map(|m| m.into_iter().map(|(s, (q, _))| (s, (q, ()))).collect()).collect(),
+            labels
+        }
+    }
+}
+
 impl<T, W> FiniteAutomaton<T, W>
 where
     T: Eq + Hash + Clone,
@@ -89,7 +102,7 @@ where
         }
     }
 
-    /// Creates a new deterministic FSA from intergerized transitions.
+    /// Creates a new deterministic FSA from integerized transitions.
     pub fn from_integerized(
         arcv: Vec<Transition<StateInstruction<usize>, usize, W>>,
         initial: usize,
@@ -123,55 +136,41 @@ where
     /// Constructs the intersection of two deterministic `FiniteAutomata`.
     pub fn intersect(&self, other: &FiniteAutomaton<T, ()>) -> Self where W: Copy {
         let mut new_states = HashIntegeriser::new();
+        let mut arcs: Vec<IntMap<(usize, W)>> = Vec::new();
+        let mut stack = vec![(self.initial, other.initial)];
+        
+        let initial = new_states.integerise((self.initial, other.initial));
 
-        let mut initial_arcs = Vec::new();
-        for (label, &(to, weight)) in self.arcs.get(self.initial).unwrap_or(&IntMap::default()) {
-            if let Some(&(to_, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
-                initial_arcs.push(
-                    WeightedSearchItem(
-                        (self.initial, other.initial, *label, to, to_), weight)
-                    );
+        while let Some((from, from_)) = stack.pop() { 
+            for (label, &(to, weight)) in self.arcs.get(from).unwrap_or(&IntMap::default()) {
+                if let Some(&(to_, _)) = other.arcs.get(from_).and_then(|m| m.get(label)) {
+                    let from_i = new_states.find_key(&(from, from_)).unwrap();
+                    let target_i = if let Some(i) = new_states.find_key(&(to, to_)) {
+                        i
+                    } else {
+                        stack.push((to, to_));
+                        new_states.integerise((to, to_))
+                    };
+                    vec_entry(&mut arcs, from_i).insert(*label, (target_i, weight));
+                }
             }
         }
 
-        let intersect_arcs = Search::unweighted(initial_arcs, |&WeightedSearchItem((_, _, _, sto, oto), _)| {
-            let mut successors = Vec::new();
-            for (label, &(to, weight)) in self.arcs.get(sto).unwrap_or(&IntMap::default()) {
-                if let Some(&(to_, _)) = other.arcs.get(oto).and_then(|m| m.get(label)) {
-                    successors.push(
-                        WeightedSearchItem((sto, oto, *label, to, to_), weight)
-                    );
-                }
-            }
-            successors
-        }).uniques()
-            .map(|WeightedSearchItem((from1, from2, label, to1, to2), weight)| {
-                Transition {
-                    instruction: StateInstruction(
-                        new_states.integerise((from1, from2)),
-                        new_states.integerise((to1, to2)),
-                    ),
-                    word: vec![label],
-                    weight,
-                }
-            })
-            .collect();
-
-        let mut intersect_finals = Vec::new();
+        let mut finals = Vec::new();
         for qf in &self.finals {
             for qf_ in &other.finals {
                 if let Some(i) = new_states.find_key(&(*qf, *qf_)) {
-                    intersect_finals.push(i);
+                    finals.push(i);
                 }
             }
         }
 
-        FiniteAutomaton::from_integerized(
-            intersect_arcs,
-            new_states.integerise((self.initial, other.initial)),
-            intersect_finals,
-            Rc::clone(&self.labels),
-        )
+        FiniteAutomaton {
+            initial,
+            finals,
+            arcs,
+            labels: Rc::clone(&self.labels)
+        }
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
@@ -468,5 +467,65 @@ where
 
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
         self.initial
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use util::reverse::Reverse;
+
+
+    #[test]
+    fn intersection () {
+        let fsa = example_fsa();
+        let fsa_ = example_fsa().to_unweighted();
+        
+        let intersection1 = fsa.intersect(&fsa_);
+
+        assert_eq!(intersection1.initial, example_fsa().initial);
+        assert_eq!(intersection1.finals, example_fsa().finals);
+        assert_eq!(intersection1.arcs, example_fsa().arcs);
+
+        let intersection2 = fsa.intersect(&example_fsa2());
+
+        assert_eq!(intersection2.initial, 0);
+        assert_eq!(intersection2.finals, vec![2]);
+        assert_eq!(
+            intersection2.arcs,
+            vec![
+                vec![(0, (1, 1.into()))].into_iter().collect(),
+                vec![(1, (2, 1.into()))].into_iter().collect()
+            ]
+        );
+    }
+
+    fn example_fsa2 () -> FiniteAutomaton<char, ()> {
+        FiniteAutomaton {
+            initial: 0,
+            finals: vec![0],
+            arcs: vec![
+                vec![(0, (1, ()))].into_iter().collect(),
+                vec![(1, (0, ()))].into_iter().collect(),
+            ],
+            labels: Rc::clone(&example_fsa().labels)
+        }
+    } 
+
+    fn example_fsa () -> FiniteAutomaton<char, Reverse<usize>> {
+        let mut int = HashIntegeriser::new();
+        int.integerise('a');
+        int.integerise('b');
+
+        FiniteAutomaton {
+            initial: 0,
+            finals: vec![1],
+            arcs: vec![
+                vec![(0, (0, 1.into())), (1, (1, 1.into()))].into_iter().collect(),
+                vec![(1, (1, 1.into()))].into_iter().collect(),
+            ],
+            labels: Rc::new(int)
+        }
     }
 }
