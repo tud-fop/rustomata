@@ -40,7 +40,7 @@ where
 }
 
 impl<T, W> FiniteAutomaton<T, W> where T: Eq + Hash {
-    fn to_unweighted(self) -> FiniteAutomaton<T, ()> {
+    pub fn to_unweighted(self) -> FiniteAutomaton<T, ()> {
         let FiniteAutomaton{ initial, finals, arcs, labels } = self;
 
         FiniteAutomaton {

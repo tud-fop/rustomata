@@ -149,9 +149,7 @@ where
             match g_.generate(beam)
                 .enumerate()
                 .filter(|&(_, ref candidate)| dyck::recognize(candidate))
-                .filter_map(|(i, candidate)| {
-                    toderiv(&self.rules, &candidate).map(|_| (i + 1))
-                })
+                .filter_map(|(i, candidate)| toderiv(&self.rules, &candidate).map(|_| (i + 1)))
                 .next() {
                 Some(i) => i, // valid candidate
                 None => 0,    // failed

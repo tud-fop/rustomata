@@ -2,7 +2,7 @@
 /// TODO: * this should not need terminal-separated rules
 
 use dyck::Bracket;
-use grammars::lcfrs::cs_representation::{automata::Delta, automata::FiniteAutomaton,
+use grammars::lcfrs::cs_representation::{automata::FiniteAutomaton,
                                          bracket_fragment::BracketFragment, BracketContent};
 use integeriser::{Integeriser, HashIntegeriser};
 use num_traits::{One, Zero};
@@ -10,7 +10,7 @@ use std::ops::Mul;
 use util::{search::{Search, WeightedSearchItem},
            agenda::Capacity};
 
-use std::{collections::HashMap, hash::Hash, iter::once};
+use std::{collections::HashMap, hash::Hash, cmp::max};
 
 mod iterator;
 
@@ -63,6 +63,7 @@ impl<W> CykGeneratorHeuristic<W> {
     }
 }
 
+#[derive(Clone)]
 pub struct ExplodedAutomaton<T, W>
 where
     T: Eq + Hash,
@@ -83,16 +84,16 @@ where
 
 impl<T, W> ::std::fmt::Debug for ExplodedAutomaton<T, W>
 where
-    T: ::std::fmt::Debug + Hash + Eq,
+    T: ::std::fmt::Debug + Hash + Eq + Clone,
     W: ::std::fmt::Debug + Copy
 {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-        for &(q, ref ts, w, q_) in &self.terminal {
-            writeln!(f, "{} → {:?} {} # {:?}", q, ts, q_, w)?;
+        for &(q, ts, w, q_) in &self.terminal {
+            writeln!(f, "{:?}: {} → {} # {:?}", self.terminal_i.find_value(ts as usize).unwrap(), q, q_, w)?;
         }
-        for &(q1, ref cont, w1, q1_) in &self.opening_brackets {
-            for &(q2, w2, q2_) in self.closing_brackets.get(cont).unwrap_or(&Vec::new()) {
-               writeln!(f, "{:?}: {} → {} # {:?}, {} → {} # {:?}", cont, q1, q1_, w1, q2, q2_, w2)?;
+        for &(q1, cont, w1, q1_) in &self.opening_brackets {
+            for &(q2, w2, q2_) in self.closing_brackets.get(&cont).unwrap_or(&Vec::new()) {
+                writeln!(f, "{:?}: {} → {} # {:?}, {} → {} # {:?}", self.bracket_i.find_value(cont as usize).unwrap(), q1, q1_, w1, q2, q2_, w2)?;
             }
         }
         Ok(())
@@ -120,7 +121,7 @@ where
         let mut bracket_i = HashIntegeriser::new();
 
         // counter for unique usize states while exploding fsa transitions
-        let mut uniquestate = fsa.arcs.len() as u32;
+        let mut uniquestate = max(fsa.arcs.len(), fsa.arcs.iter().flat_map(|m| m.values().map(|&(q, _)| q)).max().unwrap_or(0) + 1) as u32;
 
         for (from, tos) in fsa.arcs.into_iter().enumerate() {
             for (ilabel, (to, weight)) in tos.into_iter() {
@@ -238,6 +239,7 @@ impl<W> ChartEntry<W> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct GenerationChart<W>(
     HashMap<(u32, u32), Vec<(ChartEntry<W>, W)>>
 );
@@ -287,7 +289,13 @@ impl<W> GenerationChart<W> {
 
         while let Some(WeightedSearchItem((p, w, q, t), _)) = agenda.dequeue() {
             match chart.entry((p, q)) {
-                Entry::Occupied(mut oe) => { oe.get_mut().push((t, w)); },
+                Entry::Occupied(mut oe) => {
+                    match t {
+                        Initial(_, _) | Bracketed(_, _, _, _, _) => { oe.get_mut().push((t, w)); },
+                        Concat(_, _, _) => ()
+                    }
+                    
+                },
                 Entry::Vacant(mut ve) => {
                     ve.insert(vec![(t, w)]);
                     from_left.entry(p).or_insert_with(HashMap::new).entry(q).or_insert(w);
@@ -318,7 +326,7 @@ impl<W> GenerationChart<W> {
                 }
             }
         }
-
+        
         GenerationChart(chart)
     }
 }
@@ -330,7 +338,7 @@ where
 {
     let exploded = ExplodedAutomaton::new(fsa);
     let chart = GenerationChart::fill(&exploded, beam);
-    
+
     iterator::ChartIterator::new(chart, exploded)
 }
 
@@ -345,14 +353,14 @@ mod tests {
     use num_traits::One;
     use recognisable::Transition;
     use util::reverse::Reverse;
-    
+
     #[test]
     fn test_chart() {
         let one = LogDomain::one().into();
         let w1 = LogDomain::new(0.5).unwrap().into();
         let w2 = LogDomain::new(0.75).unwrap().into();
         
-        use self::ChartEntry::{Initial, Concat, Bracketed};
+        use self::ChartEntry::{Initial, Bracketed};
         let exploded = ExplodedAutomaton::new(example_fsa());
         let chart = GenerationChart::fill(&exploded, Capacity::Infinite);
 
