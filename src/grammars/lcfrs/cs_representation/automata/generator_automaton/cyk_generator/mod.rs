@@ -13,6 +13,7 @@ use util::{search::{Search, WeightedSearchItem},
 use std::{collections::HashMap, hash::Hash, cmp::max};
 
 mod iterator;
+mod chart_entry;
 
 #[derive(Debug, PartialEq, Eq)]
 struct CykGeneratorHeuristic<W> {
@@ -226,17 +227,6 @@ enum ChartEntry<W> {
     Initial(u8, W),
     Concat(u32, u32, u32),
     Bracketed(u32, W, u32, u32, W)
-}
-
-impl<W> ChartEntry<W> {
-    pub fn dim(&self) -> usize {
-        use self::ChartEntry::*;
-        match *self {
-            Initial(_, _) => 0,
-            Bracketed(_, _, _, _, _) => 1,
-            Concat(_, _, _) => 2
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

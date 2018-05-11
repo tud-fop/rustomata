@@ -11,15 +11,12 @@ pub mod bracket_fragment;
 mod rule_fragments;
 
 use self::automata::*;
-use dyck::Bracket;
 use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
 use util::with_time;
 use util::tree::GornTree;
 
-use dyck::multiple::MultipleDyckLanguage;
-mod mdl;
 use self::automata::GeneratorStrategy;
 use util::factorizable::Factorizable;
 use std::ops::Mul;
@@ -58,7 +55,6 @@ where
 {
     generator: Generator<T, W>,
     filter: Filter<T>,
-    checker: MultipleDyckLanguage<BracketContent<T>>,
 
     rules: HashIntegeriser<PMCFGRule<N, T, W>>,
 }
@@ -81,8 +77,6 @@ where
             irules.integerise(rule);
         }
 
-        let checker = mdl::mdl(irules.values(), &irules);
-
         let gen = match gstrat {
             GeneratorStrategy::Finite => Generator::naive(irules.values(), initial, &irules),
             GeneratorStrategy::Approx(d) => Generator::approx(irules.values(), initial, &irules, d),
@@ -99,23 +93,18 @@ where
             generator: gen,
             filter: fil,
             rules: irules,
-            checker,
         }
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate(&self, word: &[T], beam: Capacity) -> impl Iterator<Item=GornTree<&PMCFGRule<N, T, W>>>
+    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity) -> impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord
     {
         let f = self.filter.fsa(word, &self.generator);
         let g = self.generator.intersect(f).generate(beam);
-
-        CSGenerator {
-            candidates: g,
-            rules: &self.rules,
-            checker: &self.checker,
-        }
+        
+        g.filter_map(move |bs| self.toderiv(&bs))
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
@@ -148,8 +137,7 @@ where
         let (cans, ptime) = with_time(|| {
             match g_.generate(beam)
                 .enumerate()
-                .filter(|&(_, ref candidate)| dyck::recognize(candidate))
-                .filter_map(|(i, candidate)| toderiv(&self.rules, &candidate).map(|_| (i + 1)))
+                .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
                 .next() {
                 Some(i) => i, // valid candidate
                 None => 0,    // failed
@@ -158,90 +146,34 @@ where
 
         eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
     }
-}
 
-fn toderiv<'a, 'b, N, T, W, I>(
-    rules: &'a I,
-    word: &'b [Delta<T>],
-) -> Option<GornTree<&'a PMCFGRule<N, T, W>>>
-where
-    I: Integeriser<Item = PMCFGRule<N, T, W>>,
-    T: PartialEq,
-{
-    let mut tree = BTreeMap::new();
-    let mut pos = Vec::new();
+    fn toderiv<'a>(&'a self, word: &[Delta<T>]) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
+        let mut tree = BTreeMap::new();
+        let mut pos = Vec::new();
 
-    for sigma in word {
-        match *sigma {
-            dyck::Bracket::Open(BracketContent::Component(rule_id, _)) => {
-                let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
-                if rule_at_pos != &rule_id {
-                    return None;
+        for sigma in word {
+            match *sigma {
+                dyck::Bracket::Open(BracketContent::Component(rule_id, _)) => {
+                    let rule_at_pos = tree.entry(pos.clone()).or_insert(rule_id);
+                    if rule_at_pos != &rule_id {
+                        return None;
+                    }
                 }
-            }
-            dyck::Bracket::Open(BracketContent::Variable(_, i, _)) => {
-                pos.push(i);
-            }
-            dyck::Bracket::Close(BracketContent::Variable(_, _, _)) => {
-                pos.pop();
-            }
-            _ => (),
-        }
-    }
-
-    Some(
-        tree.into_iter()
-            .map(|(pos, i)| (pos, rules.find_value(i).unwrap()))
-            .collect(),
-    )
-}
-
-/// Iterates Dyck words that represent a derivation for a word according to
-/// the Chomsky-Schützenberger characterization of an MCFG.
-struct CSGenerator<'a, T, N, W, G>
-where
-    T: 'a + PartialEq + Hash + Clone + Eq + Ord,
-    N: 'a + Hash + Eq,
-    W: 'a + Eq,
-    G: Iterator<Item=Vec<Delta<T>>> + 'a
-{
-    candidates: G,
-    rules: &'a HashIntegeriser<PMCFGRule<N, T, W>>,
-    checker: &'a MultipleDyckLanguage<BracketContent<T>>,
-}
-
-impl<'a, N, T, W, G> Iterator for CSGenerator<'a, T, N, W, G>
-where
-    T: PartialEq + Hash + Clone + Eq + Ord,
-    N: Hash + Eq + Clone,
-    W: Eq + Clone,
-    G: Iterator<Item=Vec<Delta<T>>>
-{
-    type Item = GornTree<&'a PMCFGRule<N, T, W>>;
-
-    fn next(&mut self) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
-        let &mut CSGenerator {
-            ref mut candidates,
-            rules,
-            checker,
-        } = self;
-        for candidate in candidates {
-            let candidate: Vec<_> = candidate
-                .into_iter()
-                .filter(|b| match *b {
-                    Bracket::Open(BracketContent::Terminal(_)) |
-                    Bracket::Close(BracketContent::Terminal(_)) => false,
-                    _ => true,
-                })
-                .collect();
-            if checker.recognize(&candidate) {
-                if let Some(derivation) = toderiv(rules, &candidate) {
-                    return Some(derivation);
+                dyck::Bracket::Open(BracketContent::Variable(_, i, _)) => {
+                    pos.push(i);
                 }
+                dyck::Bracket::Close(BracketContent::Variable(_, _, _)) => {
+                    pos.pop();
+                }
+                _ => (),
             }
         }
 
-        None
+        Some(
+            tree.into_iter()
+                .map(|(pos, i)| (pos, self.rules.find_value(i).unwrap()))
+                .collect(),
+        )
     }
 }
 

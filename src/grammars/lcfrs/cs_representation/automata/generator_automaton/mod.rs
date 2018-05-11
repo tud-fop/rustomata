@@ -1,6 +1,6 @@
 use integeriser::{Integeriser, HashIntegeriser};
 use std::hash::Hash;
-use dyck::Bracket;
+use dyck::{self, Bracket};
 use grammars::lcfrs::cs_representation::BracketContent;
 use std::rc::Rc;
 use util::agenda::Capacity;
@@ -173,7 +173,8 @@ where
     {
         match self {
             Generator::Finite(fsa) => GeneratorImpl::Finite(
-                fsa.generate(beam).map(|fs| BracketFragment::concat(fs)),
+                fsa.generate(beam).map(|fs| BracketFragment::concat(fs))
+                                  .filter(|w| dyck::recognize(w)),
             ),
             Generator::PushDown(pda) => GeneratorImpl::PushDown(
                 pda.generate(beam).map(|fs| BracketFragment::concat(fs)),

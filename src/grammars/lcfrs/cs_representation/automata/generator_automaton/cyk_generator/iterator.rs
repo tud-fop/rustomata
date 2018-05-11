@@ -3,10 +3,11 @@
 
 use std::collections::{BinaryHeap, HashMap};
 use super::*;
-use std::iter::repeat;
 use std::ops::Mul;
 use dyck::Bracket;
-use util::{reverse::Reverse, tree::GornTree};
+use util::reverse::Reverse;
+
+use super::chart_entry::ChartEntryWithIndex;
 
 pub struct ChartIterator<T, W>
 where
@@ -15,8 +16,8 @@ where
     chart: GenerationChart<W>,
     fsa: ExplodedAutomaton<T, W>,
 
-    d: HashMap<(u32, u32), Vec<(ChartEntry<W>, Vec<usize>, W)>>,
-    c: HashMap<(u32, u32), BinaryHeap<(Reverse<W>, ChartEntry<W>, Reverse<Vec<usize>>)>>,
+    d: HashMap<(u32, u32), Vec<(ChartEntryWithIndex<W>, W)>>,
+    c: HashMap<(u32, u32), BinaryHeap<(Reverse<W>, ChartEntryWithIndex<W>)>>,
     
     k: usize
 }
@@ -24,7 +25,7 @@ where
 impl<T, W> ChartIterator<T, W>
 where
     T: Eq + Hash,
-    W: Mul<Output=W> + Ord + Copy
+    W: Mul<Output=W> + Ord + Copy + ::std::fmt::Debug
 {
     pub fn new(chart: GenerationChart<W>, fsa: ExplodedAutomaton<T, W>) -> Self {
         ChartIterator {
@@ -35,10 +36,25 @@ where
             k: 0
         }
     }
-    
-    fn kth(&mut self, state: (u32, u32), k: usize) -> Option<(ChartEntry<W>, Vec<usize>, W)> {
-        use self::ChartEntry::*;
 
+    fn weight(&mut self, ce: &ChartEntryWithIndex<W>) -> Option<W> {
+        use self::ChartEntryWithIndex::*;
+        
+        match ce {
+            &Initial(_, w) => Some(w),
+            &Bracketed(_, w1, p, q, w2, i) => {
+                let wi = self.kth((p, q), i)?.1;
+                Some(w1 * wi * w2)
+            },
+            &Concat(p, q1, q2, i1, i2) => {
+                let w1 = self.kth((p, q1), i1)?.1;
+                let w2 = self.kth((q1, q2), i2)?.1;
+                Some(w1 * w2)
+            }
+        }
+    }
+    
+    fn kth(&mut self, state: (u32, u32), k: usize) -> Option<(ChartEntryWithIndex<W>, W)> {
         if let Some(deriv) = self.d.get(&state).and_then(|v| v.get(k)) {
             return Some(deriv.clone())
         }
@@ -46,42 +62,23 @@ where
         if self.c.get(&state).is_none() {
             self.c.insert(
                 state, 
-                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(
-                    |&(ce, w)| (w.into(), ce, repeat(0).take(ce.dim()).collect::<Vec<_>>().into())
-                ).collect()
+                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (w.into(), ce.into())).collect()
             );
             self.d.insert(
                 state,
-                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(w, ce, v)| (ce, v.unwrap(), w.unwrap())).into_iter().collect()
+                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(w, ce)| (ce, w.unwrap())).into_iter().collect()
             );
         }
 
         while self.d.get(&state).unwrap().len() < (k + 1) {
-            if let Some((ce, i, _)) = self.d.get(&state).unwrap().last().map(|t| t.clone()) {
-
-                for d in 0 .. ce.dim() {
-                    let mut i_ = i.clone();
-                    i_[d] += 1;
-                    
-                    match ce {
-                        Concat(p, q, q2) => {
-                            if let (Some(w1), Some(w2)) = (self.kth((p, q), i_[0]).map(|t| t.2), self.kth((q, q2), i_[1]).map(|t| t.2)) {
-                                if !self.c.get(&state).unwrap().iter().any(|&(_, ref ce_, ref i__)| &ce == ce_ && &i_ == i__.inner()) {
-                                    self.c.get_mut(&state).unwrap().push(((w1 * w2).into(), ce, i_.into()));
-                                }
-                            }
-                        },
-                        Bracketed(_, w1, p, q, w2) => {
-                            if let Some(wi) = self.kth((p, q), i_[0]).map(|t| t.2) {
-                                if !self.c.get(&state).unwrap().iter().any(|&(_, ref ce_, ref i__)| &ce == ce_ && &i_ == i__.inner()) {
-                                    self.c.get_mut(&state).unwrap().push(((w1 * wi * w2).into(), ce, i_.into()));
-                                }
-                            }
+            if let Some((ce, _)) = self.d.get(&state).unwrap().last().map(|t| t.clone()) {
+                for ce_ in ce.successors() {
+                    if let Some(weight) = self.weight(&ce_) {
+                        if !self.c.get(&state).unwrap().iter().any(|&(_, ref ceih)| ceih == &ce_) {
+                            self.c.get_mut(&state).unwrap().push((weight.into(), ce_));
                         }
-                        _ => ()
                     }
                 }
-
             }
 
             if self.c.get(&state).unwrap().is_empty() {
@@ -89,31 +86,31 @@ where
             }
             
             self.d.get_mut(&state).unwrap().push(
-                self.c.get_mut(&state).unwrap().pop().map(|(w, ce, i)| (ce, i.unwrap(), w.unwrap())).unwrap()
+                self.c.get_mut(&state).unwrap().pop().map(|(w, ce)| (ce, w.unwrap())).unwrap()
             )
 
         }
 
-        self.d.get(&state).and_then(|v| v.get(k)).map(|t| (*t).clone())
+        self.d.get(&state).and_then(|v| v.get(k)).map(|t| *t)
     }
 
-    fn read(&mut self, ce: &ChartEntry<W>, i: &[usize]) -> Vec<Bracket<T>>
+    fn read(&mut self, ce: &ChartEntryWithIndex<W>) -> Vec<Bracket<T>>
     where
         T: Clone
     {
-        use self::ChartEntry::*;
+        use self::ChartEntryWithIndex::*;
 
         match *ce {
-            Concat(p, q, q2) => {
-                let (ce1, i1, _) = self.kth((p, q), i[0]).unwrap();
-                let (ce2, i2, _) = self.kth((q, q2), i[1]).unwrap();
-                let mut w = self.read(&ce1, &i1);
-                w.extend(self.read(&ce2, &i2));
+            Concat(p, q, q2, i1, i2) => {
+                let (ce1, _) = self.kth((p, q), i1).unwrap();
+                let (ce2, _) = self.kth((q, q2), i2).unwrap();
+                let mut w = self.read(&ce1);
+                w.extend(self.read(&ce2));
                 w
             },
-            Bracketed(ti, _, p, q, _) => {
-                let (ce_, i_, _) = self.kth((p, q), i[0]).unwrap();
-                let mut w = self.read(&ce_, &i_);
+            Bracketed(ti, _, p, q, _, i) => {
+                let (ce_, _) = self.kth((p, q), i).unwrap();
+                let mut w = self.read(&ce_);
                 let t = self.fsa.bracket_i.find_value(ti as usize).unwrap();
                 
                 w.insert(0, Bracket::Open(t.clone()));
@@ -142,7 +139,7 @@ where
             self.k += 1;
 
             self.kth(state, k).map(
-                |(ce, i, _)| self.read(&ce, &i)
+                |(ce, _)| self.read(&ce)
             )
         }
     }
@@ -164,7 +161,7 @@ mod tests {
         let w1 = LogDomain::new(0.5).unwrap().into();
         let w2 = LogDomain::new(0.75).unwrap().into();
         
-        use self::ChartEntry::*;
+        use self::ChartEntryWithIndex::*;
 
         let exploded = ExplodedAutomaton::new(example_fsa());
         let chart = GenerationChart::fill(&exploded, Capacity::Infinite);
@@ -176,23 +173,30 @@ mod tests {
 
         assert_eq!(
             it.kth((0, 1), 0),
-            Some((Initial(0, w2), Vec::new(), w2))
+            Some((Initial(0, w2), w2))
         );
 
         assert_eq!(
             it.kth((2, 3), 0),
-            Some((Bracketed(t1 as u32, one, 0, 1, one), vec![0], w2))
+            Some((Bracketed(t1 as u32, one, 0, 1, one, 0), w2))
         );
 
         assert_eq!(
             it.kth((0, 1), 1),
-            Some((Bracketed(t2 as u32, w1, 2, 3, w1), vec![0], w1 * w2 * w1))
+            Some((Bracketed(t2 as u32, w1, 2, 3, w1, 0), w1 * w2 * w1))
+        );
+
+        assert_eq!(
+            it.kth((0, 1), 2),
+            Some((Bracketed(t2 as u32, w1, 2, 3, w1, 1), w1 * w1 * w2 * w1 * w1))
         );
 
     }
 
     #[test]
     fn structure() {
+        use self::ChartEntryWithIndex::*;
+
         let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
         let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.5).unwrap().into();
         let w2 = LogDomain::new(0.75).unwrap().into();
@@ -216,7 +220,7 @@ mod tests {
             vec![
                 ( (0, 1), 
                   vec![
-                    (ChartEntry::Initial(0, w2), Vec::new(), w2)
+                    (Initial(0, w2), w2)
                   ]
                 )
             ].into_iter().collect()
@@ -229,29 +233,35 @@ mod tests {
             vec![
                 ( (0, 1), 
                   vec![
-                    (w, ChartEntry::Bracketed(t1, w1, 2, 3, w1), vec![0].into())
+                    (w, Bracketed(t1, w1, 2, 3, w1, 0))
                   ]
                 )
             ]
         );
 
         assert!(it.next().is_some());
+
+        assert!(it.c.get(&(0, 1)).expect("empty heap").is_empty());
+        assert!(it.c.get(&(2, 3)).expect("empty heap").is_empty());
+        
         assert_eq!(
             it.d,
             vec![
                 ( (0, 1), 
                   vec![
-                    (ChartEntry::Initial(0, w2), Vec::new(), w2),
-                    (ChartEntry::Bracketed(t1, w1, 2, 3, w1), vec![0], w1 * w2 * w1),
+                    (Initial(0, w2), w2),
+                    (Bracketed(t1, w1, 2, 3, w1, 0), w1 * w2 * w1),
                   ]
                 ),
                 ( (2, 3), 
                   vec![
-                    (ChartEntry::Bracketed(t2, one, 0, 1, one), vec![0], w2),
+                    (Bracketed(t2, one, 0, 1, one, 0), w2),
                   ]
                 )
             ].into_iter().collect()
         );
+
+        assert!(it.next().is_some());
     }
 
     #[test]
