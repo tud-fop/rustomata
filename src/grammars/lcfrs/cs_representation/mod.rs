@@ -1,4 +1,3 @@
-use util::agenda::Capacity;
 use std::hash::Hash;
 use integeriser::{HashIntegeriser, Integeriser};
 use std::collections::BTreeMap;
@@ -14,11 +13,9 @@ use self::automata::*;
 use super::Lcfrs;
 
 use std::fmt::{Display, Error, Formatter};
-use util::with_time;
-use util::tree::GornTree;
+use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable, agenda::Capacity };
 
 use self::automata::GeneratorStrategy;
-use util::factorizable::Factorizable;
 use std::ops::Mul;
 use num_traits::{Zero, One};
 
@@ -135,14 +132,13 @@ where
         );
 
         let (cans, ptime) = with_time(|| {
-            match g_.generate(beam)
-                .enumerate()
-                .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
-                .next() {
-                Some(i) => i, // valid candidate
-                None => 0,    // failed
-            }
-        });
+                    match take_capacity(g_.generate(beam).enumerate(), beam)
+                            .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
+                            .next() {
+                        Some(i) => i, // valid candidate
+                        None => 0,    // failed
+                    }
+                });
 
         eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
     }
