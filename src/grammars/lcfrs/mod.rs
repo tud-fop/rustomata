@@ -135,9 +135,49 @@ mod tests {
 
     #[test]
     fn conversion() {
-
         let lcfrs: Lcfrs<(usize, BTreeSet<usize>), usize, ()> = Mcfg::new(mcfg_rules(), 1).into();
-        eprintln!("{:?}", lcfrs);
+        
+        let emptyset = BTreeSet::new();
+        let set0: BTreeSet<_> = vec![0].into_iter().collect();
+        let set01: BTreeSet<_> = vec![0, 1].into_iter().collect();
+        
+        assert_eq!(
+            lcfrs.init,
+            (1, BTreeSet::new())
+        );
+
+        let rules: Vec<PMCFGRule<(usize, BTreeSet<usize>), usize, ()>> =
+            vec![
+                PMCFGRule {
+                    weight: (),
+                    head: (1, emptyset.clone()),
+                    tail: vec![],
+                    composition: Composition { composition: vec![vec![VarT::T(0)]] },
+                },
+                PMCFGRule {
+                    weight: (),
+                    head: (1, emptyset.clone()),
+                    tail: vec![(2, set0.clone())],
+                    composition: Composition { composition: vec![vec![VarT::Var(0, 0), VarT::T(0)]] },
+                },
+                PMCFGRule {
+                    weight: (),
+                    head: (2, set0.clone()),
+                    tail: vec![(2, set01.clone())],
+                    composition: Composition { composition: vec![vec![VarT::T(2)]] },
+                },
+                PMCFGRule {
+                    weight: (),
+                    head: (2, set01.clone()),
+                    tail: vec![(2, set01.clone())],
+                    composition: Composition { composition: vec![] },
+                },
+            ];
+
+        assert_eq!(
+            lcfrs.rules.into_iter().collect::<BTreeSet<_>>(),
+            rules.into_iter().collect::<BTreeSet<_>>()
+        )
     }
 
     fn mcfg_rules() -> Vec<PMCFGRule<usize, usize, ()>> {

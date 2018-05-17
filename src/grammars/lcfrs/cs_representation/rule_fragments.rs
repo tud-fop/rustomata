@@ -249,11 +249,28 @@ mod test {
         let mut int = HashIntegeriser::new();
         int.integerise(rule.clone());
 
-        eprintln!(
-            "{:?}",
+        assert_eq!(
             super::fragments(&rule)
                 .map(|f| f.bracket_word(&int))
-                .collect::<Vec<_>>()
-        );
+                .collect::<Vec<_>>(),
+            vec![
+                BracketFragment(
+                    vec![
+                        Bracket::Open(BracketContent::Component(0, 0)),
+                        Bracket::Open(BracketContent::Terminal(1)),
+                        Bracket::Close(BracketContent::Terminal(1)),
+                        Bracket::Open(BracketContent::Variable(0, 0, 0))
+                    ]
+                ),
+                BracketFragment(
+                    vec![
+                        Bracket::Close(BracketContent::Variable(0, 0, 0)),
+                        Bracket::Open(BracketContent::Terminal(2)),
+                        Bracket::Close(BracketContent::Terminal(2)),
+                        Bracket::Close(BracketContent::Component(0, 0)),
+                    ]
+                ),
+            ]
+        )
     }
 }

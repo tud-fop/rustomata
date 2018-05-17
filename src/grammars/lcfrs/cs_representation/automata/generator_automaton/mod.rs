@@ -84,7 +84,7 @@ where
         PushDownAutomaton::new(
             transitions,
             Bracket::Open((initial.clone(), 0)),
-            vec![Bracket::Close((initial, 0))],
+            Bracket::Close((initial, 0)),
         )
     }
 

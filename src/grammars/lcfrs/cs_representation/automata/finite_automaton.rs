@@ -33,19 +33,19 @@ pub struct FiniteAutomaton<T, W>
 where
     T: Eq + Hash,
 {
-    pub initial: usize,
-    pub finals: Vec<usize>,
+    pub qi: usize,
+    pub qf: usize,
     pub arcs: Vec<IntMap<(usize, W)>>,
     pub labels: Rc<HashIntegeriser<T>>,
 }
 
 impl<T, W> FiniteAutomaton<T, W> where T: Eq + Hash {
     pub fn to_unweighted(self) -> FiniteAutomaton<T, ()> {
-        let FiniteAutomaton{ initial, finals, arcs, labels } = self;
+        let FiniteAutomaton{ qi, qf, arcs, labels } = self;
 
         FiniteAutomaton {
-            initial,
-            finals,
+            qi,
+            qf,
             arcs: arcs.into_iter().map(|m| m.into_iter().map(|(s, (q, _))| (s, (q, ()))).collect()).collect(),
             labels
         }
@@ -64,7 +64,7 @@ where
     pub fn new<Q>(
         arcs: Vec<Transition<StateInstruction<Q>, T, W>>,
         qinitial: Q,
-        qfinals: Vec<Q>,
+        qfinals: Q,
     ) -> Self
     where
         Q: Eq + Hash + Clone,
@@ -73,7 +73,7 @@ where
         let mut states = HashIntegeriser::new();
         let mut labels = HashIntegeriser::new();
 
-        let initial = states.integerise(qinitial);
+        let qi = states.integerise(qinitial);
 
         for Transition {
             mut word,
@@ -89,14 +89,9 @@ where
                 ));
         }
 
-        let finals = qfinals
-            .into_iter()
-            .filter_map(|q| states.find_key(&q))
-            .collect();
-
         FiniteAutomaton {
-            initial,
-            finals,
+            qi,
+            qf: states.integerise(qfinals),
             arcs: arcmap,
             labels: Rc::new(labels),
         }
@@ -105,8 +100,8 @@ where
     /// Creates a new deterministic FSA from integerized transitions.
     pub fn from_integerized(
         arcv: Vec<Transition<StateInstruction<usize>, usize, W>>,
-        initial: usize,
-        finals: Vec<usize>,
+        qi: usize,
+        qf: usize,
         labels: Rc<HashIntegeriser<T>>,
     ) -> Self {
         let mut arcs = Vec::new();
@@ -122,8 +117,8 @@ where
 
         FiniteAutomaton {
             arcs,
-            initial,
-            finals,
+            qi,
+            qf,
             labels,
         }
     }
@@ -137,9 +132,9 @@ where
     pub fn intersect(&self, other: &FiniteAutomaton<T, ()>) -> Self where W: Copy {
         let mut new_states = HashIntegeriser::new();
         let mut arcs: Vec<IntMap<(usize, W)>> = Vec::new();
-        let mut stack = vec![(self.initial, other.initial)];
+        let mut stack = vec![(self.qi, other.qi)];
         
-        let initial = new_states.integerise((self.initial, other.initial));
+        let qi = new_states.integerise((self.qi, other.qi));
 
         while let Some((from, from_)) = stack.pop() { 
             for (label, &(to, weight)) in self.arcs.get(from).unwrap_or(&IntMap::default()) {
@@ -156,44 +151,34 @@ where
             }
         }
 
-        let mut finals = Vec::new();
-        for qf in &self.finals {
-            for qf_ in &other.finals {
-                if let Some(i) = new_states.find_key(&(*qf, *qf_)) {
-                    finals.push(i);
-                }
-            }
-        }
-
         FiniteAutomaton {
-            initial,
-            finals,
+            qi,
+            qf: new_states.integerise((self.qf, other.qf)),
             arcs,
             labels: Rc::clone(&self.labels)
         }
     }
 
     /// Creates an `Iterator` over the language accepted by an FSA.
-    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>> where W: Copy + Mul<Output=W> + One + Zero + Ord {
+    pub fn generate(self, beamwidth: Capacity) -> impl Iterator<Item = Vec<T>>
+    where 
+        W: Copy + Mul<Output=W> + One + Zero + Ord
+    {
         let heuristics = self.heuristics();
 
         let FiniteAutomaton {
-            initial,
-            finals,
+            qi,
+            qf,
             arcs,
             labels,
         } = self;
 
-        let initial_agenda = if !finals.is_empty() {
-            vec![
-                WeightedSearchItem(
-                    (initial, Vec::new(), W::one()),
-                    *heuristics.get(&initial).unwrap()
-                ),
-            ]
-        } else {
-            Vec::new()
-        };
+        let initial_agenda = vec![
+            WeightedSearchItem(
+                (qi, Vec::new(), W::one()),
+                *heuristics.get(&qi).unwrap()
+            ),
+        ];
 
         Search::weighted(initial_agenda, move |&WeightedSearchItem((q,
                                     ref word,
@@ -218,9 +203,7 @@ where
             }
             successors
         }).beam(beamwidth)
-            .filter(move |&WeightedSearchItem((ref q, _, _), _)| {
-                finals.contains(q)
-            })
+            .filter(move |&WeightedSearchItem((ref q, _, _), _)| q == &qf)
             .map(move |WeightedSearchItem((_, wi, _), _)| {
                 wi.into_iter()
                     .map(|i| labels.find_value(i).unwrap())
@@ -229,7 +212,10 @@ where
             })
     }
 
-    fn heuristics(&self) -> IntMap<W> where W: Ord + One + Mul<Output=W> + Copy {
+    fn heuristics(&self) -> IntMap<W>
+    where
+        W: Ord + One + Mul<Output=W> + Copy
+    {
         // index of first vector are states,
         // the second is unordered and holds all transitions targeting the state
         // without alphabet symbols
@@ -241,9 +227,7 @@ where
         }
 
         Search::weighted(
-            self.finals.iter().map(|q| {
-                WeightedSearchItem(*q, W::one())
-            }),
+            vec![WeightedSearchItem(self.qf, W::one())],
             move |&WeightedSearchItem(to, w)| if let Some(arcs_to) = bwtrans.get(to) {
                 arcs_to
                     .iter()
@@ -269,7 +253,7 @@ where
 use std::borrow::Borrow;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 type SerializerRepresentation<T, W> = (usize,
-                                       Vec<usize>,
+                                       usize,
                                        Vec<IntMap<(usize, W)>>,
                                        HashIntegeriser<T>);
 
@@ -283,8 +267,8 @@ where
         S: Serializer,
     {
         (
-            &self.initial,
-            &self.finals,
+            &self.qi,
+            &self.qf,
             &self.arcs,
             Borrow::<HashIntegeriser<T>>::borrow(&self.labels),
         ).serialize(s)
@@ -300,11 +284,11 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (initial, finals, arcs, labels) = SerializerRepresentation::deserialize(d)?;
+        let (qi, qf, arcs, labels) = SerializerRepresentation::deserialize(d)?;
 
         Ok(FiniteAutomaton {
-            initial,
-            finals,
+            qi,
+            qf,
             arcs,
             labels: Rc::new(labels),
         })
@@ -334,9 +318,9 @@ where
 
         write!(
             f,
-            "initial: {}, finals: {:?}\n{}",
-            &self.initial,
-            &self.finals,
+            "initial: {}, final: {}\n{}",
+            &self.qi,
+            &self.qf,
             &buffer
         )
     }
@@ -382,7 +366,7 @@ where
     }
 
     fn initial(&self) -> <Self::I as Instruction>::Storage {
-        self.initial
+        self.qi
     }
 
     fn item_map(
@@ -436,7 +420,7 @@ where
         &self,
         c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
     ) -> bool {
-        c.word.is_empty() && self.finals.contains(&c.storage)
+        c.word.is_empty() && c.storage == self.qf
     }
 
     fn transition_map(
@@ -466,7 +450,7 @@ where
     }
 
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
-        self.initial
+        self.qi
     }
 }
 
@@ -484,14 +468,14 @@ mod tests {
         
         let intersection1 = fsa.intersect(&fsa_);
 
-        assert_eq!(intersection1.initial, example_fsa().initial);
-        assert_eq!(intersection1.finals, example_fsa().finals);
+        assert_eq!(intersection1.qi, example_fsa().qi);
+        assert_eq!(intersection1.qf, example_fsa().qf);
         assert_eq!(intersection1.arcs, example_fsa().arcs);
 
         let intersection2 = fsa.intersect(&example_fsa2());
 
-        assert_eq!(intersection2.initial, 0);
-        assert_eq!(intersection2.finals, vec![2]);
+        assert_eq!(intersection2.qi, 0);
+        assert_eq!(intersection2.qf, 2);
         assert_eq!(
             intersection2.arcs,
             vec![
@@ -503,8 +487,8 @@ mod tests {
 
     fn example_fsa2 () -> FiniteAutomaton<char, ()> {
         FiniteAutomaton {
-            initial: 0,
-            finals: vec![0],
+            qi: 0,
+            qf: 0,
             arcs: vec![
                 vec![(0, (1, ()))].into_iter().collect(),
                 vec![(1, (0, ()))].into_iter().collect(),
@@ -519,8 +503,8 @@ mod tests {
         int.integerise('b');
 
         FiniteAutomaton {
-            initial: 0,
-            finals: vec![1],
+            qi: 0,
+            qf: 1,
             arcs: vec![
                 vec![(0, (0, 1.into())), (1, (1, 1.into()))].into_iter().collect(),
                 vec![(1, (1, 1.into()))].into_iter().collect(),

@@ -47,8 +47,8 @@ pub struct PushDownAutomaton<T, W>
 where
     T: Hash + Eq + Clone,
 {
-    pub initial: usize,
-    pub finals: Vec<usize>,
+    pub qi: usize,
+    pub qf: usize,
     pub arcs: Vec<IntMap<(usize, W, PushDownInstruction<usize>)>>,
     pub labels: Rc<HashIntegeriser<T>>,
 }
@@ -134,7 +134,7 @@ where
     /// Creates a deterministic `PushDownAutomaton` using a sequence of transisitons.
     /// If there are multiple transitions from the same state with the same label,
     /// the last one will be used.
-    pub fn new<Q, S>(oarcs: Vec<PDSTransition<Q, S, T, W>>, oinitial: Q, ofinals: Vec<Q>) -> Self
+    pub fn new<Q, S>(oarcs: Vec<PDSTransition<Q, S, T, W>>, oinitial: Q, ofinal: Q) -> Self
     where
         Q: Hash + Eq + Clone,
         S: Hash + Eq + Clone,
@@ -144,7 +144,7 @@ where
         let mut pd_symbols = HashIntegeriser::new();
         let mut states = HashIntegeriser::new();
 
-        let initial = states.integerise(oinitial);
+        let qi = states.integerise(oinitial);
 
         let mut arcs = Vec::new();
         for Transition {
@@ -180,14 +180,9 @@ where
             ));
         }
 
-        let finals = ofinals
-            .into_iter()
-            .filter_map(|q| states.find_key(&q))
-            .collect();
-
         PushDownAutomaton {
-            initial,
-            finals,
+            qi,
+            qf: states.integerise(ofinal),
             arcs,
             labels: Rc::new(labels),
         }
@@ -202,12 +197,12 @@ where
 
         let mut agenda = Vec::new();
         for (label, &(to, weight, ref op)) in
-            self.arcs.get(self.initial).unwrap_or(&IntMap::default())
+            self.arcs.get(self.qi).unwrap_or(&IntMap::default())
         {
             let pd = Vec::new();
             if let Some(pd_) = op.apply_with_capacity(&pd, depth) {
                 agenda.push(
-                    WeightedSearchItem((self.initial, pd, *label, pd_, to), weight)
+                    WeightedSearchItem((self.qi, pd, *label, pd_, to), weight)
                 );
             }
         }
@@ -237,15 +232,10 @@ where
             })
             .collect();
 
-        let new_finals: Vec<usize> = self.finals
-            .into_iter()
-            .filter_map(|q| new_states.find_key(&(q, Vec::new())))
-            .collect();
-
         FiniteAutomaton::from_integerized(
             transitions,
-            new_states.find_key(&(self.initial, Vec::new())).unwrap(),
-            new_finals,
+            new_states.find_key(&(self.qi, Vec::new())).unwrap(),
+            new_states.integerise((self.qf, Vec::new())),
             self.labels,
         )
     }
@@ -261,11 +251,11 @@ where
         let mut agenda = Vec::new();
 
         for (label, &(to, weight, op)) in
-            self.arcs.get(self.initial).unwrap_or(&IntMap::default())
+            self.arcs.get(self.qi).unwrap_or(&IntMap::default())
         {
-            if let Some(&(fto, _)) = other.arcs.get(other.initial).and_then(|m| m.get(label)) {
+            if let Some(&(fto, _)) = other.arcs.get(other.qi).and_then(|m| m.get(label)) {
                 agenda.push(
-                    WeightedSearchItem((self.initial, other.initial, op, *label, to, fto), weight)
+                    WeightedSearchItem((self.qi, other.qi, op, *label, to, fto), weight)
                 );
             }
         }
@@ -293,19 +283,10 @@ where
             ).insert(s, (states.integerise((to1, to2)), weight, i));
         }
 
-        let mut new_finals: Vec<usize> = Vec::new();
-        for kq in self.finals {
-            for fq in &other.finals {
-                if let Some(q) = states.find_key(&(kq, *fq)) {
-                    new_finals.push(q);
-                }
-            }
-        }
-
         PushDownAutomaton {
             arcs: new_arcs,
-            initial: states.integerise((self.initial, other.initial)),
-            finals: new_finals,
+            qi: states.integerise((self.qi, other.qi)),
+            qf: states.integerise((self.qf, other.qf)),
             labels: self.labels,
         }
     }
@@ -316,22 +297,18 @@ where
 
         let PushDownAutomaton {
             arcs,
-            initial,
-            finals,
+            qi,
+            qf,
             labels,
         } = self;
 
         // empty agenda if there are no final states
-        let initial_agenda = if !finals.is_empty() {
-            vec![
-                WeightedSearchItem(
-                    (W::one(), initial, vec![], vec![]),
-                    heuristics.get(&initial).unwrap().1
-                ),
-            ]
-        } else {
-            Vec::new()
-        };
+        let initial_agenda = vec![
+            WeightedSearchItem(
+                (W::one(), qi, vec![], vec![]),
+                heuristics.get(&qi).unwrap().1
+            ),
+        ];
 
         Search::weighted(initial_agenda, move |&WeightedSearchItem((weight_,
                                        q,
@@ -371,9 +348,7 @@ where
 
                 results
             }).beam(beamwidth)
-                .filter(move |&WeightedSearchItem((_, ref q, _, ref pd), _)| {
-                    finals.contains(q) && pd.is_empty()
-                })
+                .filter(move |&WeightedSearchItem((_, ref q, _, ref pd), _)| q == &qf && pd.is_empty())
                 .map(move |WeightedSearchItem((_, _, word, _), _)| {
                     word.into_iter()
                         .map(|i| labels.find_value(i).unwrap())
@@ -383,9 +358,7 @@ where
     }
 
     fn heuristics(&self) -> IntMap<(IntMap<W>, W)> where W: Ord + Copy + Mul<Output=W> + One {
-        let starts = self.finals.iter().map(|q| {
-            WeightedSearchItem((*q, BTreeSet::new()), W::one())
-        });
+        let starts = vec![WeightedSearchItem((self.qf, BTreeSet::new()), W::one())];
 
         let mut bwtransitions: Vec<
             Vec<
@@ -449,7 +422,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// `Serialize` and `Deserialize` for tuples.
 /// It holds the conents of `PushDownAutomaton`.
 type SerializedRepresentation<T, W> = (usize,
-                                       Vec<usize>,
+                                       usize,
                                        Vec<IntMap<(usize, W, PushDownInstruction<usize>)>>,
                                        HashIntegeriser<T>);
 
@@ -463,8 +436,8 @@ where
         S: Serializer,
     {
         (
-            &self.initial,
-            &self.finals,
+            &self.qi,
+            &self.qf,
             &self.arcs,
             Borrow::<HashIntegeriser<T>>::borrow(&self.labels),
         ).serialize(s)
@@ -480,10 +453,10 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (initial, finals, arcs, labels) = SerializedRepresentation::deserialize(d)?;
+        let (qi, qf, arcs, labels) = SerializedRepresentation::deserialize(d)?;
         Ok(PushDownAutomaton {
-            initial,
-            finals,
+            qi,
+            qf,
             arcs,
             labels: Rc::new(labels),
         })
@@ -515,9 +488,9 @@ where
 
         write!(
             f,
-            "initial: {}, finals: {:?}\n{}",
-            &self.initial,
-            &self.finals,
+            "initial: {}, final: {:?}\n{}",
+            &self.qi,
+            &self.qf,
             &buffer
         )
     }
@@ -561,7 +534,7 @@ where
     }
 
     fn initial(&self) -> <Self::I as Instruction>::Storage {
-        (self.initial, Vec::new())
+        (self.qi, Vec::new())
     }
 
     /// Maps items from the internal representation to the desired output.
@@ -616,7 +589,7 @@ where
         &self,
         c: &Configuration<<Self::IInt as Instruction>::Storage, Self::TInt, W>,
     ) -> bool {
-        c.word.is_empty() && self.finals.contains(&c.storage.0) && c.storage.1.is_empty()
+        c.word.is_empty() && self.qf == c.storage.0 && c.storage.1.is_empty()
     }
 
     fn transition_map(
@@ -647,7 +620,7 @@ where
 
     /// Returns the initial storage configuration (in its internal representation).
     fn initial_int(&self) -> <Self::IInt as Instruction>::Storage {
-        (self.initial, Vec::new())
+        (self.qi, Vec::new())
     }
 }
 
@@ -658,34 +631,87 @@ mod test {
     use log_domain::LogDomain;
 
     #[test]
-    fn pda() {
+    fn heuristic() {
+        let one = LogDomain::new(1.0).unwrap().into();
+        let pointfive = LogDomain::new(0.5).unwrap().into();
+
+        let h: IntMap<(IntMap<Reverse<LogDomain<f64>>>, Reverse<LogDomain<f64>>)> =
+            vec![
+                (1, (vec![(0, one)].into_iter().collect(), one)),
+                (0, (vec![(0, pointfive)].into_iter().collect(), pointfive)),
+            ].into_iter().collect();
+
+        assert_eq!(
+            example_pda().heuristics(),
+            h
+        );
+    }
+
+    #[test]
+    fn constructor() {
+        let one = LogDomain::new(1.0).unwrap().into();
+        let pointfive = LogDomain::new(0.5).unwrap().into();
+        let pda = example_pda();
+
+        assert_eq!(pda.qi, 0);
+        assert_eq!(pda.qf, 1);
+
+        let arcs: Vec<IntMap<(usize, Reverse<LogDomain<f64>>, PushDownInstruction<usize>)>>
+            = vec![
+                vec![(0, (0, one, PushDownInstruction::Add(0))), (1, (1, pointfive, PushDownInstruction::Remove(0))), (2, (0, one, PushDownInstruction::Add(1)))].into_iter().collect(),
+                vec![(1, (1, one, PushDownInstruction::Remove(0)))].into_iter().collect()
+            ];
+
+        assert_eq!(
+            pda.arcs,
+            arcs
+        );
+    }
+
+    #[test]
+    fn words() {
+        let pda = example_pda();
+
+        assert_eq!(
+            pda.generate(Capacity::Infinite).take(5).collect::<Vec<_>>(),
+            vec![
+                vec!["A", "B"],
+                vec!["A", "A", "B", "B"],
+                vec!["A", "A", "A", "B", "B", "B"],
+                vec!["A", "A", "A", "A", "B", "B", "B", "B"],
+                vec!["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"],
+            ]
+        )
+    }
+
+    fn example_pda() -> PushDownAutomaton<&'static str, Reverse<LogDomain<f64>>> {
+        let one = LogDomain::new(1.0).unwrap().into();
+        let pointfive = LogDomain::new(0.5).unwrap().into();
+
         let arcs: Vec<PDSTransition<usize, usize, &str, Reverse<LogDomain<f64>>>> = vec![
             Transition {
                 instruction: (StateInstruction(0, 0), PushDownInstruction::Add(0)),
                 word: vec!["A"],
-                weight: LogDomain::new(1.0).unwrap().into(),
+                weight: one,
             },
             Transition {
                 instruction: (StateInstruction(0, 1), PushDownInstruction::Remove(0)),
                 word: vec!["B"],
-                weight: LogDomain::new(0.5).unwrap().into(),
+                weight: pointfive,
             },
             Transition {
                 instruction: (StateInstruction(1, 1), PushDownInstruction::Remove(0)),
                 word: vec!["B"],
-                weight: LogDomain::new(1.0).unwrap().into(),
+                weight: one,
             },
             Transition {
                 instruction: (StateInstruction(0, 0), PushDownInstruction::Add(1)),
                 word: vec!["C"],
-                weight: LogDomain::new(1.0).unwrap().into(),
+                weight: one,
             },
         ];
-
-        eprintln!(
-            "{:?}",
-            PushDownAutomaton::new(arcs, 0, vec![1]).heuristics()
-        );
+        
+        PushDownAutomaton::new(arcs, 0, 1)
     }
 
 }

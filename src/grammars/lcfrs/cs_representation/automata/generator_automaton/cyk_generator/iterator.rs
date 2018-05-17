@@ -1,14 +1,14 @@
 /// This module implements the better k-best parsing algorithm
 /// described by Huang and Chiang in 2005 in Algorithm 3.
 
-use std::collections::{BinaryHeap, HashMap};
-use super::*;
-use std::ops::Mul;
+use super::{*, chart_entry::ChartEntryWithIndex};
 use dyck::Bracket;
 use util::reverse::Reverse;
 
-use super::chart_entry::ChartEntryWithIndex;
+use std::{collections::BinaryHeap, ops::Mul};
+use fnv::FnvHashMap;
 
+/// Stores the information for the lazy enumeration of hyperpaths.
 pub struct ChartIterator<T, W>
 where
     T: Hash + Eq,
@@ -16,27 +16,31 @@ where
     chart: GenerationChart<W>,
     fsa: ExplodedAutomaton<T, W>,
 
-    d: HashMap<(u32, u32), Vec<(ChartEntryWithIndex<W>, W)>>,
-    c: HashMap<(u32, u32), BinaryHeap<(Reverse<W>, ChartEntryWithIndex<W>)>>,
+    // caches already queried hyperpaths
+    d: FnvHashMap<(usize, usize), Vec<(ChartEntryWithIndex<W>, W)>>,
+    // stores candidates for next elements in d
+    c: FnvHashMap<(usize, usize), BinaryHeap<(Reverse<W>, ChartEntryWithIndex<W>)>>,
     
+    // current k for root
     k: usize
 }
 
 impl<T, W> ChartIterator<T, W>
 where
     T: Eq + Hash,
-    W: Mul<Output=W> + Ord + Copy + ::std::fmt::Debug
+    W: Mul<Output=W> + Ord + Copy
 {
     pub fn new(chart: GenerationChart<W>, fsa: ExplodedAutomaton<T, W>) -> Self {
         ChartIterator {
             chart,
             fsa,
-            d: HashMap::new(),
-            c: HashMap::new(),
+            d: FnvHashMap::default(),
+            c: FnvHashMap::default(),
             k: 0
         }
     }
 
+    /// Computes the weight of an item recursively and checks the existence of all predecessors.
     fn weight(&mut self, ce: &ChartEntryWithIndex<W>) -> Option<W> {
         use self::ChartEntryWithIndex::*;
         
@@ -54,7 +58,8 @@ where
         }
     }
     
-    fn kth(&mut self, state: (u32, u32), k: usize) -> Option<(ChartEntryWithIndex<W>, W)> {
+    // Implementation of the lazy enumeration for hyperpaths in Better k-best Parsing.
+    fn kth(&mut self, state: (usize, usize), k: usize) -> Option<(ChartEntryWithIndex<W>, W)> {
         if let Some(deriv) = self.d.get(&state).and_then(|v| v.get(k)) {
             return Some(deriv.clone())
         }
@@ -94,6 +99,7 @@ where
         self.d.get(&state).and_then(|v| v.get(k)).map(|t| *t)
     }
 
+    // Reads the bracket word for a hyperpath.
     fn read(&mut self, ce: &ChartEntryWithIndex<W>) -> Vec<Bracket<T>>
     where
         T: Clone
@@ -111,14 +117,14 @@ where
             Bracketed(ti, _, p, q, _, i) => {
                 let (ce_, _) = self.kth((p, q), i).unwrap();
                 let mut w = self.read(&ce_);
-                let t = self.fsa.bracket_i.find_value(ti as usize).unwrap();
+                let t = self.fsa.bracket_i.find_value(ti).unwrap();
                 
                 w.insert(0, Bracket::Open(t.clone()));
                 w.push(Bracket::Close(t.clone()));
                 w
             }
             Initial(wi, _) => {
-                self.fsa.terminal_i.find_value(wi as usize).unwrap().clone()
+                self.fsa.terminal_i.find_value(wi).unwrap().clone()
             }
         }
     }
@@ -127,24 +133,19 @@ where
 impl<T, W> Iterator for ChartIterator<T, W>
 where
     T: Eq + Hash + Clone,
-    W: Ord + Mul<Output=W> + Copy + ::std::fmt::Debug
+    W: Ord + Mul<Output=W> + Copy
 {
     type Item = Vec<Bracket<T>>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.fsa.finals.is_empty() {
-            None
-        } else {
-            let state = (self.fsa.initial, self.fsa.finals[0]);
-            let k = self.k;
-            self.k += 1;
+        let state = (self.fsa.qi, self.fsa.qf);
+        let k = self.k;
+        self.k += 1;
 
-            self.kth(state, k).map(
-                |(ce, _)| self.read(&ce)
-            )
-        }
+        self.kth(state, k).map(
+            |(ce, _)| self.read(&ce)
+        )
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -178,17 +179,17 @@ mod tests {
 
         assert_eq!(
             it.kth((2, 3), 0),
-            Some((Bracketed(t1 as u32, one, 0, 1, one, 0), w2))
+            Some((Bracketed(t1, one, 0, 1, one, 0), w2))
         );
 
         assert_eq!(
             it.kth((0, 1), 1),
-            Some((Bracketed(t2 as u32, w1, 2, 3, w1, 0), w1 * w2 * w1))
+            Some((Bracketed(t2, w1, 2, 3, w1, 0), w1 * w2 * w1))
         );
 
         assert_eq!(
             it.kth((0, 1), 2),
-            Some((Bracketed(t2 as u32, w1, 2, 3, w1, 1), w1 * w1 * w2 * w1 * w1))
+            Some((Bracketed(t2, w1, 2, 3, w1, 1), w1 * w1 * w2 * w1 * w1))
         );
 
     }
@@ -204,8 +205,8 @@ mod tests {
         let exploded = ExplodedAutomaton::new(example_fsa());
         let chart = GenerationChart::fill(&exploded, Capacity::Infinite);
 
-        let t1 = exploded.bracket_i.find_key(&BracketContent::Component(0, 0)).unwrap() as u32;
-        let t2 = exploded.bracket_i.find_key(&BracketContent::Variable(0, 0, 0)).unwrap() as u32;
+        let t1 = exploded.bracket_i.find_key(&BracketContent::Component(0, 0)).unwrap();
+        let t2 = exploded.bracket_i.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
 
         let mut it = ChartIterator::new(chart, exploded);
 
@@ -332,7 +333,7 @@ mod tests {
     #[test]
     fn kth2 () {
         let exploded = ExplodedAutomaton::new(example_fsa2());
-        let state = (exploded.initial, exploded.finals[0]);
+        let state = (exploded.qi, exploded.qf);
 
         let chart = GenerationChart::fill(&exploded, Capacity::Infinite);
 

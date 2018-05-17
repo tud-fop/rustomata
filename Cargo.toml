@@ -2,6 +2,7 @@
 name = "rustomata"
 version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
+autobins = false
 
 [lib]
 name = "rustomata"

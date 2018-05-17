@@ -100,14 +100,10 @@ mod test {
                 Close(3),
             ],
         ];
-
-        eprintln!("{:?}", mdl.recognize(&not_words[0]));
-        eprintln!("{:?}", mdl.recognize(&not_words[1]));
-        // assert!(!mdl.recognize(&not_words[0]));
-        // assert!(!mdl.recognize(&not_words[1]));
-        // for not_dyckword in not_words {
-        //     assert!(!mdl.recognize(&not_dyckword));
-        // }
+        
+        for not_dyckword in not_words {
+            assert!(!mdl.recognize(&not_dyckword));
+        }
     }
 
     #[test]

@@ -94,18 +94,18 @@ where
     }
 
     /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity) -> impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a
+    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity, candidates: Capacity) -> impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord
     {
         let f = self.filter.fsa(word, &self.generator);
-        let g = self.generator.intersect(f).generate(beam);
+        let g = take_capacity(self.generator.intersect(f).generate(beam), candidates);
         
         g.filter_map(move |bs| self.toderiv(&bs))
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
-    pub fn debug(&self, word: &[T], beam: Capacity) 
+    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) 
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord,
         T: ::std::fmt::Debug
@@ -132,13 +132,13 @@ where
         );
 
         let (cans, ptime) = with_time(|| {
-                    match take_capacity(g_.generate(beam).enumerate(), beam)
-                            .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
-                            .next() {
-                        Some(i) => i, // valid candidate
-                        None => 0,    // failed
-                    }
-                });
+            match take_capacity(g_.generate(beam).enumerate(), candidates)
+                    .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
+                    .next() {
+                Some(i) => i, // valid candidate
+                None => 0,    // failed
+            }
+        });
 
         eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
     }
@@ -196,9 +196,9 @@ mod test {
             FilterStrategy::Naive,
             GeneratorStrategy::Finite,
         );
-        assert_eq!(cs.generate(&['A'], Capacity::Infinite).next(), Some(d1));
+        assert_eq!(cs.generate(&['A'], Capacity::Infinite, Capacity::Infinite).next(), Some(d1));
         assert_eq!(
-            cs.generate(&['A', 'A'], Capacity::Infinite).next(),
+            cs.generate(&['A', 'A'], Capacity::Infinite, Capacity::Infinite).next(),
             Some(d2)
         );
     }

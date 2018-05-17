@@ -196,7 +196,7 @@ where
                 FiniteAutomaton::from_integerized(
                     arcs,
                     0,
-                    vec![word.len()],
+                    word.len(),
                     Rc::clone(&reference_automaton.get_integeriser()),
                 )
             }
@@ -308,7 +308,7 @@ where
                 FiniteAutomaton::from_integerized(
                     arcs,
                     0,
-                    vec![word.len()],
+                    word.len(),
                     Rc::clone(&reference_automaton.get_integeriser()),
                 )
             }

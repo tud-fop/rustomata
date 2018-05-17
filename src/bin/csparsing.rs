@@ -87,6 +87,13 @@ pub fn get_sub_command(name: &str) -> App {
                         .help("Beam with during search."),
                 )
                 .arg(
+                    Arg::with_name("candidates")
+                        .short("c")
+                        .long("candidates")
+                        .takes_value(true)
+                        .help("Maximum number of candidates to enumerate."),
+                )
+                .arg(
                     Arg::with_name("with-lines")
                         .short("l")
                         .long("with-lines")
@@ -153,10 +160,16 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 Some(n) => n.parse::<usize>().unwrap(),
                 None => 1usize,
             };
+            
             let beam: Capacity = match params.value_of("beam") {
                 Some(b) => Capacity::Limit(b.parse().unwrap()),
                 None => Capacity::Infinite,
             };
+            let candidates: Capacity = match params.value_of("candidates") {
+                Some(c) => Capacity::Limit(c.parse().unwrap()),
+                None => Capacity::Infinite,
+            };
+
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
 
             let csrep: CSRepresentation<String, String, Reverse<LogDomain<f64>>> =
@@ -164,39 +177,13 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                     .unwrap();
 
             for (i, sentence) in word_strings.lines().enumerate() {
-                let (i, words): (usize, Vec<String>) = if params.is_present("with-lines") {
-                    let mut it = sentence.split_whitespace();
-                    (
-                        it.next()
-                            .expect("missing line number")
-                            .parse()
-                            .expect("invalid line numer"),
-                        it.map(|s| s.to_string()).collect(),
-                    )
-                } else {
-                    (
-                        i,
-                        sentence.split_whitespace().map(|s| s.to_string()).collect(),
-                    )
-                };
-                let (words, negra_mode): (Vec<String>, DumpMode<String>) = if params.is_present("with-pos") {
-                    let (ws, pos) = words.into_iter().map(
-                        |wp| {
-                            let mut it = wp.split('/');
-                            ( it.next().unwrap().to_string(),
-                              it.next().expect("missing pos annotation").to_string()
-                            )
-                        }
-                    ).unzip();
-                    (pos, DumpMode::FromPos(ws))
-                } else {
-                    (words, DumpMode::Default)
-                };
+                let (i, words) = split_line(sentence, params.is_present("with-lines"), i);
+                let (words, negra_mode) = split_pos(words, params.is_present("with-pos"));
 
                 if params.is_present("debugmode") {
-                    csrep.debug(words.as_slice(), beam);
+                    csrep.debug(words.as_slice(), beam, candidates);
                 } else {
-                    for derivation in csrep.generate(words.as_slice(), beam).take(k) {
+                    for derivation in csrep.generate(words.as_slice(), beam, candidates).take(k) {
                         print!(
                             "{}",
                             to_negra(
@@ -213,5 +200,36 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             }
         }
         _ => (),
+    }
+}
+
+fn split_line<'a>(line: &'a str, with_line_number: bool, default_line_number: usize) -> (usize, impl Iterator<Item=&'a str> + 'a) {
+    let mut word_iterator = line.split_whitespace();
+    
+    let line_number = if with_line_number {
+        word_iterator.next()
+                     .expect("missing line number")
+                     .parse()
+                     .expect("invalid line numer")
+    } else {
+        default_line_number
+    };
+
+    (line_number, word_iterator)
+}
+
+fn split_pos<'a>(words: impl Iterator<Item=&'a str> + 'a, with_pos: bool) -> (Vec<String>, DumpMode<String>) {
+    if with_pos {
+        let (ws, pos) = words.map(
+            |wp| {
+                let mut it = wp.split('/');
+                ( it.next().unwrap().to_string(),
+                  it.next().expect("missing pos annotation").to_string()
+                )
+            }
+        ).unzip();
+        (pos, DumpMode::FromPos(ws))
+    } else {
+        (words.map(|s| s.to_string()).collect(), DumpMode::Default)
     }
 }
