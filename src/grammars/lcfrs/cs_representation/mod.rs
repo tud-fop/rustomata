@@ -1,10 +1,11 @@
 use std::hash::Hash;
 use integeriser::{HashIntegeriser, Integeriser};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
 
 use grammars::pmcfg::PMCFGRule;
 use dyck;
 
+mod fallback;
 pub mod automata;
 pub mod bracket_fragment;
 mod rule_fragments;
@@ -93,21 +94,26 @@ where
         }
     }
 
-    /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word`.
-    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity, candidates: Capacity) -> impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a
+    /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word` in the first component.
+    /// The second component contains a fallback parse tree that is built using a context-free approximation of the grammar.
+    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity, candidates: Capacity) -> (impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a, Option<GornTree<PMCFGRule<N, T, W>>>)
     where
-        W: One + Zero + Mul<Output=W> + Copy + Ord
+        W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable
     {
-        let f = self.filter.fsa(word, &self.generator);
-        let g = take_capacity(self.generator.intersect(f).generate(beam), candidates);
+        let hw = self.filter.fsa(word, &self.generator);
+        let mut drw = self.generator.intersect(hw).generate(beam).peekable();
         
-        g.filter_map(move |bs| self.toderiv(&bs))
+        let first = drw.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
+        
+        ( take_capacity(drw, candidates).filter_map(move |bs| self.toderiv(&bs))
+        , first
+        )
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
     pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) 
     where
-        W: One + Zero + Mul<Output=W> + Copy + Ord,
+        W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
         T: ::std::fmt::Debug
     {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
@@ -132,17 +138,25 @@ where
         );
 
         let (cans, ptime) = with_time(|| {
-            match take_capacity(g_.generate(beam).enumerate(), candidates)
-                    .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
-                    .next() {
-                Some(i) => i, // valid candidate
-                None => 0,    // failed
+            if candidates == Capacity::Limit(0) {
+                if g_.generate(beam).next().map(|c| fallback::FailedParseTree::new(&c).merge(&self.rules)).is_some() {
+                    1
+                } else { 0 }
+            }
+            else {
+                match take_capacity(g_.generate(beam).enumerate(), candidates)
+                        .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
+                        .next() {
+                    Some(i) => i, // valid candidate
+                    None => 0,    // failed
+                }
             }
         });
 
         eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
     }
 
+    /// Reads off a parse tree from a multiply Dyck word. Fails if the word is not in R ∩ D.
     fn toderiv<'a>(&'a self, word: &[Delta<T>]) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
         let mut tree = BTreeMap::new();
         let mut pos = Vec::new();
@@ -196,9 +210,9 @@ mod test {
             FilterStrategy::Naive,
             GeneratorStrategy::Finite,
         );
-        assert_eq!(cs.generate(&['A'], Capacity::Infinite, Capacity::Infinite).next(), Some(d1));
+        assert_eq!(cs.generate(&['A'], Capacity::Infinite, Capacity::Infinite).0.next(), Some(d1));
         assert_eq!(
-            cs.generate(&['A', 'A'], Capacity::Infinite, Capacity::Infinite).next(),
+            cs.generate(&['A', 'A'], Capacity::Infinite, Capacity::Infinite).0.next(),
             Some(d2)
         );
     }

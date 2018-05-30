@@ -33,6 +33,7 @@ where
     v.get_mut(i).unwrap()
 }
 
+/// Measures the time needed to execute a given command.
 use time::{PreciseTime, Duration};
 pub fn with_time<B, F>(f: F) -> (B, Duration)
 where
@@ -45,27 +46,30 @@ where
     (result, t0.to(t1))
 }
 
-pub enum CapacityIterator<I: Iterator> {
+
+/// Like `Take`, but uses a `Capacity` instead of a `usize`. 
+pub enum TakeCapacity<I: Iterator> {
     Inf(I),
     Lim(I, usize)
 }
 
 use std::ops::SubAssign;
-impl<I: Iterator> Iterator for CapacityIterator<I> {
+impl<I: Iterator> Iterator for TakeCapacity<I> {
     type Item = I::Item;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            &mut CapacityIterator::Inf(ref mut it) => it.next(),
-            &mut CapacityIterator::Lim(_, 0) => None,
-            &mut CapacityIterator::Lim(ref mut it, ref mut i) => { i.sub_assign(1); it.next() }
+            &mut TakeCapacity::Inf(ref mut it) => it.next(),
+            &mut TakeCapacity::Lim(_, 0) => None,
+            &mut TakeCapacity::Lim(ref mut it, ref mut i) => { i.sub_assign(1); it.next() }
         }
     }
 }
 
-pub fn take_capacity<I: Iterator>(it: I, c: agenda::Capacity) -> CapacityIterator<I> {
+/// Construct a `CapacityIterator`.
+pub fn take_capacity<I: Iterator>(it: I, c: agenda::Capacity) -> TakeCapacity<I> {
     use self::agenda::Capacity::*;
     match c {
-        Infinite => CapacityIterator::Inf(it),
-        Limit(i) => CapacityIterator::Lim(it, i)
+        Infinite => TakeCapacity::Inf(it),
+        Limit(i) => TakeCapacity::Lim(it, i)
     }
 }

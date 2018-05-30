@@ -176,7 +176,7 @@ where
         let initial_agenda = vec![
             WeightedSearchItem(
                 (qi, Vec::new(), W::one()),
-                *heuristics.get(&qi).unwrap()
+                heuristics.get(&qi).map(|h| *h).unwrap_or_else(W::zero)
             ),
         ];
 

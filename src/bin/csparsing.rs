@@ -110,6 +110,12 @@ pub fn get_sub_command(name: &str) -> App {
                         .short("d")
                         .long("debug")
                         .help("Prints debug information instead of parse trees."),
+                )
+                .arg(
+                    Arg::with_name("fallback")
+                        .short("f")
+                        .long("with-fallback")
+                        .help("Will output an incorrect parse tree if the parse does not find a correct one."),
                 ),
         )
 }
@@ -120,12 +126,12 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             let strategy = {
                 if susbsubmatches.is_present("naive") {
                     GeneratorStrategy::Finite
-                } else if susbsubmatches.is_present("cyk") {
-                    GeneratorStrategy::CykLike
+                } else if susbsubmatches.is_present("pd") {
+                    GeneratorStrategy::PushDown
                 } else if let Some(depth) = susbsubmatches.value_of("approx") {
                     GeneratorStrategy::Approx(depth.parse().unwrap())
                 } else {
-                    GeneratorStrategy::PushDown
+                    GeneratorStrategy::CykLike
                 }
             };
             let filter = {
@@ -183,8 +189,11 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 if params.is_present("debugmode") {
                     csrep.debug(words.as_slice(), beam, candidates);
                 } else {
-                    for derivation in csrep.generate(words.as_slice(), beam, candidates).take(k) {
-                        print!(
+                    let mut found_trees = 0;
+                    let (iterator, fallback) = csrep.generate(words.as_slice(), beam, candidates);
+                    for derivation in iterator.take(k) {
+                        found_trees += 1;
+                        println!(
                             "{}",
                             to_negra(
                                 &derivation
@@ -195,6 +204,18 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                                 negra_mode.clone()
                             )
                         );
+                    }
+                    if found_trees == 0 && params.is_present("fallback") {
+                        if let Some(tree) = fallback {
+                            println!(
+                                "{}",
+                                to_negra(
+                                    &tree,
+                                    i,
+                                    negra_mode
+                                )
+                            );
+                        }
                     }
                 }
             }

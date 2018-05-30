@@ -33,7 +33,7 @@ where
 }
 
 impl<T: Ord> Partition<T> {
-    /// Retuns a reference to the cell that contains the symbol `elem`.
+    /// Returns a reference to the cell that contains the symbol `elem`.
     pub fn get_cell(&self, elem: &T) -> Option<&BTreeSet<T>> {
         let &Partition(ref map) = self;
 
