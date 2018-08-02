@@ -5,9 +5,7 @@ use log_domain::LogDomain;
 use std::{fs::File,
           io::{stdin, stdout, Read}};
 
-use rustomata::grammars::{lcfrs::{cs_representation::{automata::{FilterStrategy,
-                                                                 GeneratorStrategy},
-                                                      CSRepresentation},
+use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
 use rustomata::util::{agenda::Capacity, reverse::Reverse};
@@ -122,26 +120,7 @@ pub fn get_sub_command(name: &str) -> App {
 
 pub fn handle_sub_matches(submatches: &ArgMatches) {
     match submatches.subcommand() {
-        ("extract", Some(susbsubmatches)) => {
-            let strategy = {
-                if susbsubmatches.is_present("naive") {
-                    GeneratorStrategy::Finite
-                } else if susbsubmatches.is_present("pd") {
-                    GeneratorStrategy::PushDown
-                } else if let Some(depth) = susbsubmatches.value_of("approx") {
-                    GeneratorStrategy::Approx(depth.parse().unwrap())
-                } else {
-                    GeneratorStrategy::CykLike
-                }
-            };
-            let filter = {
-                if susbsubmatches.is_present("naive-filter") {
-                    FilterStrategy::Naive
-                } else {
-                    FilterStrategy::Inside
-                }
-            };
-
+        ("extract", Some(_)) => {
             let mut grammar_string = String::new();
             stdin()
                 .read_to_string(&mut grammar_string)
@@ -152,7 +131,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
 
             bincode::serialize_into(
                 &mut write::GzEncoder::new(stdout(), Compression::best()),
-                &CSRepresentation::new(grammar, filter, strategy),
+                &CSRepresentation::new(grammar),
                 bincode::Infinite,
             ).unwrap()
         }
@@ -188,8 +167,8 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
 
                 if params.is_present("debugmode") {
                     let tuple = csrep.debug(words.as_slice(), beam, candidates);
-                    eprint!("{} {} {} {} {} {} ", tuple.0, tuple.1, tuple.2, tuple.3, tuple.4, tuple.5);
-                    if let Some((t, c)) = tuple.6 {
+                    eprint!("{} {} {} {} ", tuple.0, tuple.1, tuple.2, tuple.3);
+                    if let Some((t, c)) = tuple.4 {
                         eprintln!("{}", c);
                         println!("{}", to_negra(&t, i, negra_mode));
                     } else {

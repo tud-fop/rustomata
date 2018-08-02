@@ -23,7 +23,7 @@ nom = "^3.2"
 num-traits = "0.1.41"
 rand = "0.3.16"
 time = "0.1.38"
-serde = "1.0"
+serde = { version = "1.0", features = ["rc"] }
 serde_derive = "1.0"
 bincode = "0.9"
 fnv = "1.0"

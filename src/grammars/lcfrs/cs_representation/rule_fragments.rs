@@ -1,9 +1,12 @@
-use grammars::pmcfg::{PMCFGRule, VarT};
-use integeriser::Integeriser;
+
 use super::BracketContent;
-use super::bracket_fragment::BracketFragment;
 use dyck::Bracket;
+use grammars::pmcfg::{PMCFGRule, VarT};
 use util::factorizable::Factorizable;
+
+use integeriser::Integeriser;
+use num_traits::One;
+use std::ops::Mul;
 
 /// Represents a part either
 /// * before the first variable,
@@ -101,38 +104,32 @@ where
         }
     }
 
-    /// Extracts a `BracketFragment` for the construction of the `GeneratorAutomaton` and ´FilterAutomaton` in a CS characterization.
-    pub fn bracket_word(
-        &self,
-        integerizer: &Integeriser<Item = PMCFGRule<N, T, W>>,
-    ) -> BracketFragment<T> {
-        let mut bracks = Vec::new();
-        let r = integerizer.find_key(self.rule()).unwrap();
-
+    /// returns the first bracket
+    fn first<I>(&self, integeriser: &I) -> Bracket<BracketContent<T>>
+    where
+        I: Integeriser<Item = PMCFGRule<N, T, W>>
+    {
+        let r = integeriser.find_key(self.rule()).unwrap();
         match *self {
-            Start(_, j, _, _, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
-            Intermediate(_, _, (i, j), _, _) => {
-                bracks.push(Bracket::Close(BracketContent::Variable(r, i, j)))
-            }
-            End(_, _, (i, j), _, _) => bracks.push(Bracket::Close(BracketContent::Variable(r, i, j))),
-            Whole(_, j, _, _) => bracks.push(Bracket::Open(BracketContent::Component(r, j))),
-        };
-
-        for symbol in self.terminals() {
-            bracks.push(Bracket::Open(BracketContent::Terminal((*symbol).clone())));
-            bracks.push(Bracket::Close(BracketContent::Terminal((*symbol).clone())));
+            Start(_, j, _, _, _) => Bracket::Open(BracketContent::Component(r, j)),
+            Intermediate(_, _, (i, j), _, _) => Bracket::Close(BracketContent::Variable(r, i, j)),
+            End(_, _, (i, j), _, _) => Bracket::Close(BracketContent::Variable(r, i, j)),
+            Whole(_, j, _, _) => Bracket::Open(BracketContent::Component(r, j)),
         }
+    }
 
+    /// returns the last bracket
+    fn last<I>(&self, integeriser: &I) -> Bracket<BracketContent<T>>
+    where
+        I: Integeriser<Item = PMCFGRule<N, T, W>>
+    {
+        let r = integeriser.find_key(self.rule()).unwrap();
         match *self {
-            Start(_, _, _, (i, j), _) => bracks.push(Bracket::Open(BracketContent::Variable(r, i, j))),
-            Intermediate(_, _, _, _, (i, j)) => {
-                bracks.push(Bracket::Open(BracketContent::Variable(r, i, j)))
-            }
-            End(_, j, _, _, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
-            Whole(_, j, _, _) => bracks.push(Bracket::Close(BracketContent::Component(r, j))),
-        };
-
-        BracketFragment(bracks)
+            Start(_, _, _, (i, j), _) => Bracket::Open(BracketContent::Variable(r, i, j)),
+            Intermediate(_, _, _, _, (i, j)) => Bracket::Open(BracketContent::Variable(r, i, j)),
+            End(_, j, _, _, _) => Bracket::Close(BracketContent::Component(r, j)),
+            Whole(_, j, _, _) => Bracket::Close(BracketContent::Component(r, j)),
+        }
     }
 
     /// Lists the terminals in a `RuleFragment`.
@@ -145,6 +142,7 @@ where
         }
     }
 
+    /// left state
     fn from(&self) -> Bracket<(N, usize)> {
         match *self {
             Start(r, j, _, _, _) => Bracket::Open((r.head.clone(), j)),
@@ -154,6 +152,7 @@ where
         }
     }
 
+    /// target state
     fn to(&self) -> Bracket<(N, usize)> {
         match *self {
             Start(r, _, _, (i, j), _) => Bracket::Open((r.tail[i].clone(), j)),
@@ -162,38 +161,9 @@ where
             Whole(r, j, _, _) => Bracket::Close((r.head.clone(), j)),
         }
     }
-
-    fn pdi(
-        &self,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
-    ) -> PushDownInstruction<(usize, usize, usize)> {
-        match *self {
-            Start(r, _, _, (i, j), _) => {
-                PushDownInstruction::Add((integeriser.find_key(r).unwrap(), i, j))
-            }
-            Intermediate(r, _, (i1, j1), _, (i2, j2)) => {
-                let i = integeriser.find_key(r).unwrap();
-                PushDownInstruction::Replace((i, i1, j1), (i, i2, j2))
-            }
-            End(r, _, (i, j), _, _) => {
-                PushDownInstruction::Remove((integeriser.find_key(r).unwrap(), i, j))
-            }
-            _ => PushDownInstruction::Nothing,
-        }
-    }
 }
 
-use super::automata::{PushDownInstruction, StateInstruction};
-use recognisable::Transition;
-use num_traits::One;
-use std::ops::Mul;
-
-type Trans<N, T, W> = Transition<
-    (StateInstruction<Bracket<(N, usize)>>,
-     PushDownInstruction<(usize, usize, usize)>),
-    BracketFragment<T>,
-    W,
->;
+type Singleton<N, T> = (Bracket<(N, usize)>, Bracket<BracketContent<T>>);
 
 impl<'a, N, T, W> RuleFragment<'a, N, T, W>
 where
@@ -201,28 +171,31 @@ where
     T: Clone + PartialEq,
     W: One
 {
-    /// Extracts the transition of the push-down automaton for the construction of the `PushDownGenerator`.
-    pub fn pds(
-        &self,
-        integeriser: &Integeriser<Item = PMCFGRule<N, T, W>>,
-    ) -> Trans<N, T, W>
+    /// Splits the `RuleFragment` into three parts:
+    /// * the left state and the first bracket
+    /// * the terminal symbols between the brackets
+    /// * the target state and the last bracket
+    pub fn singletons<I>(&self, integeriser: &I) -> (Singleton<N, T>, &[&'a T], Singleton<N, T>)
     where
+        I: Integeriser<Item = PMCFGRule<N, T, W>>,
         W: Copy
     {
-        let weight = match *self {
-            Start(_, _, _, _, weight)
-            | End(_, _, _, _, weight)
-            | Whole(_, _, _, weight) => weight,
-            Intermediate(_, _, _, _, _) => W::one()
-        };
+        ( (self.from(), self.first(integeriser))
+        ,  self.terminals()
+        , (self.to(), self.last(integeriser))
+        )
+    }
 
-        Transition {
-            word: vec![self.bracket_word(integeriser)],
-            weight,
-            instruction: (
-                StateInstruction(self.from(), self.to()),
-                self.pdi(integeriser),
-            ),
+    /// Returns the weight of the `RuleFragment`
+    pub fn weight(&self) -> W
+    where
+        W: Copy + Mul<Output=W>
+    {
+        match self {
+            &Start(_, _, _, _, weight)
+            | &End(_, _, _, _, weight) => weight,
+            &Whole(_, _, _, weight) => weight * weight,
+            &Intermediate(_, _, _, _, _) => W::one()
         }
     }
 }
@@ -249,28 +222,26 @@ mod test {
         let mut int = HashIntegeriser::new();
         int.integerise(rule.clone());
 
+        use self::Bracket::*;
+        use self::BracketContent::*;
+
+        let singletons: Vec<(Singleton<usize, usize>, Vec<usize>, Singleton<usize, usize>)>
+            = vec![
+                ( (Open((1, 0)), Open(Component(0, 0)))
+                , vec![1]
+                , (Open((1, 0)), Open(Variable(0, 0, 0)))
+                ),
+                ( (Close((1, 0)), Close(Variable(0, 0, 0)))
+                , vec![2]
+                , (Close((1, 0)), Close(Component(0, 0)))
+                )
+            ];
+
         assert_eq!(
             super::fragments(&rule)
-                .map(|f| f.bracket_word(&int))
+                .map(|f| { let (p, ts, q) = f.singletons(&int); (p, ts.iter().map(|p| *(*p)).collect::<Vec<_>>(), q) } )
                 .collect::<Vec<_>>(),
-            vec![
-                BracketFragment(
-                    vec![
-                        Bracket::Open(BracketContent::Component(0, 0)),
-                        Bracket::Open(BracketContent::Terminal(1)),
-                        Bracket::Close(BracketContent::Terminal(1)),
-                        Bracket::Open(BracketContent::Variable(0, 0, 0))
-                    ]
-                ),
-                BracketFragment(
-                    vec![
-                        Bracket::Close(BracketContent::Variable(0, 0, 0)),
-                        Bracket::Open(BracketContent::Terminal(2)),
-                        Bracket::Close(BracketContent::Terminal(2)),
-                        Bracket::Close(BracketContent::Component(0, 0)),
-                    ]
-                ),
-            ]
+            singletons
         )
     }
 }
