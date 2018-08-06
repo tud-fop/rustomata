@@ -187,7 +187,14 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 let (words, negra_mode) = split_pos(words, params.is_present("with-pos"));
 
                 if params.is_present("debugmode") {
-                    csrep.debug(words.as_slice(), beam, candidates);
+                    let tuple = csrep.debug(words.as_slice(), beam, candidates);
+                    eprint!("{} {} {} {} {} {} ", tuple.0, tuple.1, tuple.2, tuple.3, tuple.4, tuple.5);
+                    if let Some((t, c)) = tuple.6 {
+                        eprintln!("{}", c);
+                        println!("{}", to_negra(&t, i, negra_mode));
+                    } else {
+                        eprintln!("{}", -1)
+                    }
                 } else {
                     let mut found_trees = 0;
                     let (iterator, fallback) = csrep.generate(words.as_slice(), beam, candidates);

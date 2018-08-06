@@ -111,49 +111,39 @@ where
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
-    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) 
+    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) -> (usize, usize, usize, usize, usize, i64, Option<(GornTree<PMCFGRule<N, T, W>>, usize)>)
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
         T: ::std::fmt::Debug
     {
         let (f, filter_const) = with_time(|| self.filter.fsa(word, &self.generator));
         let filter_size = f.arcs.iter().flat_map(|map| map.values()).count();
-
-        eprint!(
-            "{} {} {} {} {}",
-            self.rules.size(),
-            word.len(),
-            filter_const.num_nanoseconds().unwrap(),
-            filter_size,
-            self.generator.size(),
-        );
-
         let (g_, intersection_time) = with_time(|| self.generator.intersect(f));
         let intersection_size = g_.size();
 
-        eprint!(
-            " {} {}",
-            intersection_time.num_nanoseconds().unwrap(),
-            intersection_size
-        );
-
         let (cans, ptime) = with_time(|| {
             if candidates == Capacity::Limit(0) {
-                if g_.generate(beam).next().map(|c| fallback::FailedParseTree::new(&c).merge(&self.rules)).is_some() {
-                    1
-                } else { 0 }
+                g_.generate(beam).next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
             }
             else {
-                match take_capacity(g_.generate(beam).enumerate(), candidates)
-                        .filter_map(|(i, candidate)| self.toderiv(&candidate).map(|_| (i + 1)))
+                let mut it = take_capacity(g_.generate(beam).enumerate(), candidates).peekable();
+                let fb = it.peek().map(|(_, w)| fallback::FailedParseTree::new(w).merge(&self.rules));
+                match it.filter_map(|(i, candidate)| self.toderiv(&candidate).map(| t | (t, i + 1)))
                         .next() {
-                    Some(i) => i, // valid candidate
-                    None => 0,    // failed
+                    Some((t, i)) => Some((t.into_iter().map(|(k, v)| (k, v.clone())).collect(), i)), // valid candidate
+                    None => fb.map(|t| (t, 0)),    // failed
                 }
             }
         });
-
-        eprintln!(" {} {}", cans, ptime.num_nanoseconds().unwrap());
+        
+        ( self.rules.size()
+        , word.len()
+        , filter_size
+        , self.generator.size()
+        , intersection_size
+        , filter_const.num_nanoseconds().unwrap() + intersection_time.num_nanoseconds().unwrap() + ptime.num_nanoseconds().unwrap()
+        , cans
+        )
     }
 
     /// Reads off a parse tree from a multiply Dyck word. Fails if the word is not in R ∩ D.
