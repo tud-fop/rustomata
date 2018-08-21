@@ -8,6 +8,17 @@ pub enum Capacity {
     Infinite,
 }
 
+impl ::std::str::FromStr for Capacity {
+    type Err = ::std::num::ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if vec!["inf", "infinite", "∞"].into_iter().any(|i| i == s) {
+            Ok(Capacity::Infinite)
+        } else {
+            s.parse().map(|n| Capacity::Limit(n))
+        }
+    }
+}
+
 pub trait Agenda {
     type Item;
 

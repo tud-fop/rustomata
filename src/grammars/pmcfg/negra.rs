@@ -98,6 +98,24 @@ where
     output
 }
 
+pub fn noparse<T>(sentence: &[T], sentence_id: usize, mode: DumpMode<T>) -> String
+where
+    T: ToString
+{
+    let mut output = format!("#BOS {}\n", sentence_id);
+    if  let DumpMode::FromPos(poss) = mode {
+        for (pos, word) in sentence.iter().zip(&poss) {
+            output.push_str(&format!("{}\t{}\t--\t--\t500\n", word.to_string(), pos.to_string()));
+        }
+    } else {
+        for word in sentence.iter() {
+            output.push_str(&format!("{}\t--\t--\t--\t500\n", word.to_string()));
+        }
+    }
+    output.push_str(&format!("#500\tNOPARSE\t--\t--\t0\n#EOS {}", sentence_id));
+    output
+}
+
 pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>) -> bool {
     for (_address, rule) in tree_map {
         let &PMCFGRule {

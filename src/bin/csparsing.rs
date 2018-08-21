@@ -9,7 +9,7 @@ use rustomata::grammars::{lcfrs::{cs_representation::{automata::{FilterStrategy,
                                                                  GeneratorStrategy},
                                                       CSRepresentation},
                                   Lcfrs},
-                          pmcfg::negra::{to_negra, DumpMode}};
+                          pmcfg::negra::{to_negra, DumpMode, noparse}};
 use rustomata::util::{agenda::Capacity, reverse::Reverse};
 
 pub fn get_sub_command(name: &str) -> App {
@@ -168,11 +168,11 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             };
             
             let beam: Capacity = match params.value_of("beam") {
-                Some(b) => Capacity::Limit(b.parse().unwrap()),
+                Some(b) => b.parse().unwrap(),
                 None => Capacity::Infinite,
             };
             let candidates: Capacity = match params.value_of("candidates") {
-                Some(c) => Capacity::Limit(c.parse().unwrap()),
+                Some(c) => c.parse().unwrap(),
                 None => Capacity::Infinite,
             };
 
@@ -193,13 +193,14 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                         eprintln!("{}", c);
                         println!("{}", to_negra(&t, i, negra_mode));
                     } else {
-                        eprintln!("{}", -1)
+                        eprintln!("{}", -1);
+                        println!("{}", noparse(&words, i, negra_mode));
                     }
                 } else {
-                    let mut found_trees = 0;
+                    let mut found_trees = false;
                     let (iterator, fallback) = csrep.generate(words.as_slice(), beam, candidates);
                     for derivation in iterator.take(k) {
-                        found_trees += 1;
+                        found_trees = true;
                         println!(
                             "{}",
                             to_negra(
@@ -212,17 +213,14 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                             )
                         );
                     }
-                    if found_trees == 0 && params.is_present("fallback") {
+                    if !found_trees && params.is_present("fallback") {
                         if let Some(tree) = fallback {
-                            println!(
-                                "{}",
-                                to_negra(
-                                    &tree,
-                                    i,
-                                    negra_mode
-                                )
-                            );
+                            println!("{}", to_negra(&tree, i, negra_mode));
+                        } else {
+                            println!("{}", noparse(&words, i, negra_mode));
                         }
+                    } else if !found_trees {
+                        println!("{}", noparse(&words, i, negra_mode));
                     }
                 }
             }
