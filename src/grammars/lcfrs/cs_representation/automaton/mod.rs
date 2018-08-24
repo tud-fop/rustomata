@@ -8,7 +8,7 @@ mod rule_filter;
 mod k_best;
 mod heuristic;
 
-pub use self::{ k_best::ChartIterator, rule_filter::NaiveFilter };
+pub use self::{ k_best::ChartIterator, rule_filter::{ CachedFilterPersistentStorage, CachedFilter } };
 use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}, heuristic::NaiveHeuristic };
 use super::{BracketContent, rule_fragments::fragments};
 use grammars::pmcfg::PMCFGRule;

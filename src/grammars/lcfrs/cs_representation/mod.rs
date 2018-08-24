@@ -2,7 +2,7 @@ mod fallback;
 mod automaton;
 mod rule_fragments;
 
-use self::automaton::{CykAutomatonPersistentStorage, NaiveFilter};
+use self::automaton::{CykAutomatonPersistentStorage, CachedFilterPersistentStorage};
 use super::Lcfrs;
 
 use dyck::Bracket;
@@ -47,6 +47,7 @@ where
     W: Ord + Clone
 {
     generator: CykAutomatonPersistentStorage<BracketContent<T>, W>,
+    filter: CachedFilterPersistentStorage<T>,
     rules: HashIntegeriser<PMCFGRule<N, T, W>>,
 }
 
@@ -70,6 +71,7 @@ where
         
         CSRepresentation {
             generator: CykAutomatonPersistentStorage::from_grammar(irules.values().iter(), &irules, initial),
+            filter: CachedFilterPersistentStorage::new(irules.values().iter().enumerate()),
             rules: irules,
         }
     }
@@ -80,7 +82,7 @@ where
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable
     {
-        let automaton = self.generator.intersect(NaiveFilter::new(self.rules.values().iter().enumerate(), word), word);
+        let automaton = self.generator.intersect(self.filter.instantiate(word), word);
         let mut chart = automaton.fill_chart(beam).into_iter().peekable();
 
         let first = chart.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
@@ -96,7 +98,7 @@ where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
         T: ::std::fmt::Debug
     {
-        let (f, filter_const): (Vec<_>, _) = with_time(|| NaiveFilter::new(self.rules.values().iter().enumerate(), word).collect());
+        let (f, filter_const): (Vec<_>, _) = with_time(|| self.filter.instantiate(word).collect());
         let filter_size = f.len();
         let (g_, intersection_time) =  with_time(|| self.generator.intersect(f.into_iter(), word));
 
