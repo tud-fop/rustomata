@@ -246,9 +246,9 @@ fn split_line<'a>(line: &'a str, with_line_number: bool, default_line_number: us
 
 fn split_pos<'a>(words: impl Iterator<Item=&'a str> + 'a, with_pos: bool) -> (Vec<String>, DumpMode<String>) {
     if with_pos {
-        let (ws, pos) = words.map(
+        let (pos, ws) = words.map(
             |wp| {
-                let mut it = wp.split('/');
+                let mut it = wp.rsplitn(2, '/');
                 ( it.next().unwrap().to_string(),
                   it.next().expect("missing pos annotation").to_string()
                 )
