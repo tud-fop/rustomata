@@ -155,20 +155,20 @@ mod test {
 
         let filter = CachedFilterPersistentStorage::new(integeriser.values().iter().enumerate());
 
-        assert_eq!(filter.clone().instantiate(&[]).collect::<HashSet<usize>>(), vec![].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[1]).collect::<HashSet<usize>>(), vec![].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[2]).collect::<HashSet<usize>>(), vec![].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[1, 2]).collect::<HashSet<usize>>(), vec![].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[0, 1]).collect::<HashSet<usize>>(), vec![2].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[0, 1, 2]).collect::<HashSet<usize>>(), vec![0, 2].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[1, 2, 3]).collect::<HashSet<usize>>(), vec![0, 1, 3].into_iter().collect::<HashSet<usize>>());
-        assert_eq!(filter.clone().instantiate(&[0, 1, 2, 3]).collect::<HashSet<usize>>(), vec![0, 1, 2, 3].into_iter().collect::<HashSet<usize>>());
+        assert_eq!(filter.clone().instantiate(&[]), vec![].into_iter().collect::<IntSet>());
+        assert_eq!(filter.clone().instantiate(&[1]), vec![].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[2]), vec![].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[1, 2]), vec![].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[0, 1]), vec![2].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[0, 1, 2]), vec![0, 2].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[1, 2, 3]), vec![0, 1, 3].into_iter().collect::<>());
+        assert_eq!(filter.clone().instantiate(&[0, 1, 2, 3]), vec![0, 1, 2, 3].into_iter().collect::<>());
     }
 }
 
-
-use std::collections::HashMap;
 use integeriser::{HashIntegeriser, Integeriser};
+use util::{IntMap, IntSet};
+use fnv::{FnvHashMap, FnvHashSet};
 
 type RuleId = usize;
 type CachedNt = usize;
@@ -179,15 +179,15 @@ pub struct CachedFilterPersistentStorage<T>
 where
     T: Eq + Hash
 {
-    free_rules: HashSet<RuleId>, // rules without rhs nts and terminals
-    free_nts: HashSet<CachedNt>, // lhs nonterminals of those rules
+    free_rules: IntSet, // rules without rhs nts and terminals
+    free_nts: IntSet, // lhs nonterminals of those rules
     
     // rules with nts on rhs, no terminals
-    only_nt: HashMap<CachedNt, Vec<(Vec<CachedNt>, RuleId, CachedNt)>>,
+    only_nt: IntMap<Vec<(Vec<CachedNt>, RuleId, CachedNt)>>,
     // rules with no nts on rhs, but terminals
-    only_t: HashMap<T, Vec<(Vec<T>, RuleId, CachedNt)>>,
+    only_t: FnvHashMap<T, Vec<(Vec<T>, RuleId, CachedNt)>>,
     // rules with nts and terminals
-    nt_and_t: HashMap<T, Vec<(Vec<T>, Vec<CachedNt>, RuleId, CachedNt)>>
+    nt_and_t: FnvHashMap<T, Vec<(Vec<T>, Vec<CachedNt>, RuleId, CachedNt)>>
 }
 
 impl<T> CachedFilterPersistentStorage<T>
@@ -201,12 +201,12 @@ where
         W: 'a
     {
         let mut integeriser = HashIntegeriser::new();
-        let mut free_rules: HashSet<RuleId> = HashSet::new();
-        let mut free_nts: HashSet<CachedNt> = HashSet::new();
+        let mut free_rules: IntSet = IntSet::default();
+        let mut free_nts: IntSet = IntSet::default();
 
-        let mut only_nt = HashMap::new();
-        let mut only_t = HashMap::new();
-        let mut nt_and_t = HashMap::new();
+        let mut only_nt = IntMap::default();
+        let mut only_t = FnvHashMap::default();
+        let mut nt_and_t = FnvHashMap::default();
 
         for (rid, rule) in rules {
             let nid = integeriser.integerise(rule.head.clone());
@@ -252,8 +252,8 @@ where
         }
     }
 
-    pub fn instantiate(&self, word: &[T]) -> CachedFilter {
-        let ts: HashSet<&T> = word.iter().collect::<HashSet<_>>();
+    pub fn instantiate(&self, word: &[T]) -> IntSet {
+        let ts: FnvHashSet<&T> = word.iter().collect::<FnvHashSet<_>>();
 
         let mut free_nts = self.free_nts.clone();
         let mut free_rules = self.free_rules.clone();
@@ -279,25 +279,36 @@ where
             }
         }
 
-        let remaining = free_rules.iter().cloned().collect::<Vec<_>>();
-        let runtime_stack = free_nts.iter().cloned().collect::<Vec<_>>();
+        // let remaining = free_rules.iter().cloned().collect::<Vec<_>>();
+        let mut runtime_stack = free_nts.iter().cloned().collect::<Vec<_>>();
 
-        CachedFilter {
-            finished: free_rules,
-            nts: free_nts,
-            only_nt,
+        // CachedFilter {
+        //     finished: free_rules,
+        //     nts: free_nts,
+        //     only_nt,
 
-            remaining,
-            runtime_stack
+        //     remaining,
+        //     runtime_stack
+        // }
+
+        while let Some(nt) = runtime_stack.pop() {
+            for &(ref rhs, rule, lhs) in only_nt.get(&nt).into_iter().flat_map(|v| v) {
+                if !free_rules.contains(&rule) && rhs.iter().all(|a| free_nts.contains(a)) {
+                    free_rules.insert(rule);
+                    if free_nts.insert(lhs) { runtime_stack.push(lhs); }
+                }
+            }
         }
+
+        free_rules
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct CachedFilter {
-    finished: HashSet<RuleId>,
-    nts: HashSet<CachedNt>,
-    only_nt: HashMap<CachedNt, Vec<(Vec<CachedNt>, RuleId, CachedNt)>>,
+    finished: IntSet,
+    nts: IntSet,
+    only_nt: IntMap<Vec<(Vec<CachedNt>, RuleId, CachedNt)>>,
     
     remaining: Vec<RuleId>,
     runtime_stack: Vec<CachedNt>,

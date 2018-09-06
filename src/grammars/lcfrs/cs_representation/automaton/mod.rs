@@ -18,6 +18,7 @@ use util::{IntMap, agenda::{PriorityQueue, Capacity, Agenda}, search::WeightedSe
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{ One, Zero };
 use std::{ collections::{HashMap, hash_map::Entry}, hash::Hash, ops::Mul, rc::Rc };
+use fnv::FnvHashMap;
 
 /// Represents a finite state automaton over a Dyck alphabet; optimized to extract
 /// Dyck words from this automaton.
@@ -52,12 +53,13 @@ where
     /// automaton.
     /// Also, this constructor for `CykAutomaton` will apply a rule filter
     /// for rules of the grammar.
-    pub fn intersect(&self, rules: impl Iterator<Item=usize>, word: &[T]) -> CykAutomaton<BracketContent<T>, W>
+    pub fn intersect<I>(&self, rules: I, word: &[T]) -> CykAutomaton<BracketContent<T>, W>
     where
-        T: Clone, W: Copy
+        T: Clone, W: Copy,
+        I: IntoIterator<Item=usize>
     {
         let mut initial_map: IntMap<Vec<TwinArc<W>>> = IntMap::default();
-        let mut twin_arcs: HashMap<TwinState, Vec<TwinArc<W>>> = HashMap::default();
+        let mut twin_arcs: FnvHashMap<TwinState, Vec<TwinArc<W>>> = FnvHashMap::default();
 
         // only use initials and twin arcs for given rules
         for rule in rules {
@@ -108,7 +110,7 @@ where
     // Pairs of transitions with matching parentheses.
     // structure:
     //    automata state range -> [ parenthesis, automata state range, weight ]
-    twin_arcs: HashMap<TwinState, Vec<TwinArc<W>>>,
+    twin_arcs: FnvHashMap<TwinState, Vec<TwinArc<W>>>,
     // Contains the target ranges, i.e. the initial and final state of the
     // finite state automaton and the first and last index of the word.
     finals: TwinRange,
@@ -133,12 +135,12 @@ where
     pub fn fill_chart(&self, beam: Capacity) -> Chart<T, W> {
         let heuristic = NaiveHeuristic::new(self);
 
-        let mut map: HashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = HashMap::new();
+        let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
         let mut agenda = PriorityQueue::new(beam);
         
         // stores items via right (left) range component
-        let mut to_right: HashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = HashMap::new();
-        let mut to_left:  HashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = HashMap::new();
+        let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
+        let mut to_left:  FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
 
         // enqueue initial items
         for &(range, label, weight) in &self.initials {
@@ -218,7 +220,7 @@ where
 pub struct Chart<T: Eq + Hash, W>(
     // Contains the actual chart, a relation between `TwinRange`s and
     // backtraces.
-    HashMap<TwinRange, Vec<(ChartEntry<W>, W)>>,
+    FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>>,
     // The root entry; it's the same as the initial/final state range of the
     // `CykAutomaton`. 
     TwinRange,

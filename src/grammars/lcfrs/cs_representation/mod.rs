@@ -98,7 +98,7 @@ where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
         T: ::std::fmt::Debug
     {
-        let (f, filter_const): (Vec<_>, _) = with_time(|| self.filter.instantiate(word).collect());
+        let (f, filter_const) = with_time(|| self.filter.instantiate(word));
         let filter_size = f.len();
         let (g_, intersection_time) =  with_time(|| self.generator.intersect(f.into_iter(), word));
 
