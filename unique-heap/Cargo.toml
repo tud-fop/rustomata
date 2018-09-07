@@ -1,0 +1,10 @@
+[package]
+name = "unique-heap"
+version = "0.1.0"
+authors = ["Thomas Ruprecht <thomas.ruprecht@tu-dresden.de>"]
+
+[dependencies]
+fnv = { version = "*", optional = true }
+
+[features]
+fnvtype = ["fnv"]

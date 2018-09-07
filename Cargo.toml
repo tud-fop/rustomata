@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 autobins = false
 
+[workspace]
+members = ["unique-heap"]
+
 [lib]
 name = "rustomata"
 path = "src/lib.rs"
@@ -25,6 +28,7 @@ serde_derive = "1.0"
 bincode = "0.9"
 fnv = "1.0"
 flate2 = "1.0"
+unique-heap = { path = "unique-heap", features = ["fnvtype"] }
 
 [profile.release]
 debug = true

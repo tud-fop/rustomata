@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::hash::{ Hash, Hasher };
 
 /// An entry in the `GenerationChart` for the extraction of dyck words from an fsa.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
@@ -68,6 +69,18 @@ impl<W> PartialEq for ChartEntryWithIndex<W> {
             (&Bracketed(ref t1, _, _, _, _, ref i1), &Bracketed(ref t2, _, _, _, _, ref i2))
                 => (t1, i1).eq(&(t2, i2)),
             _ => false
+        }
+    }
+}
+
+impl<W> Hash for ChartEntryWithIndex<W> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use self::ChartEntryWithIndex::*;
+        
+        match *self {
+            Initial(ref t1, _) => t1.hash(state),
+            Concat(_, ref q1, _, ref i11, ref i12) => (q1, i11, i12).hash(state),
+            Bracketed(ref t1, _, _, _, _, ref i1) => (t1, i1).hash(state),
         }
     }
 }
