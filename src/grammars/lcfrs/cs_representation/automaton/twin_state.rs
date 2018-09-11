@@ -1,8 +1,6 @@
 /// This module contains structures to handle state and index ranges.
 /// It is used for the extraction of Dyck words from finite state automata.
 
-use num_traits::One;
-
 /// A range of integer states.
 /// This structure is primarily used for two purposes:
 /// * to represent a range of states of a finite state automaton (similar to
@@ -50,6 +48,24 @@ impl TwinRange {
                    }
         )
     }
+
+    /// Expands the both ranges to the right, i.e. replaces the right
+    /// Components of both TwinStates with the given values.
+    pub fn expand_right(&self, state: usize, range: usize) -> Self {
+        TwinRange{
+            state: TwinState{ left: self.state.left, right: state },
+            range: TwinState{ left: self.range.left, right: range }
+        }
+    }
+
+    /// Expands the both ranges to the left, i.e. replaces the left
+    /// Components of both TwinStates with the given values.
+    pub fn expand_left(&self, state: usize, range: usize) -> Self {
+        TwinRange{
+            state: TwinState{ left: state, right: self.state.right },
+            range: TwinState{ left: range, right: self.range.right }
+        }
+    }
 }
 
 /// Represents two transitions in a finite state automaton over a Dyck alphabet
@@ -75,15 +91,19 @@ pub struct StateArc<W> {
     pub to: usize
 }
 
+use util::factorizable::Factorizable;
+
 impl<W> TwinArc<W> {
     /// Reconstructs the transitions of the finite state automaton that were
     /// used to construct the `TwinArc`
     pub fn split(&self, from: &TwinState) -> (StateArc<W>, StateArc<W>)
     where
-        W: One + Copy
+        W: Copy + Factorizable
     {
-        ( StateArc{ from: self.left, weight: self.weight, to: from.left }
-        , StateArc{ from: from.right, weight: W::one(), to: self.right }
+        let ws = self.weight.factorize(2);
+        
+        ( StateArc{ from: self.left, weight: ws[0], to: from.left }
+        , StateArc{ from: from.right, weight: ws[1], to: self.right }
         )
     }
 }

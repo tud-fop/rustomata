@@ -7,7 +7,7 @@ use super::Chart;
 use dyck::Bracket;
 use util::reverse::Reverse;
 
-use std::{collections::BinaryHeap, ops::Mul, hash::Hash};
+use std::{ ops::Mul, hash::Hash, collections::BinaryHeap };
 use fnv::FnvHashMap;
 use integeriser::Integeriser;
 
@@ -183,7 +183,7 @@ mod tests {
         let w2 = LogDomain::new(0.75).unwrap().into();
         
         use self::IndexedChartEntry::*;
-        let chart = example_automaton().fill_chart(Capacity::Infinite);
+        let chart = example_automaton().fill_chart();
 
         let t1 = chart.2.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
         let t2 = chart.2.find_key(&BracketContent::Component(0, 0)).unwrap();
@@ -224,7 +224,7 @@ mod tests {
         let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.25).unwrap().into();
         let w2 = LogDomain::new(0.75).unwrap().into();
 
-        let mut it = example_automaton().fill_chart(Capacity::Infinite).into_iter();
+        let mut it = example_automaton().fill_chart().into_iter();
 
         let t1 = it.chart.2.find_key(&BracketContent::Component(0, 0)).unwrap();
         let t2 = it.chart.2.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn elements() {
-        let chart = example_automaton().fill_chart(Capacity::Infinite);
+        let chart = example_automaton().fill_chart();
 
         assert_eq!(
             chart.clone().into_iter().take(10).count(),
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn kth2 () {
-        let chart = example_automaton2().fill_chart(Capacity::Infinite);
+        let chart = example_automaton2().fill_chart();
         let state = chart.1;
 
         assert_eq!(chart.0.get(&state).expect("missing root entry").len(), 1);
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn elements2 () {
-        let chart = example_automaton2().fill_chart(Capacity::Infinite);
+        let chart = example_automaton2().fill_chart();
 
         assert_eq!(
             chart.clone().into_iter().take(10).count(),

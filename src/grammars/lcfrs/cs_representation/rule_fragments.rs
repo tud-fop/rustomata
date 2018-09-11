@@ -1,4 +1,3 @@
-
 use super::BracketContent;
 use dyck::Bracket;
 use grammars::pmcfg::{PMCFGRule, VarT};
@@ -22,7 +21,7 @@ where
 {
     Start(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>, (usize, usize), W),
     Intermediate(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>, (usize, usize)),
-    End(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>, W),
+    End(&'a PMCFGRule<N, T, W>, usize, (usize, usize), Vec<&'a T>),
     Whole(&'a PMCFGRule<N, T, W>, usize, Vec<&'a T>, W),
 }
 
@@ -36,7 +35,7 @@ pub fn fragments<'a, N: 'a, T: 'a, W: 'a + Factorizable>(
 where
     W: Copy
 {
-    FragmentIterator(rule, 0, -1, rule.weight.factorize(2 * rule.composition.composition.len()))
+    FragmentIterator(rule, 0, -1, rule.weight.factorize(rule.composition.composition.len()))
 }
 
 impl<'a, N, T, W> Iterator for FragmentIterator<'a, N, T, W>
@@ -81,9 +80,9 @@ where
         self.1 += 1;
         self.2 = -1;
         if let Some((i, j)) = start_var {
-            return Some(End(self.0, comp, (i, j), terminals, self.3.remove(0)));
+            return Some(End(self.0, comp, (i, j), terminals));
         } else {
-            return Some(Whole(self.0, comp, terminals, self.3.remove(0) * self.3.remove(0)));
+            return Some(Whole(self.0, comp, terminals, self.3.remove(0)));
         }
     }
 }
@@ -99,7 +98,7 @@ where
         match *self {
             Start(r, _, _, _, _) |
             Intermediate(r, _, _, _, _) |
-            End(r, _, _, _, _) |
+            End(r, _, _, _) |
             Whole(r, _, _, _) => r,
         }
     }
@@ -113,7 +112,7 @@ where
         match *self {
             Start(_, j, _, _, _) => Bracket::Open(BracketContent::Component(r, j)),
             Intermediate(_, _, (i, j), _, _) => Bracket::Close(BracketContent::Variable(r, i, j)),
-            End(_, _, (i, j), _, _) => Bracket::Close(BracketContent::Variable(r, i, j)),
+            End(_, _, (i, j), _) => Bracket::Close(BracketContent::Variable(r, i, j)),
             Whole(_, j, _, _) => Bracket::Open(BracketContent::Component(r, j)),
         }
     }
@@ -127,7 +126,7 @@ where
         match *self {
             Start(_, _, _, (i, j), _) => Bracket::Open(BracketContent::Variable(r, i, j)),
             Intermediate(_, _, _, _, (i, j)) => Bracket::Open(BracketContent::Variable(r, i, j)),
-            End(_, j, _, _, _) => Bracket::Close(BracketContent::Component(r, j)),
+            End(_, j, _, _) => Bracket::Close(BracketContent::Component(r, j)),
             Whole(_, j, _, _) => Bracket::Close(BracketContent::Component(r, j)),
         }
     }
@@ -137,7 +136,7 @@ where
         match *self {
             Start(_, _, ref ts, _, _) |
             Intermediate(_, _, _, ref ts, _) |
-            End(_, _, _, ref ts, _) |
+            End(_, _, _, ref ts) |
             Whole(_, _, ref ts, _) => ts,
         }
     }
@@ -147,7 +146,7 @@ where
         match *self {
             Start(r, j, _, _, _) => Bracket::Open((r.head.clone(), j)),
             Intermediate(r, _, (i, j), _, _) => Bracket::Close((r.tail[i].clone(), j)),
-            End(r, _, (i, j), _, _) => Bracket::Close((r.tail[i].clone(), j)),
+            End(r, _, (i, j), _) => Bracket::Close((r.tail[i].clone(), j)),
             Whole(r, j, _, _) => Bracket::Open((r.head.clone(), j)),
         }
     }
@@ -157,7 +156,7 @@ where
         match *self {
             Start(r, _, _, (i, j), _) => Bracket::Open((r.tail[i].clone(), j)),
             Intermediate(r, _, _, _, (i, j)) => Bracket::Open((r.tail[i].clone(), j)),
-            End(r, j, _, _, _) => Bracket::Close((r.head.clone(), j)),
+            End(r, j, _, _) => Bracket::Close((r.head.clone(), j)),
             Whole(r, j, _, _) => Bracket::Close((r.head.clone(), j)),
         }
     }
@@ -192,10 +191,10 @@ where
         W: Copy + Mul<Output=W>
     {
         match self {
-            &Start(_, _, _, _, weight)
-            | &End(_, _, _, _, weight) => weight,
-            &Whole(_, _, _, weight) => weight * weight,
-            &Intermediate(_, _, _, _, _) => W::one()
+            &Start(_, _, _, _, weight) => weight,
+            &Whole(_, _, _, weight) => weight,
+            &Intermediate(_, _, _, _, _)
+            | &End(_, _, _, _) => W::one()
         }
     }
 }

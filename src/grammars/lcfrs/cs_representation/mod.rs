@@ -83,7 +83,10 @@ where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable
     {
         let automaton = self.generator.intersect(self.filter.instantiate(word), word);
-        let mut chart = automaton.fill_chart(beam).into_iter().peekable();
+        let mut chart = match beam {
+            Capacity::Limit(beam) => automaton.fill_chart_beam(beam),
+            Capacity::Infinite => automaton.fill_chart(),
+        }.into_iter().peekable();
 
         let first = chart.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
         
@@ -104,10 +107,17 @@ where
 
         let (cans, ptime) = with_time(|| {
             if candidates == Capacity::Limit(0) {
-                g_.fill_chart(beam).into_iter().next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
+                match beam {
+                    Capacity::Limit(beam) => g_.fill_chart_beam(beam),
+                    Capacity::Infinite => g_.fill_chart(),
+                }.into_iter().next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
             }
             else {
-                let mut it = take_capacity(g_.fill_chart(beam).into_iter().enumerate(), candidates).peekable();
+                let mut it = take_capacity(
+                    match beam {
+                        Capacity::Limit(beam) => g_.fill_chart_beam(beam),
+                        Capacity::Infinite => g_.fill_chart(),
+                    }.into_iter().enumerate(), candidates).peekable();
                 let fb = it.peek().map(|(_, w)| fallback::FailedParseTree::new(w).merge(&self.rules));
                 match it.filter_map(|(i, candidate)| self.toderiv(&candidate).map(| t | (t, i + 1))).next() {
                     Some((t, i)) => Some((t.into_iter().map(|(k, v)| (k, v.clone())).collect(), i)), // valid candidate

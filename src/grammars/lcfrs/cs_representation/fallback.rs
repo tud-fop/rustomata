@@ -72,6 +72,7 @@ impl FailedParseTree {
     }
 
     /// Counts the occurences of unambiguous grammar applications.
+    #[allow(dead_code)]
     pub fn fails(&self) -> usize {
         self.0.values()
             .flat_map(|node| node.children.values().map(|rs| rs.len()))

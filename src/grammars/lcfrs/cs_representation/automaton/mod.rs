@@ -8,16 +8,16 @@ mod rule_filter;
 mod k_best;
 mod heuristic;
 
-pub use self::{ k_best::ChartIterator, rule_filter::{ CachedFilterPersistentStorage, CachedFilter } };
+pub use self::{ k_best::ChartIterator, rule_filter::{ CachedFilterPersistentStorage } };
 use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}, heuristic::NaiveHeuristic };
 use super::{BracketContent, rule_fragments::fragments};
 use grammars::pmcfg::PMCFGRule;
 use dyck::Bracket;
-use util::{IntMap, agenda::{PriorityQueue, Capacity, Agenda}, search::WeightedSearchItem, vec_entry, factorizable::Factorizable};
+use util::{IntMap, agenda::{PriorityQueue, Capacity, Agenda}, search::WeightedSearchItem, vec_entry, factorizable::Factorizable, reverse::Reverse};
 
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{ One, Zero };
-use std::{ collections::{HashMap, hash_map::Entry}, hash::Hash, ops::Mul, rc::Rc };
+use std::{ collections::{ hash_map::Entry, BinaryHeap }, hash::Hash, ops::Mul, rc::Rc };
 use fnv::FnvHashMap;
 
 /// Represents a finite state automaton over a Dyck alphabet; optimized to extract
@@ -125,18 +125,82 @@ type RangeT = usize;
 impl<T, W> CykAutomaton<T, W>
 where
     T: Hash + Eq,
-    W: Ord + Copy + Mul<Output=W> + One + Zero
+    W: Ord + Copy + Mul<Output=W> + One + Zero + ::std::fmt::Debug + Factorizable
 {
+    pub fn fill_chart(&self) -> Chart<T, W> {
+        let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
+
+        // initial items
+        let mut agenda: BinaryHeap<(Reverse<_>, _, _)> = self.initials.iter().map(|&(range, label, weight)| (weight.into(), range, ChartEntry::Initial{ label, weight })).collect();
+
+        // stores items via right (left) range component
+        let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, Reverse<W>)>> = FnvHashMap::default();
+        let mut to_left:  FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, Reverse<W>)>> = FnvHashMap::default();
+
+        while let Some((weight, tr, ce)) = agenda.pop() {
+            match map.entry(tr) {
+                // if the chart entry was already discovered, we don't need to
+                // inviestigate any successors
+                Entry::Occupied(mut entry) => {
+                    match ce {
+                        ChartEntry::Concat{ .. } => (),
+                        _ => { entry.get_mut().push((ce, weight.unwrap())) }
+                    }
+                }
+                Entry::Vacant(mut entry) => {
+                    entry.insert(vec![(ce, weight.unwrap())]);
+                    // keep the left (right) fringes of the current ranges for
+                    // later concatenations
+                    to_left.entry((tr.state.right, tr.range.right)).or_insert_with(Vec::new).push((tr.state.left, tr.range.left, weight));
+                    to_right.entry((tr.state.left, tr.range.left)).or_insert_with(Vec::new).push((tr.state.right, tr.range.right, weight));
+
+                    // apply all wrap operations, i.e. find applicable
+                    // `TwinArcs` and enqueue the successors
+                    for ta in self.twin_arcs.get(&tr.state).into_iter().flat_map(|v| v) {
+                        agenda.push(
+                            ( weight * ta.weight.into()
+                            , tr.apply_state_arc(ta)
+                            , ChartEntry::Wrap{ label: ta.label, inner: TwinState{ left: tr.state.left, right: tr.state.right }, weight: ta.weight }
+                            ),
+                        );
+                    }
+
+                    // investigate all concatenations to the left
+                    for &(sleft, rleft, weight_) in to_left.get(&(tr.state.left, tr.range.left)).into_iter().flat_map(|v| v) {
+                        agenda.push(
+                            ( weight * weight_
+                            , tr.expand_left(sleft, rleft)
+                            , ChartEntry::Concat{ mid_state: tr.state.left, mid_range: tr.range.left }
+                            ),
+                        );
+                    }
+
+                    // and to the right
+                    for &(sright, rright, weight_) in to_right.get(&(tr.state.right, tr.range.right)).into_iter().flat_map(|v| v) {
+                        agenda.push(
+                            ( weight * weight_
+                            , tr.expand_right(sright, rright)
+                            , ChartEntry::Concat{ mid_state: tr.state.right, mid_range: tr.range.right }
+                            ),
+                        );
+                    }
+                }
+            }
+            
+        }
+
+        Chart( map, self.finals, Rc::clone(&self.integeriser) )
+    }
     /// Constructs a `Chart` from a `CykAutomaton`.
     /// This construction involves a Knuth search that is implemented using
     /// a priority Queue as an agenda structure. This Queue may be limited to
     /// hold only a specific amount of elements, i.e. this search implements
     /// ``beam seach''.
-    pub fn fill_chart(&self, beam: Capacity) -> Chart<T, W> {
+    pub fn fill_chart_beam(&self, beam: usize) -> Chart<T, W> {
         let heuristic = NaiveHeuristic::new(self);
 
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
-        let mut agenda = PriorityQueue::new(beam);
+        let mut agenda = PriorityQueue::new(Capacity::Limit(beam));
         
         // stores items via right (left) range component
         let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
@@ -144,6 +208,7 @@ where
 
         // enqueue initial items
         for &(range, label, weight) in &self.initials {
+            if heuristic.wrap(range, weight) == W::zero() { continue; }
             agenda.enqueue(
                 WeightedSearchItem((range, ChartEntry::Initial{ label, weight }, weight), heuristic.wrap(range, weight))
             );
@@ -169,39 +234,44 @@ where
                     // apply all wrap operations, i.e. find applicable
                     // `TwinArcs` and enqueue the successors
                     for ta in self.twin_arcs.get(&tr.state).into_iter().flat_map(|v| v) {
+                        if heuristic.wrap(tr.apply_state_arc(ta), weight * ta.weight) == W::zero() { continue; }
                         agenda.enqueue(
                             WeightedSearchItem(
                                 ( tr.apply_state_arc(ta)
                                 , ChartEntry::Wrap{ label: ta.label, inner: TwinState{ left: tr.state.left, right: tr.state.right }, weight: ta.weight }
                                 , weight * ta.weight
                                 ),
-                                heuristic.wrap(tr, weight * ta.weight)
+                                heuristic.wrap(tr.apply_state_arc(ta), weight * ta.weight)
                             )
                         );
                     }
 
                     // investigate all concatenations to the left
                     for &(sleft, rleft, weight_) in to_left.get(&(tr.state.left, tr.range.left)).into_iter().flat_map(|v| v) {
+                        let successor = tr.expand_left(sleft, rleft);
+                        if heuristic.wrap(successor, weight * weight_) == W::zero() { continue; }
                         agenda.enqueue(
                             WeightedSearchItem(
-                                ( TwinRange{ state: TwinState{ left: sleft, right: tr.state.right }, range: TwinState{ left: rleft, right: tr.range.right } }
+                                ( successor
                                 , ChartEntry::Concat{ mid_state: tr.state.left, mid_range: tr.range.left }
                                 , weight * weight_
                                 ),
-                                heuristic.wrap(tr, weight * weight_)
+                                heuristic.wrap(successor, weight * weight_) 
                             )
                         );
                     }
 
                     // and to the right
                     for &(sright, rright, weight_) in to_right.get(&(tr.state.right, tr.range.right)).into_iter().flat_map(|v| v) {
+                        let successor = tr.expand_right(sright, rright);
+                        if heuristic.wrap(successor, weight * weight_) == W::zero() { continue; }
                         agenda.enqueue(
                             WeightedSearchItem(
-                                ( TwinRange{ state: TwinState{ left: tr.state.left, right: sright }, range: TwinState{ left: tr.range.left, right: rright } }
+                                ( successor
                                 , ChartEntry::Concat{ mid_state: tr.state.right, mid_range: tr.range.right }
                                 , weight * weight_
                                 ),
-                                heuristic.wrap(tr, weight * weight_)
+                                heuristic.wrap(successor, weight * weight_) 
                             )
                         );
                     }
@@ -448,15 +518,24 @@ mod test {
 
     #[test]
     fn chart_construction () {
+        use util::reverse::Reverse;
         let rules = example_grammar();
         let mut r_integeriser = HashIntegeriser::new();
         for rule in &rules {
             r_integeriser.integerise(rule.clone());
         }
-        let chart = CykAutomatonPersistentStorage::from_grammar(rules.iter(), &r_integeriser, "S")
-                        .intersect(vec![0, 1, 2, 3, 4].into_iter(), &[3, 2, 2, 1, 1, 3])
-                        .fill_chart(Capacity::Infinite);
-        let Chart(map, finals, _) = chart;
+        let initials: Vec<(TwinRange, usize, Reverse<LogDomain<f64>>)> = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one().into())];
+        let twin_arcs = vec![
+            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap().into() }]),
+            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one().into() }]),
+            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap().into() }]),
+        ].into_iter().collect();
+        let finals = TwinRange{ state: TwinState{ left: 2, right: 3 }, range: TwinState{ left: 0, right: 1 }};
+
+        let automaton = CykAutomaton{ initials, twin_arcs, finals, integeriser: Rc::new(r_integeriser) };
+        let Chart(map, _, _) = automaton.fill_chart();
+        
+        use self::chart_entry::ChartEntry::*;
 
         assert!(map.get(&finals).is_some());
     }

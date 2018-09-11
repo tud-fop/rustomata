@@ -43,6 +43,35 @@ impl<W> Hash for ChartEntry<W> {
     }
 } 
 
+impl<W> PartialOrd for ChartEntry<W> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// ´Ord` instance with reversed index values.
+impl<W> Ord for ChartEntry<W> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        use self::ChartEntry::*;
+        
+        match (self, other) {
+            (&Initial{ label: ref l1, .. }, &Initial{ label: ref l2, .. }) => l1.cmp(l2),
+            (&Initial{ .. }, _) => Ordering::Greater,
+            (_, &Initial{ .. }) => Ordering::Less,
+
+            (&Wrap{ label: ref l1, .. }, &Wrap{ label: ref l2, .. })
+                => l1.cmp(l2),
+            (&Wrap{ .. }, _) => Ordering::Greater,
+
+            (&Concat{ mid_range: r1, mid_state: s1 },
+             &Concat{ mid_range: r2, mid_state: s2 })
+                => (r1, s1).cmp(&(r2, s2)),
+            
+            _ => Ordering::Less
+        }
+    }
+}
+
 // A `ChartEntry` with an index for each successor.
 #[derive(Debug, Clone, Copy)]
 pub enum IndexedChartEntry<W> {
