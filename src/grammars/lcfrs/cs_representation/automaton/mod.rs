@@ -535,8 +535,6 @@ mod test {
         let automaton = CykAutomaton{ initials, twin_arcs, finals, integeriser: Rc::new(r_integeriser) };
         let Chart(map, _, _) = automaton.fill_chart();
         
-        use self::chart_entry::ChartEntry::*;
-
         assert!(map.get(&finals).is_some());
     }
 }

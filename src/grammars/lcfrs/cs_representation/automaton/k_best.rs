@@ -7,21 +7,25 @@ use super::Chart;
 use dyck::Bracket;
 use util::reverse::Reverse;
 
-use std::{ ops::Mul, hash::Hash, collections::BinaryHeap };
+use std::{ ops::Mul, hash::Hash };
 use fnv::FnvHashMap;
 use integeriser::Integeriser;
+
+extern crate unique_heap;
+use self::unique_heap::FnvUniqueHeap;
 
 /// Stores the information for the lazy enumeration of hyperpaths.
 pub struct ChartIterator<T, W>
 where
     T: Hash + Eq,
+    W: Ord
 {
     chart: Chart<T, W>,
     
     // caches already queried hyperpaths
     d: FnvHashMap<TwinRange, Vec<(IndexedChartEntry<W>, W)>>,
     // stores candidates for next elements in d
-    c: FnvHashMap<TwinRange, BinaryHeap<(Reverse<W>, IndexedChartEntry<W>)>>,
+    c: FnvHashMap<TwinRange, FnvUniqueHeap<IndexedChartEntry<W>, Reverse<W>>>,
     
     // current k for root
     k: usize
@@ -69,11 +73,11 @@ where
         if self.c.get(&state).is_none() {
             self.c.insert(
                 state, 
-                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (w.into(), ce.into())).collect()
+                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (ce.into(), w.into())).collect()
             );
             self.d.insert(
                 state,
-                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(w, ce)| (ce, w.unwrap())).into_iter().collect()
+                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(ce, w)| (ce, w.unwrap())).into_iter().collect()
             );
         }
 
@@ -81,9 +85,7 @@ where
             if let Some((ce, _)) = self.d.get(&state).unwrap().last().map(|t| t.clone()) {
                 for ce_ in ce.successors() {
                     if let Some(weight) = self.weight(state, &ce_) {
-                        if !self.c.get(&state).unwrap().iter().any(|&(_, ref ceih)| ceih == &ce_) {
-                            self.c.get_mut(&state).unwrap().push((weight.into(), ce_));
-                        }
+                        self.c.get_mut(&state).unwrap().push(ce_, weight.into());
                     }
                 }
             }
@@ -93,7 +95,7 @@ where
             }
             
             self.d.get_mut(&state).unwrap().push(
-                self.c.get_mut(&state).unwrap().pop().map(|(w, ce)| (ce, w.unwrap())).unwrap()
+                self.c.get_mut(&state).unwrap().pop().map(|(ce, w)| (ce, w.unwrap())).unwrap()
             )
 
         }

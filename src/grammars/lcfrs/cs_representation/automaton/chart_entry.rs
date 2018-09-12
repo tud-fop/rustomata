@@ -128,6 +128,21 @@ impl<W> Ord for IndexedChartEntry<W> {
     }
 }
 
+impl<W> Hash for IndexedChartEntry<W> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use self::IndexedChartEntry::*;
+
+        match self {
+            &Initial{ label, .. }
+                => label.hash(state),
+            &Concat{ mid_range, mid_state, index_left, index_right }
+                => (index_left, index_right, mid_range, mid_state).hash(state),
+            &Wrap{ label, index, .. }
+                => (index, label).hash(state)
+        }
+    }
+} 
+
 
 impl<W> Into<IndexedChartEntry<W>> for ChartEntry<W> {
     fn into(self) -> IndexedChartEntry<W> {
