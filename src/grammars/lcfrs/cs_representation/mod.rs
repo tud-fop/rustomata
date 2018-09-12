@@ -51,6 +51,12 @@ where
     rules: HashIntegeriser<PMCFGRule<N, T, W>>,
 }
 
+pub enum DebugResult<N, T, W> {
+    Parse(GornTree<PMCFGRule<N, T, W>>, usize),
+    Fallback(GornTree<PMCFGRule<N, T, W>>, usize),
+    Noparse
+} 
+
 impl<N, T, W> CSRepresentation<N, T, W>
 where
     N: Ord + Hash + Clone,
@@ -96,7 +102,7 @@ where
     }
 
     /// Produces additional output to stderr that logs construction times and the parsing time.
-    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) -> (usize, usize, usize, i64, Option<(GornTree<PMCFGRule<N, T, W>>, usize)>)
+    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) -> (usize, usize, usize, i64, DebugResult<N, T, W>)
     where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
         T: ::std::fmt::Debug
@@ -105,32 +111,49 @@ where
         let filter_size = f.len();
         let (g_, intersection_time) =  with_time(|| self.generator.intersect(f.into_iter(), word));
 
-        let (cans, ptime) = with_time(|| {
-            if candidates == Capacity::Limit(0) {
-                match beam {
+        let (debug_result, ptime) = with_time(|| {
+            let chart = match beam {
                     Capacity::Limit(beam) => g_.fill_chart_beam(beam),
                     Capacity::Infinite => g_.fill_chart(),
-                }.into_iter().next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
+            };
+            let mut words = take_capacity(chart.into_iter(), candidates).peekable();
+            let fallback_word = words.peek().cloned();
+            let mut enumerated_words = 0;
+            match words.filter_map(|candidate| { enumerated_words += 1; self.toderiv(&candidate) }).next() {
+                Some(t) => DebugResult::Parse(t.cloned(), enumerated_words),
+                None => if let Some(w) = fallback_word { 
+                            let tree = fallback::FailedParseTree::new(&w).merge(&self.rules);
+                            DebugResult::Fallback(tree, enumerated_words)
+                        } else {
+                            DebugResult::Noparse
+                        }
             }
-            else {
-                let mut it = take_capacity(
-                    match beam {
-                        Capacity::Limit(beam) => g_.fill_chart_beam(beam),
-                        Capacity::Infinite => g_.fill_chart(),
-                    }.into_iter().enumerate(), candidates).peekable();
-                let fb = it.peek().map(|(_, w)| fallback::FailedParseTree::new(w).merge(&self.rules));
-                match it.filter_map(|(i, candidate)| self.toderiv(&candidate).map(| t | (t, i + 1))).next() {
-                    Some((t, i)) => Some((t.into_iter().map(|(k, v)| (k, v.clone())).collect(), i)), // valid candidate
-                    None => fb.map(|t| (t, 0)),    // failed
-                }
-            }
+
+            // if candidates == Capacity::Limit(0) {
+            //     match beam {
+            //         Capacity::Limit(beam) => g_.fill_chart_beam(beam),
+            //         Capacity::Infinite => g_.fill_chart(),
+            //     }.into_iter().next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
+            // }
+            // else {
+            //     let mut it = take_capacity(
+            //         match beam {
+            //             Capacity::Limit(beam) => g_.fill_chart_beam(beam),
+            //             Capacity::Infinite => g_.fill_chart(),
+            //         }.into_iter().enumerate(), candidates).peekable();
+            //     let fb = it.peek().map(|(_, w)| fallback::FailedParseTree::new(w).merge(&self.rules));
+            //     match it.filter_map(|(i, candidate)| self.toderiv(&candidate).map(| t | (t, i + 1))).next() {
+            //         Some((t, i)) => Some((t.into_iter().map(|(k, v)| (k, v.clone())).collect(), i)), // valid candidate
+            //         None => fb.map(|t| (t, 0)),    // failed
+            //     }
+            // }
         });
         
         ( self.rules.size()
         , word.len()
         , filter_size
         , filter_const.num_nanoseconds().unwrap() + intersection_time.num_nanoseconds().unwrap() + ptime.num_nanoseconds().unwrap()
-        , cans
+        , debug_result
         )
     }
 

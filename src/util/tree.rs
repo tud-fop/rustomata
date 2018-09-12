@@ -71,6 +71,12 @@ impl<V> GornTree<V> {
     }
 }
 
+impl<'a, V: 'a + Clone> GornTree<&'a V> {
+    pub fn cloned(self) -> GornTree<V> {
+        self.into_iter().map(|(k, v)| (k, v.clone())).collect()
+    }
+}
+
 impl<V> IntoIterator for GornTree<V> {
     type Item = (Vec<usize>, V);
     type IntoIter = btree_map::IntoIter<Vec<usize>, V>;

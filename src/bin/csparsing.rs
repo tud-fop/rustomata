@@ -5,7 +5,7 @@ use log_domain::LogDomain;
 use std::{fs::File,
           io::{stdin, stdout, Read}};
 
-use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation},
+use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
 use rustomata::util::{agenda::Capacity, reverse::Reverse};
@@ -168,12 +168,19 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 if params.is_present("debugmode") {
                     let tuple = csrep.debug(words.as_slice(), beam, candidates);
                     eprint!("{} {} {} {} ", tuple.0, tuple.1, tuple.2, tuple.3);
-                    if let Some((t, c)) = tuple.4 {
-                        eprintln!("{}", c);
-                        println!("{}", to_negra(&t, i, negra_mode));
-                    } else {
-                        eprintln!("{}", -1);
-                        println!("{}", noparse(&words, i, negra_mode));
+                    match tuple.4 {
+                        DebugResult::Parse(t, n) => {
+                            eprintln!("parse {}", n);
+                            println!("{}", to_negra(&t, i, negra_mode));
+                        },
+                        DebugResult::Fallback(t, n) => {
+                            eprintln!("fallback {}", n);
+                            println!("{}", to_negra(&t, i, negra_mode));
+                        },
+                        DebugResult::Noparse => {
+                            eprintln!("noparse 0");
+                            println!("{}", noparse(&words, i, negra_mode));
+                        },
                     }
                 } else {
                     let mut found_trees = false;
