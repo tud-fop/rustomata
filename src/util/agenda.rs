@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BinaryHeap};
+use std::collections::{BTreeMap, BinaryHeap, VecDeque};
 use std::vec::Vec;
 
 /// A limit specification.
@@ -210,6 +210,27 @@ impl<I> Agenda for Vec<I> {
 
     fn peek_next(&self) -> Option<&Self::Item> {
         self.last()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+impl<I> Agenda for VecDeque<I> {
+    type Item = I;
+
+    fn enqueue(&mut self, item: Self::Item) -> Option<Self::Item> {
+        self.push_back(item);
+        None
+    }
+
+    fn dequeue(&mut self) -> Option<Self::Item> {
+        self.pop_front()
+    }
+
+    fn peek_next(&self) -> Option<&Self::Item> {
+        self.front()
     }
 
     fn is_empty(&self) -> bool {
