@@ -36,10 +36,10 @@ where
     }
 }
 
-impl<I, W, F> Search<PriorityQueue<W, I>, I, F>
+impl<I, F> Search<PriorityQueue<I>, I, F>
 where
-    I: Clone + Ord + Weighted<Weight = W>,
-    W: Ord + Clone,
+    I: Clone + Ord + Weighted,
+    I::Weight: Ord + Clone,
     F: FnMut(&I) -> Vec<I>,
 {
     /// Initializes a weighted `Search` using a `PriorityQueue`.
