@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BinaryHeap};
+use std::collections::{BTreeMap, BinaryHeap, VecDeque};
 use std::vec::Vec;
 
 /// A limit specification.
@@ -81,21 +81,20 @@ impl<T> ::std::iter::FromIterator<T> for Queue<T> {
 }
 
 // #[derive(Debug, PartialEq, Eq)]
-pub struct PriorityQueue<P, I>
+pub struct PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
+    I: Weighted,
 {
-    data: BTreeMap<P, Vec<I>>, // The values should always be non-empty.
+    data: BTreeMap<I::Weight, Vec<I>>, // The values should always be non-empty.
     capacity: Capacity,
     size: usize,
-    last_key: Option<P>, // largest key w.r.t. Ord
-                         // pub priority: Box<Fn(&I) -> P + 'a>,
+    last_key: Option<I::Weight>, // largest key w.r.t. Ord
 }
 
-impl<P, I> ::std::iter::FromIterator<I> for PriorityQueue<P, I>
+impl<I> ::std::iter::FromIterator<I> for PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
-    P: Ord + Clone
+    I: Weighted,
+    I::Weight: Ord + Clone
 {
     fn from_iter<It>(iter: It) -> Self
     where
@@ -109,9 +108,9 @@ where
     }
 }
 
-impl<P, I> PriorityQueue<P, I>
+impl<I> PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
+    I: Weighted
 {
     pub fn size(&self) -> usize {
         self.size
@@ -126,9 +125,10 @@ where
     }
 }
 
-impl<I, P: Ord + Clone> Agenda for PriorityQueue<P, I>
+impl<I> Agenda for PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
+    I: Weighted,
+    I::Weight: Ord + Clone,
 {
     type Item = I;
 
@@ -184,11 +184,12 @@ where
     }
 }
 
-impl<P: Ord, I> PriorityQueue<P, I>
+impl<I> PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
+    I: Weighted,
+    I::Weight: Ord,
 {
-    pub fn new(capacity: Capacity) -> PriorityQueue<P, I> {
+    pub fn new(capacity: Capacity) -> PriorityQueue<I> {
         assert!(capacity > Capacity::Limit(0));
         PriorityQueue {
             data: BTreeMap::new(),
@@ -199,9 +200,10 @@ where
     }
 }
 
-impl<P: Ord + Clone, I> PriorityQueue<P, I>
+impl<I> PriorityQueue<I>
 where
-    I: Weighted<Weight = P>,
+    I: Weighted,
+    I::Weight: Ord + Clone,
 {
     pub fn set_capacity(&mut self, capacity: usize) -> Vec<I> {
         self.capacity = Capacity::Limit(capacity);
@@ -216,7 +218,7 @@ where
         res
     }
 
-    fn enqueue_unchecked(&mut self, priority: P, item: I) {
+    fn enqueue_unchecked(&mut self, priority: I::Weight, item: I) {
         self.data
             .entry(priority.clone())
             .or_insert_with(Vec::new)
@@ -287,6 +289,27 @@ impl<I> Agenda for Vec<I> {
 
     fn peek_next(&self) -> Option<&Self::Item> {
         self.last()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+impl<I> Agenda for VecDeque<I> {
+    type Item = I;
+
+    fn enqueue(&mut self, item: Self::Item) -> Option<Self::Item> {
+        self.push_back(item);
+        None
+    }
+
+    fn dequeue(&mut self) -> Option<Self::Item> {
+        self.pop_front()
+    }
+
+    fn peek_next(&self) -> Option<&Self::Item> {
+        self.front()
     }
 
     fn is_empty(&self) -> bool {

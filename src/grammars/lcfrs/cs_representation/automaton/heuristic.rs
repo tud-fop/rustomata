@@ -88,7 +88,7 @@ where
         // forward pass:
         // start with initial state and search for optimal path to each other
         // state
-        let mut agenda: PriorityQueue<W, WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(q0, W::one())].into_iter().collect();
+        let mut agenda: PriorityQueue<WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(q0, W::one())].into_iter().collect();
         let mut backward = FnvHashMap::default();
         while let Some(WeightedSearchItem(q, w)) = agenda.dequeue() {
             if let Vacant(ve) = backward.entry(q) {
@@ -103,7 +103,7 @@ where
         }
 
         // backward pass starts with final state
-        let mut agenda: PriorityQueue<W, WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(qf, W::one())].into_iter().collect();
+        let mut agenda: PriorityQueue<WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(qf, W::one())].into_iter().collect();
         let mut forward = FnvHashMap::default();
         while let Some(WeightedSearchItem(q, w)) = agenda.dequeue() {
             if let Vacant(ve) = forward.entry(q) {
