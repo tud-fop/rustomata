@@ -90,6 +90,13 @@ impl<A: Clone> Pushdown<A> {
         }
     }
 
+    pub fn peek_ref(&self) -> Option<&A> {
+        match *self {
+            Pushdown::Empty => None,
+            Pushdown::Cons { ref value, .. } => Some(value),
+        }
+    }
+
     /// Returns `Some` clone of the top-most symbol of the `Pushdown` if the `Pushdown` is not empty.
     pub fn peek(&self) -> Option<A> {
         match *self {

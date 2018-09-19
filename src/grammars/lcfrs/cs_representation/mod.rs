@@ -10,7 +10,7 @@ use grammars::pmcfg::PMCFGRule;
 use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable, agenda::Capacity };
 
 use integeriser::{HashIntegeriser, Integeriser};
-use std::{ collections::{BTreeMap}, fmt::{Display, Error, Formatter}, hash::Hash, ops::Mul };
+use std::{ collections::{BTreeMap}, fmt::{Debug, Display, Error, Formatter}, hash::Hash, ops::Mul };
 use num_traits::{Zero, One};
 
 
@@ -42,7 +42,7 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CSRepresentation<N, T, W>
 where
-    N: Ord + Hash + Clone,
+    N: Ord + Hash + Debug + Clone,
     T: Ord + Hash + Clone,
     W: Ord + Clone
 {
@@ -59,7 +59,7 @@ pub enum DebugResult<N, T, W> {
 
 impl<N, T, W> CSRepresentation<N, T, W>
 where
-    N: Ord + Hash + Clone,
+    N: Ord + Hash + Debug + Clone,
     T: Ord + Hash + Clone + ::std::fmt::Debug,
     W: Ord + Clone + ::std::fmt::Debug
 {
@@ -76,8 +76,8 @@ where
         }
         
         CSRepresentation {
-            generator: CykAutomatonPersistentStorage::from_grammar(irules.values().iter(), &irules, initial),
-            filter: CachedFilterPersistentStorage::new(irules.values().iter().enumerate()),
+            generator: CykAutomatonPersistentStorage::from_grammar(irules.values().iter(), &irules, initial.clone()),
+            filter: CachedFilterPersistentStorage::new(irules.values().iter().enumerate(), &initial),
             rules: irules,
         }
     }
