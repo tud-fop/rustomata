@@ -105,7 +105,7 @@ where
         let mut productive_rules: IntMap<Vec<(Vec<usize>, usize)>> = IntMap::default();
 
         for t in &ts {
-            for &(ref ts_to_check, rid, nid) in self.only_t.get(*t).into_iter().flat_map(|v| v) {
+            for &(ref ts_to_check, rid, nid) in self.only_t.get(*t).into_iter().flatten() {
                 if ts_to_check.iter().all(|symbol| ts.contains(&symbol)) {
                     productive_nts.insert(nid);
                     productive_rules.entry(nid)
@@ -113,14 +113,14 @@ where
                         .push((Vec::new(), rid));
                 }
             }
-            for &(ref ts_to_check, ref nts, rid, nid) in self.nt_and_t.get(*t).into_iter().flat_map(|v| v) {
+            for &(ref ts_to_check, ref nts, rid, nid) in self.nt_and_t.get(*t).into_iter().flatten() {
                 if ts_to_check.iter().all(|symbol| ts.contains(&symbol)) {
-                    for nts_index in 0..(nts.len()) {
+                    for nts_index in 0 .. nts.len() {
                         let mut nts_without_index = nts.clone();
                         let nts_at_index = nts_without_index.remove(nts_index);
                         only_nt.entry(nts_at_index)
                             .or_insert_with(Vec::new)
-                            .push((nts.clone(), rid, nid));
+                            .push((nts_without_index, rid, nid));
                     }
                 }
             }
@@ -131,7 +131,11 @@ where
         while let Some(nt) = runtime_stack.pop() {
             for &(ref rhs, rule, lhs) in only_nt.get(&nt).into_iter().flatten() {
                 if rhs.iter().all(|a| productive_nts.contains(a)) {
-                    productive_rules.entry(lhs).or_insert_with(Vec::new).push((rhs.clone(), rule));
+                    let mut rhs_nts = rhs.clone();
+                    rhs_nts.push(nt);
+                    productive_rules.entry(lhs)
+                        .or_insert_with(Vec::new)
+                        .push((rhs_nts, rule));
                     if productive_nts.insert(lhs) {
                         runtime_stack.push(lhs);
                     }
