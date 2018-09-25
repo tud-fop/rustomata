@@ -5,7 +5,7 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 autobins = false
 
 [workspace]
-members = ["unique-heap"]
+members = ["unique-heap", "limited-queue"]
 
 [lib]
 name = "rustomata"

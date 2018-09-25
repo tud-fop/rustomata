@@ -1,0 +1,11 @@
+[package]
+name = "search"
+version = "0.1.0"
+authors = ["Thomas Ruprecht <thomas.ruprecht@tu-dresden.de>"]
+edition = "2018"
+
+[dependencies]
+min-max-heap = "1"
+
+[dev-dependencies]
+rand = "0.5"
