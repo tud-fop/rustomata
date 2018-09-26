@@ -10,6 +10,8 @@ extern crate serde;
 extern crate serde_derive;
 extern crate fnv;
 
+extern crate search;
+
 pub mod approximation;
 pub mod automata;
 pub mod dyck;

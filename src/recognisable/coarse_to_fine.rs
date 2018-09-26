@@ -6,7 +6,7 @@ use std::rc::Rc;
 use approximation::{ApproximationInstance, ApproximationStrategy};
 use recognisable::{Instruction, Item, Recognisable};
 use recognisable::automaton::Automaton;
-use util::agenda::Weighted;
+use search::agenda::weighted::Weighted;
 
 pub struct CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
     where Rec: Automaton<T, W>,
@@ -82,7 +82,7 @@ impl<'a, Rec, Strategy, T, W> Iterator for CoarseToFineParseForest<'a, Rec, Stra
             || self.peek_input().is_some()
             && self.output_buffer.peek().unwrap().get_weight() < self.peek_input().unwrap().get_weight()
         {
-            if let Some((_, r2)) = self.next_input() {
+            if let Some(Item(_, r2)) = self.next_input() {
                 let r1s = self.approximation_instance.unapproximate_run(r2);
                 for r1 in r1s {
                     for i1 in self.recogniser.check_run(r1) {

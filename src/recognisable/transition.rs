@@ -108,9 +108,9 @@ where
 
 impl<I, T, W> PartialOrd for Transition<I, T, W>
 where
-    I: Eq + PartialOrd,
-    T: Eq + PartialOrd,
-    W: Eq + PartialOrd,
+    I: PartialEq + PartialOrd,
+    T: PartialEq + PartialOrd,
+    W: PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {

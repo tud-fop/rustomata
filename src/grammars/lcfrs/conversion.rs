@@ -1,12 +1,11 @@
 /// This module contains the implementation of the construction of an
 /// LCFRS for each MCFG.
 
-use grammars::pmcfg::PMCFGRule;
-use grammars::mcfg::Mcfg;
-use grammars::pmcfg::VarT;
-use std::hash::Hash;
-use std::collections::{BTreeSet, HashMap};
+use grammars::{ pmcfg::{PMCFGRule, VarT}, mcfg::Mcfg };
+use std::{ collections::{BTreeSet, HashMap}, hash::Hash };
 use super::*;
+
+use search::Search;
 
 /// Implements the conversion from any `Mcfg` into a non-deleting `Mcfg`.
 impl<N, T, W> From<Mcfg<N, T, W>> for Lcfrs<(N, BTreeSet<usize>), T, W>
@@ -16,8 +15,6 @@ where
     W: Copy,
 {
     fn from(mcfg: Mcfg<N, T, W>) -> Self {
-        use util::search::Search;
-
         let (mcfg_rules, mcfg_initial) = mcfg.destruct();
 
         let fanouts = read_fanouts(&mcfg_rules).unwrap();
@@ -30,7 +27,7 @@ where
 
         let mut rules = Vec::new();
 
-        for (a, deletions) in Search::unweighted(vec![(&mcfg_initial, BTreeSet::new())], |&(a,
+        for (a, deletions) in Search::bfs(vec![(&mcfg_initial, BTreeSet::new())], |&(a,
            ref deltetions)| {
             let mut successors = Vec::new();
             for rule in rulemap.get(a).unwrap_or(&Vec::new()) {

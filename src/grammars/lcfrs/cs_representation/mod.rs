@@ -7,7 +7,7 @@ use super::Lcfrs;
 
 use dyck::Bracket;
 use grammars::pmcfg::PMCFGRule;
-use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable, agenda::Capacity };
+use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable, Capacity };
 
 use integeriser::{HashIntegeriser, Integeriser};
 use std::{ collections::{BTreeMap}, fmt::{Debug, Display, Error, Formatter}, hash::Hash, ops::Mul };

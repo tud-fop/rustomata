@@ -1,14 +1,9 @@
-use std::collections::{BinaryHeap, HashMap};
-use std::hash::Hash;
-use std::ops::MulAssign;
-use std::rc::Rc;
-
+use std::{ collections::{BinaryHeap, HashMap}, hash::Hash, ops::MulAssign, rc::Rc };
 use num_traits::One;
 
 use recognisable::{Configuration, Instruction, Item, Transition};
-use util::agenda::Capacity;
-use util::push_down::Pushdown;
-use util::search::Search;
+use util::{  push_down::Pushdown };
+use search::{Search, agenda::limited_heap::weighted::LimitedHeap, Agenda };
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
@@ -102,7 +97,7 @@ where
         result
             .into_iter()
             .map(|s| {
-                (
+                Item(
                     Configuration {
                         word: Vec::new(),
                         storage: s,
@@ -133,7 +128,7 @@ where
     let the_words: Option<_> = word.iter().map(|t| a.terminal_to_int(t)).collect();
 
     let init_confs = the_words.map(|the_word| {
-        (
+        Item(
             Configuration {
                 word: the_word,
                 storage: a.initial_int(),
@@ -143,7 +138,7 @@ where
         )
     });
 
-    Search::weighted(init_confs, move |(conf, run)| {
+    Search::weighted(init_confs, move |Item(conf, run)| {
         let key = A::extract_key(conf);
         let trans_map = a.transition_map();
         let bh = BinaryHeap::new();
@@ -152,11 +147,11 @@ where
             .iter()
             .flat_map(|r| {
                 r.apply(conf).into_iter().map(move |conf1| {
-                    (conf1, run.clone().push(r.clone()))
+                    Item(conf1, run.clone().push(r.clone()))
                 })
             })
-            .collect()
-    }).filter(move |(c, _)| a.is_terminal(c))
+            .collect::<Vec<_>>()
+    }).filter(move |Item(c, _)| a.is_terminal(c))
         .map(move |i| a.item_map(&i))
 }
 
@@ -179,7 +174,7 @@ where
     let the_words: Option<_> = word.iter().map(|t| a.terminal_to_int(t)).collect();
 
     let init_confs = the_words.map(|the_word| {
-        (
+        Item(
             Configuration {
                 word: the_word,
                 storage: a.initial_int(),
@@ -189,7 +184,10 @@ where
         )
     });
 
-    Search::weighted(init_confs, move |(conf, run)| {
+    let mut agenda = LimitedHeap::with_capacity(beam);
+    agenda.extend(init_confs);
+
+    Search::with_agenda(agenda, move |Item(conf, run)| {
         let key = A::extract_key(conf);
         let trans_map = a.transition_map();
         let bh = BinaryHeap::new();
@@ -198,11 +196,10 @@ where
             .iter()
             .flat_map(|r| {
                 r.apply(conf).into_iter().map(move |conf1| {
-                    (conf1, run.clone().push(r.clone()))
+                    Item(conf1, run.clone().push(r.clone()))
                 })
             })
-            .collect()
-    }).beam(Capacity::Limit(beam))
-        .filter(move |(c, _)| a.is_terminal(c))
+            .collect::<Vec<_>>()
+    }).filter(move |Item(c, _)| a.is_terminal(c))
         .map(move |i| a.item_map(&i))
 }

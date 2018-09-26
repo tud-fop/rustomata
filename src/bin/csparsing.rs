@@ -8,7 +8,7 @@ use std::{fs::File,
 use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
-use rustomata::util::{agenda::Capacity, reverse::Reverse};
+use rustomata::util::{Capacity, reverse::Reverse};
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)

@@ -4,8 +4,9 @@
 
 use super::CykAutomaton;
 use super::twin_state::{TwinRange, TwinState, StateArc};
-use util::{ agenda::{PriorityQueue, Agenda}, search::WeightedSearchItem, factorizable::Factorizable };
-use std::{ collections::{hash_map::Entry}, hash::Hash, ops::Mul };
+use search::agenda::weighted::WeightedItem;
+use util::{ factorizable::Factorizable, reverse::Reverse };
+use std::{ collections::{hash_map::Entry, BinaryHeap}, hash::Hash, ops::Mul };
 use num_traits::{One, Zero};
 use fnv::FnvHashMap;
 
@@ -88,31 +89,31 @@ where
         // forward pass:
         // start with initial state and search for optimal path to each other
         // state
-        let mut agenda: PriorityQueue<WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(q0, W::one())].into_iter().collect();
+        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), Reverse<W>>> = vec![WeightedItem(q0, W::one().into())].into_iter().collect();
         let mut backward = FnvHashMap::default();
-        while let Some(WeightedSearchItem(q, w)) = agenda.dequeue() {
+        while let Some(WeightedItem(q, w)) = agenda.pop() {
             if let Vacant(ve) = backward.entry(q) {
-                ve.insert(w);
+                ve.insert(w.unwrap());
                 for &(to, weight) in transitions.get(&q.0).into_iter().flat_map(|v| v) {
-                    agenda.enqueue(WeightedSearchItem((to, q.1), w * weight));
+                    agenda.push(WeightedItem((to, q.1), w * weight.into()));
                 }
                 for &(tos, tor, weight) in transitions_with_range.get(&q).into_iter().flat_map(|v| v) {
-                    agenda.enqueue(WeightedSearchItem((tos, tor), w * weight));
+                    agenda.push(WeightedItem((tos, tor), w * weight.into()));
                 }
             }
         }
 
         // backward pass starts with final state
-        let mut agenda: PriorityQueue<WeightedSearchItem<(StateT, RangeT), W>> = vec![WeightedSearchItem(qf, W::one())].into_iter().collect();
+        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), Reverse<W>>> = vec![WeightedItem(qf, W::one().into())].into_iter().collect();
         let mut forward = FnvHashMap::default();
-        while let Some(WeightedSearchItem(q, w)) = agenda.dequeue() {
+        while let Some(WeightedItem(q, w)) = agenda.pop() {
             if let Vacant(ve) = forward.entry(q) {
-                ve.insert(w);
+                ve.insert(w.unwrap());
                 for &(to, weight) in btransitions.get(&q.0).into_iter().flat_map(|v| v) {
-                    agenda.enqueue(WeightedSearchItem((to, q.1), w * weight));
+                    agenda.push(WeightedItem((to, q.1), w * weight.into()));
                 }
                 for &(tos, tor, weight) in btransitions_with_range.get(&q).into_iter().flat_map(|v| v) {
-                    agenda.enqueue(WeightedSearchItem((tos, tor), w * weight));
+                    agenda.push(WeightedItem((tos, tor), w * weight.into()));
                 }
             }
         }

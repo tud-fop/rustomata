@@ -2,7 +2,8 @@ use grammars::pmcfg::{PMCFGRule, VarT};
 
 use std::{ hash::Hash, collections::HashSet, fmt::Debug };
 use integeriser::{HashIntegeriser, Integeriser};
-use util::{IntMap, IntSet, search::Search};
+use util::{IntMap, IntSet};
+use search::Search;
 use fnv::{FnvHashMap, FnvHashSet};
 
 type RuleId = usize;
@@ -150,7 +151,7 @@ where
         {
             // search for reachable nonterminals in productive_nonterminals while adding
             // reachable rules to productive_and_reachable_rules
-            let s = Search::unweighted(
+            let s = Search::dfs(
                 vec![self.initial_nt],
                 |nt| {
                     let mut nts = Vec::new();

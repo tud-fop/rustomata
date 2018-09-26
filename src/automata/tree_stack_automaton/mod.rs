@@ -193,7 +193,7 @@ where
         i: &Item<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>,
     ) -> Item<TreeStack<A>, TreeStackInstruction<A>, T, W> {
         match *i {
-            (Configuration {
+            Item(Configuration {
                  ref word,
                  ref storage,
                  weight,
@@ -206,7 +206,7 @@ where
                         Integerisable2::un_integerise(t, &self.t_integeriser, &self.a_integeriser)
                     })
                     .collect();
-                (
+                Item(
                     Configuration {
                         word: word.iter()
                             .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())

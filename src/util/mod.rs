@@ -1,10 +1,8 @@
-pub mod agenda;
 pub mod partition;
 pub mod push_down;
 pub mod integerisable;
 pub mod parsing;
 pub mod reverse;
-pub mod search;
 pub mod tree;
 pub mod factorizable;
 
@@ -46,6 +44,22 @@ where
     (result, t0.to(t1))
 }
 
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
+pub enum Capacity {
+    Limit(usize),
+    Infinite
+}
+
+impl ::std::str::FromStr for Capacity {
+    type Err = ::std::num::ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if vec!["inf", "infinite", "∞"].into_iter().any(|i| i == s) {
+            Ok(Capacity::Infinite)
+        } else {
+            s.parse().map(|n| Capacity::Limit(n))
+        }
+    }
+}
 
 /// Like `Take`, but uses a `Capacity` instead of a `usize`. 
 pub enum TakeCapacity<I: Iterator> {
@@ -66,8 +80,8 @@ impl<I: Iterator> Iterator for TakeCapacity<I> {
 }
 
 /// Construct a `CapacityIterator`.
-pub fn take_capacity<I: Iterator>(it: I, c: agenda::Capacity) -> TakeCapacity<I> {
-    use self::agenda::Capacity::*;
+pub fn take_capacity<I: Iterator>(it: I, c: Capacity) -> TakeCapacity<I> {
+    use self::Capacity::*;
     match c {
         Infinite => TakeCapacity::Inf(it),
         Limit(i) => TakeCapacity::Lim(it, i)

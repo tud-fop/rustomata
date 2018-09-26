@@ -7,7 +7,7 @@ pub mod from_str;
 pub mod coarse_to_fine;
 
 use std::vec::Vec;
-use util::agenda::Weighted;
+use search::agenda::weighted::Weighted;
 use util::push_down::Pushdown;
 
 pub use self::configuration::Configuration;
@@ -23,7 +23,8 @@ pub trait Instruction {
 
 
 /// items of the transition system
-pub type Item<S, I, T, W> = (Configuration<S, T, W>, Pushdown<Transition<I, T, W>>);
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Item<S, I, T, W>(pub Configuration<S, T, W>, pub Pushdown<Transition<I, T, W>>);
 pub type VecItem<S, I, T, W> = (Configuration<S, T, W>, Vec<Transition<I, T, W>>);
 
 impl<S, I: Instruction<Storage = S>, T, W: Clone> Weighted for Item<S, I, T, W> {

@@ -28,9 +28,9 @@ impl<S: Eq, T: Eq, W> Eq for Configuration<S, T, W> {}
 
 impl<S, T, W> PartialOrd for Configuration<S, T, W>
 where
-    S: PartialOrd + Eq,
-    T: PartialOrd + Eq,
-    W: PartialOrd + Eq,
+    S: PartialOrd + PartialEq,
+    T: PartialOrd + PartialEq,
+    W: PartialOrd + PartialEq,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {

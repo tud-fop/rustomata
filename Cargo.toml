@@ -5,7 +5,7 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 autobins = false
 
 [workspace]
-members = ["unique-heap", "limited-queue"]
+members = ["unique-heap", "search"]
 
 [lib]
 name = "rustomata"
@@ -29,6 +29,7 @@ bincode = "0.9"
 fnv = "1.0"
 flate2 = "1.0"
 unique-heap = { path = "unique-heap", features = ["fnvtype"] }
+search = { path = "search" }
 
 [profile.release]
 debug = true

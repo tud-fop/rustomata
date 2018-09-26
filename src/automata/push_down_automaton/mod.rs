@@ -254,7 +254,7 @@ where
         i: &Item<PushDown<usize>, PushDownInstruction<usize>, usize, W>,
     ) -> Item<PushDown<A>, PushDownInstruction<A>, T, W> {
         match *i {
-            (Configuration {
+            Item(Configuration {
                  ref word,
                  ref storage,
                  ref weight,
@@ -267,7 +267,7 @@ where
                         Integerisable2::un_integerise(t, &self.t_integeriser, &self.a_integeriser)
                     })
                     .collect();
-                (
+                Item(
                     Configuration {
                         word: word.iter()
                             .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())

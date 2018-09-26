@@ -13,7 +13,9 @@ use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}
 use super::{BracketContent, rule_fragments::fragments};
 use grammars::pmcfg::PMCFGRule;
 use dyck::Bracket;
-use util::{IntMap, agenda::{PriorityQueue, Capacity, Agenda}, search::WeightedSearchItem, vec_entry, factorizable::Factorizable, reverse::Reverse};
+use util::{IntMap, factorizable::Factorizable, reverse::Reverse, vec_entry };
+
+use search::{LimitedHeap};
 
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{ One, Zero };
@@ -200,7 +202,7 @@ where
         let heuristic = NaiveHeuristic::new(self);
 
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
-        let mut agenda = PriorityQueue::new(Capacity::Limit(beam));
+        let mut agenda = LimitedHeap::with_capacity(beam);
         
         // stores items via right (left) range component
         let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
@@ -209,12 +211,13 @@ where
         // enqueue initial items
         for &(range, label, weight) in &self.initials {
             if heuristic.wrap(range, weight) == W::zero() { continue; }
-            agenda.enqueue(
-                WeightedSearchItem((range, ChartEntry::Initial{ label, weight }, weight), heuristic.wrap(range, weight))
+            agenda.push(
+                (range, ChartEntry::Initial{ label, weight }, weight),
+                heuristic.wrap(range, weight)
             );
         }
 
-        while let Some(WeightedSearchItem((tr, ce, weight), _)) = agenda.dequeue() {
+        while let Some((tr, ce, weight)) = agenda.pop() {
             match map.entry(tr) {
                 // if the chart entry was already discovered, we don't need to
                 // inviestigate any successors
@@ -235,14 +238,12 @@ where
                     // `TwinArcs` and enqueue the successors
                     for ta in self.twin_arcs.get(&tr.state).into_iter().flat_map(|v| v) {
                         if heuristic.wrap(tr.apply_state_arc(ta), weight * ta.weight) == W::zero() { continue; }
-                        agenda.enqueue(
-                            WeightedSearchItem(
-                                ( tr.apply_state_arc(ta)
-                                , ChartEntry::Wrap{ label: ta.label, inner: TwinState{ left: tr.state.left, right: tr.state.right }, weight: ta.weight }
-                                , weight * ta.weight
-                                ),
-                                heuristic.wrap(tr.apply_state_arc(ta), weight * ta.weight)
-                            )
+                        agenda.push(
+                            ( tr.apply_state_arc(ta)
+                            , ChartEntry::Wrap{ label: ta.label, inner: TwinState{ left: tr.state.left, right: tr.state.right }, weight: ta.weight }
+                            , weight * ta.weight
+                            ),
+                            heuristic.wrap(tr.apply_state_arc(ta), weight * ta.weight)
                         );
                     }
 
@@ -250,14 +251,12 @@ where
                     for &(sleft, rleft, weight_) in to_left.get(&(tr.state.left, tr.range.left)).into_iter().flat_map(|v| v) {
                         let successor = tr.expand_left(sleft, rleft);
                         if heuristic.wrap(successor, weight * weight_) == W::zero() { continue; }
-                        agenda.enqueue(
-                            WeightedSearchItem(
-                                ( successor
-                                , ChartEntry::Concat{ mid_state: tr.state.left, mid_range: tr.range.left }
-                                , weight * weight_
-                                ),
-                                heuristic.wrap(successor, weight * weight_) 
-                            )
+                        agenda.push(
+                            ( successor
+                            , ChartEntry::Concat{ mid_state: tr.state.left, mid_range: tr.range.left }
+                            , weight * weight_
+                            ),
+                            heuristic.wrap(successor, weight * weight_) 
                         );
                     }
 
@@ -265,14 +264,12 @@ where
                     for &(sright, rright, weight_) in to_right.get(&(tr.state.right, tr.range.right)).into_iter().flat_map(|v| v) {
                         let successor = tr.expand_right(sright, rright);
                         if heuristic.wrap(successor, weight * weight_) == W::zero() { continue; }
-                        agenda.enqueue(
-                            WeightedSearchItem(
-                                ( successor
-                                , ChartEntry::Concat{ mid_state: tr.state.right, mid_range: tr.range.right }
-                                , weight * weight_
-                                ),
-                                heuristic.wrap(successor, weight * weight_) 
-                            )
+                        agenda.push(
+                            ( successor
+                            , ChartEntry::Concat{ mid_state: tr.state.right, mid_range: tr.range.right }
+                            , weight * weight_
+                            ),
+                            heuristic.wrap(successor, weight * weight_) 
                         );
                     }
                 }
