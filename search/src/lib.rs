@@ -122,7 +122,7 @@ mod tests {
             }
         });
     }
-    
+
     #[bench]
     fn minmaxheap_pop(b: &mut Bencher) {
         let mut rng: SmallRng = SeedableRng::from_seed(SEED);

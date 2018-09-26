@@ -34,6 +34,10 @@ pub mod weighted {
         pub fn pop(&mut self) -> Option<I> {
             self.0.pop().map(|wi| wi.0)
         }
+
+        pub fn peek(&self) -> Option<&I> {
+            self.0.peek().map(|wi| &wi.0)
+        }
     }
 
     impl<I: Weighted> FromIterator<I> for BinaryHeap<I>

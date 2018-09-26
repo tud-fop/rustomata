@@ -59,7 +59,7 @@ pub mod weighted {
     use std::ops::Mul;
     pub struct BeamHeap<I: Weighted>(super::BeamHeap<I, I::Weight>)
         where I::Weight: Ord;
-    
+
     /// An adapter for `super::BeamHeap` that uses priorities of items given by
     /// the implementation of `Weighted`.
     impl<I: Weighted> BeamHeap<I>
@@ -70,7 +70,7 @@ pub mod weighted {
             BeamHeap(super::BeamHeap::new(beta))
         }
 
-        pub fn push(&mut self, element: I) -> bool 
+        pub fn push(&mut self, element: I) -> bool
         where
             I::Weight: Clone + Mul<Output=I::Weight>
         {
@@ -86,8 +86,12 @@ pub mod weighted {
             self.0.clear()
         }
 
-        pub fn len(&mut self) -> usize {
+        pub fn len(&self) -> usize {
             self.0.len()
+        }
+
+        pub fn peek(&self) -> Option<&I> {
+            self.0.peek()
         }
     }
 

@@ -55,7 +55,7 @@ pub mod weighted {
     /// items' implementation of `Weighted`.
     pub struct LimitedHeap<I: Weighted>(super::LimitedHeap<I, I::Weight>)
         where I::Weight: Ord;
-    
+
     impl<I: Weighted> LimitedHeap<I>
     where
         I::Weight: Ord
@@ -77,8 +77,12 @@ pub mod weighted {
             self.0.clear()
         }
 
-        pub fn len(&mut self) -> usize {
+        pub fn len(&self) -> usize {
             self.0.len()
+        }
+
+        pub fn peek(&self) -> Option<&I> {
+            self.0.peek()
         }
     }
 
