@@ -192,7 +192,6 @@ where
 mod test {
     use grammars::pmcfg::{VarT, PMCFGRule, Composition};
     use super::{Capacity, CSRepresentation, Lcfrs};
-    use util::reverse::Reverse;
     use log_domain::LogDomain;
 
     #[test]
@@ -214,7 +213,7 @@ mod test {
         );
     }
 
-    fn lcfrs() -> Lcfrs<&'static str, char, Reverse<LogDomain<f64>>> {
+    fn lcfrs() -> Lcfrs<&'static str, char, LogDomain<f64>> {
         Lcfrs {
             init: "S",
             rules: vec![
@@ -224,13 +223,13 @@ mod test {
                     composition: Composition {
                         composition: vec![vec![VarT::Var(0, 0), VarT::Var(1, 0)]],
                     },
-                    weight: LogDomain::new(0.3f64).unwrap().into(),
+                    weight: LogDomain::new(0.3f64).unwrap(),
                 },
                 PMCFGRule {
                     head: "S",
                     tail: vec![],
                     composition: Composition { composition: vec![vec![VarT::T('A')]] },
-                    weight: LogDomain::new(0.7f64).unwrap().into(),
+                    weight: LogDomain::new(0.7f64).unwrap(),
                 },
             ],
         }

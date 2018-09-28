@@ -8,7 +8,7 @@ use std::{fs::File,
 use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
-use rustomata::util::{Capacity, reverse::Reverse};
+use rustomata::util::Capacity;
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -125,7 +125,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             stdin()
                 .read_to_string(&mut grammar_string)
                 .expect("Could not read from stdin. Be sure to provide the gramar file as input.");
-            let grammar: Lcfrs<String, String, Reverse<LogDomain<f64>>> = grammar_string
+            let grammar: Lcfrs<String, String, LogDomain<f64>> = grammar_string
                 .parse()
                 .expect("Could not decode the grammar provided via stdin.");
 
@@ -157,7 +157,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
 
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
 
-            let csrep: CSRepresentation<String, String, Reverse<LogDomain<f64>>> =
+            let csrep: CSRepresentation<String, String, LogDomain<f64>> =
                 bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite)
                     .unwrap();
 

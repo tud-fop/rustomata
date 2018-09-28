@@ -5,7 +5,6 @@ use super::chart_entry::IndexedChartEntry;
 use super::twin_state::{TwinRange};
 use super::Chart;
 use dyck::Bracket;
-use util::reverse::Reverse;
 
 use std::{ ops::Mul, hash::Hash };
 use fnv::FnvHashMap;
@@ -25,7 +24,7 @@ where
     // caches already queried hyperpaths
     d: FnvHashMap<TwinRange, Vec<(IndexedChartEntry<W>, W)>>,
     // stores candidates for next elements in d
-    c: FnvHashMap<TwinRange, FnvUniqueHeap<IndexedChartEntry<W>, Reverse<W>>>,
+    c: FnvHashMap<TwinRange, FnvUniqueHeap<IndexedChartEntry<W>, W>>,
     
     // current k for root
     k: usize
@@ -73,11 +72,11 @@ where
         if self.c.get(&state).is_none() {
             self.c.insert(
                 state, 
-                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (ce.into(), w.into())).collect()
+                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (ce.into(), w)).collect()
             );
             self.d.insert(
                 state,
-                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(ce, w)| (ce, w.unwrap())).into_iter().collect()
+                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(ce, w)| (ce, w)).into_iter().collect()
             );
         }
 
@@ -85,7 +84,7 @@ where
             if let Some((ce, _)) = self.d.get(&state).unwrap().last().map(|t| t.clone()) {
                 for ce_ in ce.successors() {
                     if let Some(weight) = self.weight(state, &ce_) {
-                        self.c.get_mut(&state).unwrap().push(ce_, weight.into());
+                        self.c.get_mut(&state).unwrap().push(ce_, weight);
                     }
                 }
             }
@@ -95,7 +94,7 @@ where
             }
             
             self.d.get_mut(&state).unwrap().push(
-                self.c.get_mut(&state).unwrap().pop().map(|(ce, w)| (ce, w.unwrap())).unwrap()
+                self.c.get_mut(&state).unwrap().pop().map(|(ce, w)| (ce, w)).unwrap()
             )
 
         }
@@ -163,16 +162,16 @@ mod tests {
     use num_traits::One;
     use log_domain::LogDomain;
 
-    pub fn example_automaton() -> CykAutomaton<BracketContent<&'static str>, Reverse<LogDomain<f64>>> {
+    pub fn example_automaton() -> CykAutomaton<BracketContent<&'static str>, LogDomain<f64>> {
         let mut integeriser = HashIntegeriser::new();
         for t in vec![BracketContent::Terminal("a"), BracketContent::Component(1, 0), BracketContent::Variable(0, 0, 0), BracketContent::Component(0, 0)] {
             integeriser.integerise(t);
         }
-        let initials = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one().into())];
+        let initials = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one())];
         let twin_arcs = vec![
-            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap().into() }]),
-            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one().into() }]),
-            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap().into() }]),
+            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap() }]),
+            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one() }]),
+            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap() }]),
         ].into_iter().collect();
         let finals = TwinRange{ state: TwinState{ left: 2, right: 3 }, range: TwinState{ left: 0, right: 1 }};
 
@@ -181,8 +180,8 @@ mod tests {
     
     #[test]
     fn kth() {
-        let w1 = LogDomain::new(0.25).unwrap().into();
-        let w2 = LogDomain::new(0.75).unwrap().into();
+        let w1 = LogDomain::new(0.25).unwrap();
+        let w2 = LogDomain::new(0.75).unwrap();
         
         use self::IndexedChartEntry::*;
         let chart = example_automaton().fill_chart();
@@ -222,9 +221,9 @@ mod tests {
     fn structure() {
         use self::IndexedChartEntry::*;
 
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
-        let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.25).unwrap().into();
-        let w2 = LogDomain::new(0.75).unwrap().into();
+        let one: LogDomain<f64> = LogDomain::one();
+        let w1: LogDomain<f64> = LogDomain::new(0.25).unwrap();
+        let w2 = LogDomain::new(0.75).unwrap();
 
         let mut it = example_automaton().fill_chart().into_iter();
 
@@ -255,8 +254,8 @@ mod tests {
             ].into_iter().collect()
         );
     
-        let w_: Reverse<LogDomain<f64>> = w1 * w2;
-        let w: Reverse<Reverse<LogDomain<f64>>> = w_.into();
+        let w_: LogDomain<f64> = w1 * w2;
+        let w: LogDomain<f64> = w_;
         assert_eq!(
             it.c.iter().map(|(k, h)| (k.clone(), h.clone().into_sorted_vec())).collect::<Vec<_>>(),
             vec![
@@ -393,11 +392,11 @@ mod tests {
         );
     }
 
-    fn example_automaton2 () -> CykAutomaton<BracketContent<String>, Reverse<LogDomain<f64>>> {
+    fn example_automaton2 () -> CykAutomaton<BracketContent<String>, LogDomain<f64>> {
         use grammars::lcfrs::Lcfrs;
         use integeriser::{HashIntegeriser, Integeriser};
 
-        let Lcfrs{ rules, init }: Lcfrs<String, String, Reverse<LogDomain<f64>>>
+        let Lcfrs{ rules, init }: Lcfrs<String, String, LogDomain<f64>>
                     = "initial: [S]\n\n
                        S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1\n
                        A → [[Var 0 0, Var 1 0], [Var 0 1, Var 2 0]] (A, W, X) # 0.4\n

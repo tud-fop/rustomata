@@ -5,7 +5,7 @@
 use super::CykAutomaton;
 use super::twin_state::{TwinRange, TwinState, StateArc};
 use search::agenda::weighted::WeightedItem;
-use util::{ factorizable::Factorizable, reverse::Reverse };
+use util::{ factorizable::Factorizable };
 use std::{ collections::{hash_map::Entry, BinaryHeap}, hash::Hash, ops::Mul };
 use num_traits::{One, Zero};
 use fnv::FnvHashMap;
@@ -89,31 +89,31 @@ where
         // forward pass:
         // start with initial state and search for optimal path to each other
         // state
-        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), Reverse<W>>> = vec![WeightedItem(q0, W::one().into())].into_iter().collect();
+        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), W>> = vec![WeightedItem(q0, W::one())].into_iter().collect();
         let mut backward = FnvHashMap::default();
         while let Some(WeightedItem(q, w)) = agenda.pop() {
             if let Vacant(ve) = backward.entry(q) {
-                ve.insert(w.unwrap());
+                ve.insert(w);
                 for &(to, weight) in transitions.get(&q.0).into_iter().flat_map(|v| v) {
-                    agenda.push(WeightedItem((to, q.1), w * weight.into()));
+                    agenda.push(WeightedItem((to, q.1), w * weight));
                 }
                 for &(tos, tor, weight) in transitions_with_range.get(&q).into_iter().flat_map(|v| v) {
-                    agenda.push(WeightedItem((tos, tor), w * weight.into()));
+                    agenda.push(WeightedItem((tos, tor), w * weight));
                 }
             }
         }
 
         // backward pass starts with final state
-        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), Reverse<W>>> = vec![WeightedItem(qf, W::one().into())].into_iter().collect();
+        let mut agenda: BinaryHeap<WeightedItem<(StateT, RangeT), W>> = vec![WeightedItem(qf, W::one())].into_iter().collect();
         let mut forward = FnvHashMap::default();
         while let Some(WeightedItem(q, w)) = agenda.pop() {
             if let Vacant(ve) = forward.entry(q) {
-                ve.insert(w.unwrap());
+                ve.insert(w);
                 for &(to, weight) in btransitions.get(&q.0).into_iter().flat_map(|v| v) {
-                    agenda.push(WeightedItem((to, q.1), w * weight.into()));
+                    agenda.push(WeightedItem((to, q.1), w * weight));
                 }
                 for &(tos, tor, weight) in btransitions_with_range.get(&q).into_iter().flat_map(|v| v) {
-                    agenda.push(WeightedItem((tos, tor), w * weight.into()));
+                    agenda.push(WeightedItem((tos, tor), w * weight));
                 }
             }
         }
@@ -140,16 +140,15 @@ mod tests {
     use log_domain::LogDomain;
     use num_traits::{ One, Zero };
     use std::rc::Rc;
-    use util::reverse::Reverse;
     use grammars::lcfrs::cs_representation::BracketContent;
 
-    pub fn example_automaton() -> CykAutomaton<(), Reverse<LogDomain<f64>>> {
+    pub fn example_automaton() -> CykAutomaton<(), LogDomain<f64>> {
         let integeriser = HashIntegeriser::new();
-        let initials = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one().into())];
+        let initials = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one())];
         let twin_arcs = vec![
-            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap().into() }]),
-            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one().into() }]),
-            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap().into() }]),
+            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap() }]),
+            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one() }]),
+            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap() }]),
         ].into_iter().collect();
         let finals = TwinRange{ state: TwinState{ left: 2, right: 3 }, range: TwinState{ left: 0, right: 1 }};
 
@@ -163,10 +162,10 @@ mod tests {
         let automaton = example_automaton();
         let heuristic = NaiveHeuristic::new(&automaton);
         
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
-        let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.25).unwrap().into();
+        let one: LogDomain<f64> = LogDomain::one();
+        let w1: LogDomain<f64> = LogDomain::new(0.25).unwrap();
         let w1 = w1.factorize(2)[0];
-        let w2: Reverse<LogDomain<f64>> = LogDomain::new(0.75).unwrap().into();
+        let w2: LogDomain<f64> = LogDomain::new(0.75).unwrap();
         let w2 = w2.factorize(2)[0];
 
         assert_eq!(
@@ -192,10 +191,10 @@ mod tests {
         let automaton = example_automaton();
         let heuristic = NaiveHeuristic::new(&automaton);
         
-        let zero: Reverse<LogDomain<f64>> = LogDomain::zero().into();
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
-        let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.25).unwrap().into();
-        let w2: Reverse<LogDomain<f64>> = LogDomain::new(0.75).unwrap().into();
+        let zero: LogDomain<f64> = LogDomain::zero();
+        let one: LogDomain<f64> = LogDomain::one();
+        let w1: LogDomain<f64> = LogDomain::new(0.25).unwrap();
+        let w2: LogDomain<f64> = LogDomain::new(0.75).unwrap();
 
         assert_eq!(
             vec![0, 2, 4].into_iter()
@@ -225,12 +224,12 @@ mod tests {
         );
     }
 
-    fn example_automaton2 () -> CykAutomaton<BracketContent<String>, Reverse<LogDomain<f64>>> {
+    fn example_automaton2 () -> CykAutomaton<BracketContent<String>, LogDomain<f64>> {
         use super::super::CykAutomatonPersistentStorage;
         use grammars::lcfrs::Lcfrs;
         use integeriser::{HashIntegeriser, Integeriser};
 
-        let Lcfrs{ rules, init }: Lcfrs<String, String, Reverse<LogDomain<f64>>>
+        let Lcfrs{ rules, init }: Lcfrs<String, String, LogDomain<f64>>
                     = "initial: [S]\n\n
                        S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1\n
                        A → [[Var 0 0, Var 1 0], [Var 0 1, Var 2 0]] (A, W, X) # 0.4\n
@@ -262,15 +261,15 @@ mod tests {
         let automaton = example_automaton2();
         let state_automaton = StateAutomaton::from_cyk_automaton(&automaton);
 
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
+        let one: LogDomain<f64> = LogDomain::one();
         
-        let w1: Reverse<LogDomain<f64>> = LogDomain::new(0.4).unwrap().into();
+        let w1: LogDomain<f64> = LogDomain::new(0.4).unwrap();
         let w1 = w1.factorize(4)[0];
-        let w2: Reverse<LogDomain<f64>> = LogDomain::new(0.6).unwrap().into();
+        let w2: LogDomain<f64> = LogDomain::new(0.6).unwrap();
         let w2 = w2.factorize(4)[0];
-        let w3: Reverse<LogDomain<f64>> = LogDomain::new(0.3).unwrap().into();
+        let w3: LogDomain<f64> = LogDomain::new(0.3).unwrap();
         let w3 = w3.factorize(4)[0];
-        let w4: Reverse<LogDomain<f64>> = LogDomain::new(0.7).unwrap().into();
+        let w4: LogDomain<f64> = LogDomain::new(0.7).unwrap();
         let w4 = w4.factorize(4)[0];
 
         assert_eq!(
@@ -316,11 +315,11 @@ mod tests {
         use util::factorizable::Factorizable;
         let automaton = example_automaton2();
         let heuristic = NaiveHeuristic::new(&automaton);
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
+        let one: LogDomain<f64> = LogDomain::one();
     
-        let w2: Reverse<LogDomain<f64>> = LogDomain::new(0.6).unwrap().into();
+        let w2: LogDomain<f64> = LogDomain::new(0.6).unwrap();
         let w2 = w2.factorize(4)[0];
-        let w4: Reverse<LogDomain<f64>> = LogDomain::new(0.7).unwrap().into();
+        let w4: LogDomain<f64> = LogDomain::new(0.7).unwrap();
         let w4 = w4.factorize(4)[0];
 
         assert_eq!(

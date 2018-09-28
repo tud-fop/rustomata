@@ -13,7 +13,7 @@ use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}
 use super::{BracketContent, rule_fragments::fragments};
 use grammars::pmcfg::PMCFGRule;
 use dyck::Bracket;
-use util::{IntMap, factorizable::Factorizable, reverse::Reverse, vec_entry };
+use util::{IntMap, factorizable::Factorizable, vec_entry };
 
 use search::{LimitedHeap};
 
@@ -133,11 +133,11 @@ where
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
 
         // initial items
-        let mut agenda: BinaryHeap<(Reverse<_>, _, _)> = self.initials.iter().map(|&(range, label, weight)| (weight.into(), range, ChartEntry::Initial{ label, weight })).collect();
+        let mut agenda = self.initials.iter().map(|&(range, label, weight)| (weight, range, ChartEntry::Initial{ label, weight })).collect::<BinaryHeap<_>>();
 
         // stores items via right (left) range component
-        let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, Reverse<W>)>> = FnvHashMap::default();
-        let mut to_left:  FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, Reverse<W>)>> = FnvHashMap::default();
+        let mut to_right: FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
+        let mut to_left:  FnvHashMap<(StateT, RangeT), Vec<(StateT, RangeT, W)>> = FnvHashMap::default();
 
         while let Some((weight, tr, ce)) = agenda.pop() {
             match map.entry(tr) {
@@ -146,11 +146,11 @@ where
                 Entry::Occupied(mut entry) => {
                     match ce {
                         ChartEntry::Concat{ .. } => (),
-                        _ => { entry.get_mut().push((ce, weight.unwrap())) }
+                        _ => { entry.get_mut().push((ce, weight)) }
                     }
                 }
                 Entry::Vacant(mut entry) => {
-                    entry.insert(vec![(ce, weight.unwrap())]);
+                    entry.insert(vec![(ce, weight)]);
                     // keep the left (right) fringes of the current ranges for
                     // later concatenations
                     to_left.entry((tr.state.right, tr.range.right)).or_insert_with(Vec::new).push((tr.state.left, tr.range.left, weight));
@@ -160,7 +160,7 @@ where
                     // `TwinArcs` and enqueue the successors
                     for ta in self.twin_arcs.get(&tr.state).into_iter().flat_map(|v| v) {
                         agenda.push(
-                            ( weight * ta.weight.into()
+                            ( weight * ta.weight
                             , tr.apply_state_arc(ta)
                             , ChartEntry::Wrap{ label: ta.label, inner: TwinState{ left: tr.state.left, right: tr.state.right }, weight: ta.weight }
                             ),
@@ -515,17 +515,16 @@ mod test {
 
     #[test]
     fn chart_construction () {
-        use util::reverse::Reverse;
         let rules = example_grammar();
         let mut r_integeriser = HashIntegeriser::new();
         for rule in &rules {
             r_integeriser.integerise(rule.clone());
         }
-        let initials: Vec<(TwinRange, usize, Reverse<LogDomain<f64>>)> = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one().into())];
+        let initials: Vec<(TwinRange, usize, LogDomain<f64>)> = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one())];
         let twin_arcs = vec![
-            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap().into() }]),
-            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one().into() }]),
-            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap().into() }]),
+            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap() }]),
+            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one() }]),
+            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap() }]),
         ].into_iter().collect();
         let finals = TwinRange{ state: TwinState{ left: 2, right: 3 }, range: TwinState{ left: 0, right: 1 }};
 

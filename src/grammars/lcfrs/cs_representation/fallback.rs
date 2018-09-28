@@ -243,12 +243,11 @@ where
 mod test {
     use super::*;
     use log_domain::LogDomain;
-    use util::reverse::Reverse;
 
     #[test]
     fn rule_merging () {
         use self::VarT::*;
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
+        let one: LogDomain<f64> = LogDomain::one();
 
         let rules: Vec<(PMCFGRule<char, &str, _>, IntSet)> = vec![
             (   PMCFGRule{
@@ -339,9 +338,9 @@ mod test {
         }
     }
 
-    fn rules () -> HashIntegeriser<PMCFGRule<char, &'static str, Reverse<LogDomain<f64>>>> {
+    fn rules () -> HashIntegeriser<PMCFGRule<char, &'static str, LogDomain<f64>>> {
         use self::VarT::*;
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
+        let one: LogDomain<f64> = LogDomain::one();
         
         let mut integeriser = HashIntegeriser::new();
         
@@ -400,11 +399,11 @@ mod test {
         integeriser
     }
 
-    fn fails_with_fallbacks () -> Vec<(Vec<Delta<&'static str>>, usize, GornTree<PMCFGRule<char, &'static str, Reverse<LogDomain<f64>>>>)> {
+    fn fails_with_fallbacks () -> Vec<(Vec<Delta<&'static str>>, usize, GornTree<PMCFGRule<char, &'static str, LogDomain<f64>>>)> {
         use self::Bracket::*;
         use self::BracketContent::*;
         use self::VarT::*;
-        let one: Reverse<LogDomain<f64>> = LogDomain::one().into();
+        let one: LogDomain<f64> = LogDomain::one();
         let rules = rules();
 
         vec![
