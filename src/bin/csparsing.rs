@@ -5,7 +5,7 @@ use log_domain::LogDomain;
 use std::{fs::File,
           io::{stdin, stdout, Read}};
 
-use rustomata::grammars::{lcfrs::{cs_representation::{CSRepresentation, DebugResult},
+use rustomata::grammars::{lcfrs::{csparsing::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
 use rustomata::util::Capacity;
