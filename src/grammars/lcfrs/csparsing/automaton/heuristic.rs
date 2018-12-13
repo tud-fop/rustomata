@@ -140,7 +140,7 @@ mod tests {
     use log_domain::LogDomain;
     use num_traits::{ One, Zero };
     use std::rc::Rc;
-    use grammars::lcfrs::cs_representation::BracketContent;
+    use grammars::lcfrs::csparsing::BracketContent;
 
     pub fn example_automaton() -> CykAutomaton<(), LogDomain<f64>> {
         let integeriser = HashIntegeriser::new();

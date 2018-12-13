@@ -1,10 +1,10 @@
 extern crate bincode;
-use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use flate2::{read, write, Compression};
 use log_domain::LogDomain;
 use std::{fs::File,
           io::{stdin, stdout, Read}};
-
+use rustomata::grammars::lcfrs::from_discodop::DiscoDopGrammar;
 use rustomata::grammars::{lcfrs::{csparsing::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
@@ -19,45 +19,38 @@ pub fn get_sub_command(name: &str) -> App {
                     "Reads a grammar from stdin and prints an object
                                        that Chomsky-Schützenberger-represents the grammar.",
                 )
-                .group(ArgGroup::with_name("strategy"))
                 .arg(
-                    Arg::with_name("naive")
-                        .help("Use a naive Generator automaton.")
-                        .long("naive")
-                        .group("strategy"),
+                    Arg::with_name("disco-grammar")
+                        .short("d")
+                        .long("disco")
+                        .takes_value(false)
+                        .help("use a grammar extracted by disco-dop")
+                        .requires("disco-lexer")
+                ).arg(
+                    Arg::with_name("disco-lexer")
+                        .short("l")
+                        .long("lexer")
+                        .takes_value(true)
+                        .help("provide the lexer file of a disco-dop grammar")
+                ).arg(
+                    Arg::with_name("gzipped")
+                        .short("z")
+                        .long("zipped")
+                        .takes_value(false)
+                        .help("if the provided grammar file is Gzipped (default for disco-dop grammars)")
+                        .conflicts_with("ungzipped")
+                ).arg(
+                    Arg::with_name("ungzipped")
+                        .long("unzipped")
+                        .takes_value(false)
+                        .help("if the provided grammar file is not Gzipped (default for raw grammars)")
+                        .conflicts_with("gzipped")
+                ).arg(
+                    Arg::with_name("grammar")
+                        .index(1)
+                        .required(false)
+                        .help("Grammar file. Reads from stdin if not provided.")
                 )
-                .arg(
-                    Arg::with_name("approx")
-                        .help("Use a regular approximation the push-down generator.")
-                        .long("approx")
-                        .group("strategy")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("pd")
-                        .help("Use a push-down automaton to generate candidates.")
-                        .long("pd")
-                        .group("strategy"),
-                )
-                .arg(
-                    Arg::with_name("cyk")
-                        .help("Evaluate an fsa cyk-style to generate candidates.")
-                        .long("cyk")
-                        .group("strategy"),
-                )
-                .group(ArgGroup::with_name("filter"))
-                .arg(
-                    Arg::with_name("naive-filter")
-                        .help("Use a naive filter automaton.")
-                        .long("naive-filter")
-                        .group("filter"),
-                )
-                .arg(
-                    Arg::with_name("inside-filter")
-                        .help("Use the inside filter automaton.")
-                        .long("inside-filter")
-                        .group("filter"),
-                ),
         )
         .subcommand(
             SubCommand::with_name("parse")
@@ -120,18 +113,63 @@ pub fn get_sub_command(name: &str) -> App {
 
 pub fn handle_sub_matches(submatches: &ArgMatches) {
     match submatches.subcommand() {
-        ("extract", Some(_)) => {
+        ("extract", Some(params)) => {
             let mut grammar_string = String::new();
-            stdin()
-                .read_to_string(&mut grammar_string)
-                .expect("Could not read from stdin. Be sure to provide the gramar file as input.");
-            let grammar: Lcfrs<String, String, LogDomain<f64>> = grammar_string
-                .parse()
-                .expect("Could not decode the grammar provided via stdin.");
+            if let Some(path) = params.value_of("grammar") { 
+                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
+                    read::GzDecoder::new(File::open(path).expect("Could not open grammar file."))
+                        .read_to_string(&mut grammar_string)
+                        .expect("Could not read the provided grammar file.");
+                    eprintln!("zipped {:?}", grammar_string);
+                } else {
+                    File::open(path).expect("Could not open grammar file.")
+                        .read_to_string(&mut grammar_string)
+                        .expect("Could not read the provided grammar file.");
+                    eprintln!("unzipped {:?}", grammar_string);
+                }
+            } else {
+                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
+                    read::GzDecoder::new(stdin())
+                        .read_to_string(&mut grammar_string)
+                        .expect("Could not read the provided grammar file.");
+                    eprintln!("zipped {:?}", grammar_string);
+                } else {
+                    stdin().read_to_string(&mut grammar_string)
+                           .expect("Could not read the provided grammar file.");
+                    eprintln!("unzipped {:?}", grammar_string);
+                }
+            }
+
+            let gmr: Lcfrs<String, String, LogDomain<f64>> = if params.is_present("disco-grammar") {
+                let mut lexer_string = String::new();
+                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
+                    read::GzDecoder::new(File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
+                                             .expect("Could not open lexer file."))
+                        .read_to_string(&mut lexer_string)
+                        .expect("Could not read the provided lexer file.");
+                    eprintln!("zipped {:?}", lexer_string);
+                } else {
+                    File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
+                        .expect("Could not open lexer file.")
+                        .read_to_string(&mut lexer_string)
+                        .expect("Could not read lexer. Be sure to provide the Gzipped lexer file as input.");
+                    eprintln!("unzipped {:?}", lexer_string);
+                }
+
+                DiscoDopGrammar::from_strs(&grammar_string, &lexer_string)
+                    .expect("could not properly read the given grammar")
+                    .into()
+            } else {
+                grammar_string
+                    .parse()
+                    .expect("Could not decode the grammar provided via stdin.")
+            };
+
+            eprintln!("{:?}", gmr);
 
             bincode::serialize_into(
                 &mut write::GzEncoder::new(stdout(), Compression::best()),
-                &CSRepresentation::new(grammar),
+                &CSRepresentation::new(gmr),
                 bincode::Infinite,
             ).unwrap()
         }

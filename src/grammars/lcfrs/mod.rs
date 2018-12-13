@@ -5,7 +5,9 @@ use std::collections::HashMap;
 
 mod conversion;
 mod from_str;
+pub mod from_discodop;
 pub mod csparsing;
+
 
 /// A linear context-free rewriting system.
 #[derive(Debug, Clone)]
