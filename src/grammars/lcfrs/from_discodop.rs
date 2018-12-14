@@ -41,9 +41,12 @@ fn from_binary(s: &str) -> Option<u64> {
 named!(parse_yield<&str,DiscoYield>,
     separated_nonempty_list_complete!(
         tag!(","),
-        map!(
+        map_opt!(
             take_while!(is_binary_digit),
-            |bs| (bs.len() as u8, from_binary(bs).expect("yield was not given in correct format"))
+            |bs: &str| -> Option<(u8, u64)> {
+                let payload = from_binary(bs)?;
+                Some((bs.len() as u8, payload))
+            }
         )
     )
 );
@@ -54,20 +57,26 @@ named!(parse_yield<&str,DiscoYield>,
 fn parse_pseudocount<W>(s: &str) -> IResult<&str, W>
 where
     W: Div<Output=W> + FromStr,
-    <W as FromStr>::Err: Debug
 {
-    map!(
+    map_res!(
         s,
         tuple!(digit, opt!(complete!(preceded!(tag!("/"), digit)))),
-        |(num,denom)| 
-        if let Some(denominator) = denom {
-            num.parse::<W>().unwrap() / denominator.parse::<W>().unwrap()
-        } else { 
-            num.parse::<W>().unwrap()
+        |(num,denom): (&str, Option<&str>)| -> Result<W, W::Err> {
+            if let Some(denominator) = denom {
+                let numerator: W = num.parse()?;
+                let denominator: W = denominator.parse()?;
+                Ok(numerator / denominator)
+            } else {
+                num.parse()
+            }
         }
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ParseLexerError {
+    Lhs, Rhs
+}
 /// Parse a lexer file.
 /// Word-POS-weight-pairs are given in a list of POS-weight pairs for a word in each line.
 fn parse_discodop_lexer<N, T, W>(s: &str) -> IResult<&str, DiscoLexer<N, T, W>>
@@ -75,39 +84,40 @@ where
     N: FromStr,
     T: FromStr,
     W: Div<Output=W> + FromStr,
-    <W as FromStr>::Err: Debug,
-    <N as FromStr>::Err: Debug,
-    <T as FromStr>::Err: Debug,
 {
-    map!(
+    map_res!(
         s,
         separated_list_complete!(
             tag!("\n"),
-            do_parse!(
-                word: terminated!(take_while!(is_token), space)            >>
-                posweights: separated_nonempty_list_complete!(
-                    space, 
-                    do_parse!(
-                        pos: terminated!(take_while!(is_token), space)     >>
-                        weight: take_while!(is_token)                                         >>
-                        (pos, parse_pseudocount(weight).unwrap().1)
+            tuple!(
+                terminated!(take_while!(is_token), space),
+                separated_nonempty_list_complete!(
+                    space,
+                    tuple!(
+                        terminated!(take_while!(is_token), space),
+                        parse_pseudocount
                     )
-                )                                                                             >>
-                (word, posweights)
+                )
             )
         ),
-        |v| {
+        |v: Vec<(&str, Vec<(&str, W)>)>| -> Result<DiscoLexer<N, T, W>, ParseLexerError> {
             let mut lexer = Vec::with_capacity(v.iter().map(|(_, pws)| pws.len()).sum());
             for (word, pws) in v {
                 for (pos, weight) in pws {
-                    lexer.push((word.parse::<T>().unwrap(), pos.parse::<N>().unwrap(), weight));
+                    let w = word.parse().map_err(|_| ParseLexerError::Rhs)?;
+                    let p = pos.parse().map_err(|_| ParseLexerError::Lhs)?;
+                    lexer.push((w, p, weight));
                 }
             }
-            DiscoLexer(lexer)
+            Ok(DiscoLexer(lexer))
         }
     )
 }
 
+#[derive(Debug,Clone,Copy)]
+pub enum ParseConsituentsError {
+    Lhs, Rhs, Weight, Yield
+}
 /// Parse a list of Constituent rules given in disco-dop's format.
 /// Each line contains a rule with tab-separaterd values for:
 /// * lhs nonterminal,
@@ -118,31 +128,29 @@ fn parse_discodop_constituents<N, W>(s: &str) -> IResult<&str, DiscoConstituents
 where
     N: FromStr,
     W: Div<Output=W> + FromStr,
-    <W as FromStr>::Err: Debug,
-    <N as FromStr>::Err: Debug,
 {
     map!(
         s,
         separated_list_complete!(
             tag!("\n"),
-            map!(
+            map_res!(
                 tuple!(
                     take_while1!(is_token),
                     count_fixed!(&str, preceded!(space, take_while1!(is_token)), 3),
                     opt!(complete!(preceded!(space, take_while1!(is_token))))
                 ), 
-                |(s_lhs, [s_rhs, s_rhs_or_y, s_y_or_w], s_ow)| {
-                    let lhs = s_lhs.parse::<N>().unwrap();
-                    let rhs = s_rhs.parse::<N>().unwrap();
+                |(s_lhs, [s_rhs, s_rhs_or_y, s_y_or_w], s_ow): (&str, [&str;3], Option<&str>)| -> Result<(DiscoDeriv<N>, DiscoYield, W), ParseConsituentsError> {
+                    let lhs = s_lhs.parse().map_err(|_| ParseConsituentsError::Lhs)?;
+                    let rhs = s_rhs.parse().map_err(|_| ParseConsituentsError::Rhs)?;
                     let (deriv, y, w) = if let Some(s_weight) = s_ow {
-                        let rhs2 = s_rhs_or_y.parse::<N>().unwrap();
+                        let rhs2 = s_rhs_or_y.parse().map_err(|_| ParseConsituentsError::Rhs)?;
                         (DiscoDeriv::Binary{lhs, rhs1: rhs, rhs2}, s_y_or_w, s_weight)
                     } else {
                         (DiscoDeriv::Chain{lhs, rhs}, s_rhs_or_y, s_y_or_w)
                     };
-                    let ys = parse_yield(y).unwrap().1;
-                    let weight = parse_pseudocount(w).unwrap().1;
-                    (deriv, ys, weight)
+                    let ys = parse_yield(y).to_result().map_err(|_| ParseConsituentsError::Yield)?;
+                    let weight = parse_pseudocount(w).to_result().map_err(|_| ParseConsituentsError::Weight)?;
+                    Ok((deriv, ys, weight))
                 }
             )
         ),
