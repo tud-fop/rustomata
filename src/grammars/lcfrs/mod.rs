@@ -6,6 +6,7 @@ use std::collections::HashMap;
 mod conversion;
 mod from_str;
 pub mod from_discodop;
+pub mod from_rparse;
 pub mod csparsing;
 
 
