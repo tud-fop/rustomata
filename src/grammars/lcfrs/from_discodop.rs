@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::fmt::Debug;
 use std::collections::{hash_map::Entry};
 use fnv::FnvHashMap;
+use num_traits::One;
 
 #[derive(Debug, PartialEq)]
 enum DiscoDeriv<N> {
@@ -20,7 +21,7 @@ pub struct DiscoLexer<N, T, W>(Vec<(T, N, W)>);
 #[derive(Debug)]
 pub struct DiscoDopGrammar<N, T, W> {
     pub constituents: DiscoConstituents<N, W>,
-    pub lexer: DiscoLexer<N, T, W>
+    pub lexer: Option<DiscoLexer<N, T, W>>
 }
 
 fn is_token(c: char) -> bool { !c.is_whitespace() }
@@ -32,6 +33,15 @@ fn from_binary(s: &str) -> Option<u64> {
      .enumerate()
      .map(|(i,c)| match c { '0' => Some(0), '1' => Some(2u64.pow(i as u32)), _ => None })
      .fold(Some(0), |os, ov| os.and_then(|s| ov.and_then(|v| Some(v + s))))
+}
+
+impl<N> DiscoDeriv<N> {
+    fn get_lhs(&self) -> &N {
+        match self {
+            &DiscoDeriv::Chain{ ref lhs, .. } => lhs,
+            &DiscoDeriv::Binary{ ref lhs, .. } => lhs
+        }
+    }
 }
 
 /// Parses a yield function given in binary format.
@@ -166,12 +176,22 @@ where
     <N as FromStr>::Err: Debug,
 {
     fn from(gmr: DiscoDopGrammar<N, T, W>) -> Self {
-        let mut rules = Vec::with_capacity(gmr.constituents.0.len() + gmr.lexer.0.len());
+        let mut rules = Vec::with_capacity(gmr.constituents.0.len() + gmr.lexer.as_ref().map_or(0, |l| l.0.len()));
+
+        let mut normalization_denominators: FnvHashMap<N, W> = HashMap::default();
+        for (lhs, weight) in gmr.constituents.0.iter().map(|&(ref d, _, w)| (d.get_lhs(), w))
+                                .chain(gmr.lexer.iter().flat_map(|l| &l.0).map(|&(_, ref lhs, w)| (lhs, w))) {
+            match normalization_denominators.entry(lhs.clone()) {
+                Entry::Occupied(mut oe) => { *oe.get_mut() += weight; },
+                Entry::Vacant(ve) => { ve.insert(weight); }
+            }
+        }
 
         for (nts, y, mut weight) in gmr.constituents.0 {
             let mut composition: Vec<Vec<VarT<T>>> = Vec::with_capacity(y.len());
             let mut sind1: usize = 0;
             let mut sind2: usize = 0;
+            weight /= *normalization_denominators.get(nts.get_lhs()).unwrap();
 
             // read yield function
             for (clen, c) in y {
@@ -194,29 +214,73 @@ where
             }
         }
 
-        for (word, pos, mut weight) in gmr.lexer.0 {
+        for (word, pos, mut weight) in gmr.lexer.into_iter().flat_map(|dl| dl.0) {
+            weight /= *normalization_denominators.get(&pos).unwrap();
             rules.push(PMCFGRule{ head: pos, tail: vec![], weight, composition: vec![vec![VarT::T(word)]].into() })
-        }
-
-        {
-            // normalize weights
-            let mut normalization_denominators: FnvHashMap<*const N, W> = HashMap::default();
-            for rule in &rules {
-                match normalization_denominators.entry(&rule.head) {
-                    Entry::Occupied(mut oe) => { *oe.get_mut() += rule.weight; },
-                    Entry::Vacant(ve) => { ve.insert(rule.weight); }
-                };
-            }
-            for rule in rules.iter_mut() {
-                rule.weight /= *normalization_denominators.get(&(&rule.head as *const N)).unwrap();
-            }
         }
 
         Lcfrs{ rules, init: "ROOT".parse::<N>().unwrap() }
     }
 }
 
-impl<N, T, W> DiscoDopGrammar<N, T, W>
+impl<N, W> DiscoDopGrammar<N, (), W> {
+    pub fn with_default_lexer(self) -> DiscoDopGrammar<N, N, W>
+    where
+        N: Clone + Hash + Eq,
+        W: One
+    {
+        let mut lex = Vec::new();
+        
+        {
+            let mut is_only_on_rhs: FnvHashMap<&N, bool> = HashMap::default();
+            for &(ref deriv, _, _) in &self.constituents.0 {
+                match deriv {
+                    &DiscoDeriv::Chain{ ref lhs, ref rhs } => {
+                        *is_only_on_rhs.entry(lhs).or_insert(false) = false;
+                        is_only_on_rhs.entry(rhs).or_insert(true);
+                    },
+                    &DiscoDeriv::Binary{ ref lhs, ref rhs1, ref rhs2 } => {
+                        *is_only_on_rhs.entry(lhs).or_insert(false) = false;
+                        is_only_on_rhs.entry(rhs1).or_insert(true);
+                        is_only_on_rhs.entry(rhs2).or_insert(true);
+                    }
+                }
+            }
+            
+            for p_pos in is_only_on_rhs.into_iter() {//.filter_map(|(v, b)| if b { Some(v) } else { None }) {
+                lex.push(((*p_pos.0).clone(), (*p_pos.0).clone(), W::one()));
+            }
+        }
+
+        DiscoDopGrammar {
+            constituents: self.constituents,
+            lexer: Some(DiscoLexer(lex))
+        }
+    }
+
+    pub fn with_lexer<T>(self, lexer: DiscoLexer<N, T, W>) -> DiscoDopGrammar<N, T, W> {
+        DiscoDopGrammar{ constituents: self.constituents, lexer: Some(lexer) }
+    }
+}
+
+impl<N, W> FromStr for DiscoDopGrammar<N, (), W>
+where
+    N: FromStr,
+    W: Div<Output=W> + FromStr,
+    <W as FromStr>::Err: Debug,
+    <N as FromStr>::Err: Debug,
+{
+    type Err = nom::Err<u32>;
+    fn from_str(constituent_str: &str) -> Result<Self, Self::Err>
+    {
+        Ok(DiscoDopGrammar{
+            constituents: parse_discodop_constituents(constituent_str).to_result()?,
+            lexer: None
+        })
+    }
+}
+
+impl<N, T, W> FromStr for DiscoLexer<N, T, W>
 where
     N: FromStr,
     T: FromStr,
@@ -225,12 +289,9 @@ where
     <N as FromStr>::Err: Debug,
     <T as FromStr>::Err: Debug,
 {
-    pub fn from_strs(constituent_str: &str, lexer_str: &str) -> Result<Self, nom::Err<u32>>
-    where
-    {
-        let constituents: DiscoConstituents<N, W> = parse_discodop_constituents(constituent_str).to_result()?;
-        let lexer: DiscoLexer<N, T, W> = parse_discodop_lexer(lexer_str).to_result()?;
-        Ok(DiscoDopGrammar{ constituents, lexer })
+    type Err = nom::Err<u32>;
+    fn from_str(lexer_str: &str) -> Result<Self, Self::Err> {
+        parse_discodop_lexer(lexer_str).to_result()
     }
 }
 
@@ -287,7 +348,6 @@ mod test {
 
         for (y, yv) in ys {
             let ryv = parse_yield(y);
-            eprintln!("{:?}", ryv);
             assert_eq!(ryv.unwrap().1, yv);
         }
     }
@@ -324,7 +384,7 @@ mod test {
         let drules = vec![(DiscoDeriv::Binary{ lhs: "S".to_string(), rhs1: "NP".to_string(), rhs2: "VP".to_string() }, vec![(2, 0b10)], 5f64),(DiscoDeriv::Chain{ lhs: "NP".to_string(), rhs: "NP".to_string() }, vec![(2, 0b00)], 5f64)];
 
         let grmr: Lcfrs<String, &str, f64> = DiscoDopGrammar{
-            lexer: DiscoLexer(dlex),
+            lexer: Some(DiscoLexer(dlex)),
             constituents: DiscoConstituents(drules)
         }.into();
         assert_eq!(grmr.init, "ROOT");

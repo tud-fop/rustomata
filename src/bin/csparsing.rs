@@ -24,14 +24,13 @@ pub fn get_sub_command(name: &str) -> App {
                         .short("d")
                         .long("disco")
                         .takes_value(false)
-                        .help("use a grammar extracted by disco-dop")
-                        .requires("disco-lexer")
+                        .help("Use a grammar extracted by disco-dop.")
                 ).arg(
                     Arg::with_name("disco-lexer")
                         .short("l")
                         .long("lexer")
                         .takes_value(true)
-                        .help("provide the lexer file of a disco-dop grammar")
+                        .help("Provide the lexer file of a disco-dop grammar.")
                 ).arg(
                     Arg::with_name("gzipped")
                         .short("z")
@@ -120,52 +119,46 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                     read::GzDecoder::new(File::open(path).expect("Could not open grammar file."))
                         .read_to_string(&mut grammar_string)
                         .expect("Could not read the provided grammar file.");
-                    eprintln!("zipped {:?}", grammar_string);
                 } else {
                     File::open(path).expect("Could not open grammar file.")
                         .read_to_string(&mut grammar_string)
                         .expect("Could not read the provided grammar file.");
-                    eprintln!("unzipped {:?}", grammar_string);
                 }
             } else {
                 if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
                     read::GzDecoder::new(stdin())
                         .read_to_string(&mut grammar_string)
                         .expect("Could not read the provided grammar file.");
-                    eprintln!("zipped {:?}", grammar_string);
                 } else {
                     stdin().read_to_string(&mut grammar_string)
                            .expect("Could not read the provided grammar file.");
-                    eprintln!("unzipped {:?}", grammar_string);
                 }
             }
 
             let gmr: Lcfrs<String, String, LogDomain<f64>> = if params.is_present("disco-grammar") {
-                let mut lexer_string = String::new();
-                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
-                    read::GzDecoder::new(File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
-                                             .expect("Could not open lexer file."))
-                        .read_to_string(&mut lexer_string)
-                        .expect("Could not read the provided lexer file.");
-                    eprintln!("zipped {:?}", lexer_string);
+                let dgmr: DiscoDopGrammar<_, _, _> = grammar_string.parse().expect("Could not parse grammar.");
+                if params.is_present("disco-lexer") {
+                    let mut lexer_string = String::new();
+                    if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
+                        read::GzDecoder::new(File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
+                                                .expect("Could not open lexer file."))
+                            .read_to_string(&mut lexer_string)
+                            .expect("Could not read the provided lexer file.");
+                    } else {
+                        File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
+                            .expect("Could not open lexer file.")
+                            .read_to_string(&mut lexer_string)
+                            .expect("Could not read lexer. Be sure to provide the Gzipped lexer file as input.");
+                    }
+                    dgmr.with_lexer(lexer_string.parse().expect("Could not parse lexer file.")).into()
                 } else {
-                    File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
-                        .expect("Could not open lexer file.")
-                        .read_to_string(&mut lexer_string)
-                        .expect("Could not read lexer. Be sure to provide the Gzipped lexer file as input.");
-                    eprintln!("unzipped {:?}", lexer_string);
+                    dgmr.with_default_lexer().into()
                 }
-
-                DiscoDopGrammar::from_strs(&grammar_string, &lexer_string)
-                    .expect("could not properly read the given grammar")
-                    .into()
             } else {
                 grammar_string
                     .parse()
                     .expect("Could not decode the grammar provided via stdin.")
             };
-
-            eprintln!("{:?}", gmr);
 
             bincode::serialize_into(
                 &mut write::GzEncoder::new(stdout(), Compression::best()),

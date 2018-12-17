@@ -7,6 +7,7 @@ mod chart_entry;
 mod rule_filter;
 mod k_best;
 mod heuristic;
+// mod cyk;
 
 pub use self::{ k_best::ChartIterator, rule_filter::{ CachedFilterPersistentStorage } };
 use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}, heuristic::NaiveHeuristic };
@@ -124,11 +125,17 @@ where
 type StateT = usize;
 type RangeT = usize;
 
+// pub struct CykChart = Vec<IntMap<
+
 impl<T, W> CykAutomaton<T, W>
 where
     T: Hash + Eq,
     W: Ord + Copy + Mul<Output=W> + One + Zero + ::std::fmt::Debug + Factorizable
 {
+    // pub fn fill_chart_cyk(&self) -> CykChart {
+        
+    // }
+
     pub fn fill_chart(&self) -> Chart<T, W> {
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
 
