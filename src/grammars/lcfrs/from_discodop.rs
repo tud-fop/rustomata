@@ -247,8 +247,8 @@ impl<N, W> DiscoDopGrammar<N, (), W> {
                 }
             }
             
-            for p_pos in is_only_on_rhs.into_iter() {//.filter_map(|(v, b)| if b { Some(v) } else { None }) {
-                lex.push(((*p_pos.0).clone(), (*p_pos.0).clone(), W::one()));
+            for p_pos in is_only_on_rhs.into_iter().filter_map(|(v, b)| if b { Some(v) } else { None }) {
+                lex.push(((*p_pos).clone(), (*p_pos).clone(), W::one()));
             }
         }
 
