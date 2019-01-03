@@ -7,7 +7,9 @@ mod chart_entry;
 mod rule_filter;
 mod k_best;
 mod heuristic;
-// mod cyk;
+mod chart;
+
+use std::mem::replace;
 
 pub use self::{ k_best::ChartIterator, rule_filter::{ CachedFilterPersistentStorage } };
 use self::{ chart_entry::ChartEntry, twin_state::{TwinState, TwinRange, TwinArc}, heuristic::NaiveHeuristic };
@@ -21,7 +23,9 @@ use search::{LimitedHeap};
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{ One, Zero };
 use std::{ collections::{ hash_map::Entry, BinaryHeap }, hash::Hash, ops::Mul, rc::Rc };
-use fnv::FnvHashMap;
+use fnv::{FnvHashMap, FnvHashSet};
+
+use self::chart::{ Chart, semicyk::{SemiCykChart, chart_index}, sparse::SparseChart };
 
 /// Represents a finite state automaton over a Dyck alphabet; optimized to extract
 /// Dyck words from this automaton.
@@ -103,6 +107,7 @@ where
 
 /// Represents an instantiation of a `CykAutomatonPersistentStorage` for a
 /// specific word of the grammar that was used to extract the automaton.
+#[derive(Clone, Debug)]
 pub struct CykAutomaton<T, W>
 where
     T: Eq + Hash
@@ -119,24 +124,93 @@ where
     finals: TwinRange,
 
     // Integerised terminals.
-    integeriser: Rc<HashIntegeriser<T>>,
+    pub integeriser: Rc<HashIntegeriser<T>>,
 }
 
 type StateT = usize;
 type RangeT = usize;
-
-// pub struct CykChart = Vec<IntMap<
+type TerminalT = usize;
 
 impl<T, W> CykAutomaton<T, W>
 where
     T: Hash + Eq,
     W: Ord + Copy + Mul<Output=W> + One + Zero + ::std::fmt::Debug + Factorizable
 {
-    // pub fn fill_chart_cyk(&self) -> CykChart {
-        
-    // }
+    pub fn fill_chart_cyk(&self, n: usize) -> SemiCykChart<W> {
+        use self::chart::semicyk::{EntryState, VitMap, BaLiMap, ChartCell};
+        fn update_viterbis<T: Ord>(m: &mut VitMap<T>, left: StateT, right: StateT, w: T) -> bool {
+            match m.entry(left).or_default().entry(right) {
+                Entry::Vacant(ve) => { ve.insert((w, EntryState::Unset)); true },
+                Entry::Occupied(mut oe) => {
+                    let old_max: &mut T = &mut oe.get_mut().0;
+                    if (old_max as &T) < &w { replace(old_max, w); }
+                    false
+                }
+            }
+        }
 
-    pub fn fill_chart(&self) -> Chart<T, W> {
+        let mut chart: Vec<ChartCell<W>> = Vec::with_capacity((n * (n+1)) / 2);
+        let mut initials: FnvHashMap<(RangeT, RangeT), Vec<(StateT, StateT, TerminalT, W)>> = FnvHashMap::with_capacity_and_hasher(n, Default::default());
+        for &(tr, sigma, w) in &self.initials {
+            initials.entry((tr.range.left, tr.range.right)).or_default().push((tr.state.left, tr.state.right, sigma, w));
+        }
+
+        for range in 1..=n {
+            for l in 0..=(n-range) {
+                let r = l + range;
+                assert_eq!(chart.len(), chart_index(l, r, n));
+                
+                let mut viterbis: VitMap<W> = FnvHashMap::default();
+                let mut backlinks: BaLiMap<W> = FnvHashMap::default();
+                let mut heap_size = 0;
+
+                for &(left, right, label, weight) in initials.get(&(l, r)).into_iter().flatten() {
+                    backlinks.entry((left, right)).or_default().push((ChartEntry::Initial{ label, weight }, weight));
+                    update_viterbis(&mut viterbis, left, right, weight);
+                    heap_size += self.twin_arcs.get(&TwinState{ left, right }).map_or(0, |v| v.len());
+                }
+
+                for mid in (l+1)..r {
+                    for (statel, statem, w1, les) in chart[chart_index(l, mid, n)].0.iter().flat_map(|(statel, rs)| rs.iter().map(move |(stater, &(w, ref es))| (*statel, *stater, w, es))) {
+                        for (stater, &(w2, ref res)) in chart[chart_index(mid, r, n)].0.get(&statem).into_iter().flatten() {
+                            if unsafe { EntryState::lock(les, res) } {
+                                update_viterbis(&mut viterbis, statel, *stater, w1 * w2);
+                                backlinks.entry((statel, *stater)).or_default().push((ChartEntry::Concat{mid_range: mid, mid_state: statem}, w1 * w2));
+                                heap_size += self.twin_arcs.get(&TwinState{ left: statel, right: *stater }).map_or(0, |v| v.len());
+                            }
+                        }
+                    }
+                }
+
+                let mut execution_stack: BinaryHeap<(W, TwinState, ChartEntry<W>)> = BinaryHeap::with_capacity(heap_size);
+                let mut skip = FnvHashSet::with_capacity_and_hasher(heap_size + backlinks.len(), Default::default());
+                for (l, rwe) in viterbis.iter() {
+                    for (r, &(w, _)) in rwe.iter() {
+                        skip.insert((*l, *r));
+                        execution_stack.extend(self.twin_arcs.get(&TwinState{ left: *l, right: *r}).into_iter().flatten().map(
+                            |ta| ( w * ta.weight
+                                 , TwinState{ left: ta.left, right: ta.right }
+                                 , ChartEntry::Wrap{ inner: TwinState{ left: *l, right: *r }, weight: ta.weight, label: ta.label}
+                                 )));
+                    }
+                }
+                while let Some((weight, outer_state, backtrace)) = execution_stack.pop() {
+                    backlinks.entry((outer_state.left, outer_state.right)).or_default().push((backtrace, weight));
+                    update_viterbis(&mut viterbis, outer_state.left, outer_state.right, weight);
+                    if skip.insert((outer_state.left, outer_state.right)) {
+                        for ta in self.twin_arcs.get(&outer_state).into_iter().flatten() {
+                            execution_stack.push((weight * ta.weight, TwinState{ left: ta.left, right: ta.right }, ChartEntry::Wrap{ inner: outer_state, label: ta.label, weight: ta.weight }));
+                        }
+                    }
+                }
+
+                chart.push((viterbis, backlinks));
+            }
+        }
+        SemiCykChart::new(chart, n, self.finals)
+    }
+
+    pub fn fill_chart(&self) -> SparseChart<W> {
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
 
         // initial items
@@ -198,14 +272,14 @@ where
             
         }
 
-        Chart( map, self.finals, Rc::clone(&self.integeriser) )
+        SparseChart::new(map, self.finals)
     }
     /// Constructs a `Chart` from a `CykAutomaton`.
     /// This construction involves a Knuth search that is implemented using
     /// a priority Queue as an agenda structure. This Queue may be limited to
     /// hold only a specific amount of elements, i.e. this search implements
     /// ``beam seach''.
-    pub fn fill_chart_beam(&self, beam: usize) -> Chart<T, W> {
+    pub fn fill_chart_beam(&self, beam: usize) -> SparseChart<W> {
         let heuristic = NaiveHeuristic::new(self);
 
         let mut map: FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>> = FnvHashMap::default();
@@ -284,30 +358,7 @@ where
             
         }
 
-        Chart( map, self.finals, Rc::clone(&self.integeriser) )
-    }
-}
-
-/// A `Chart` contains a compact representation of all Dyck words that we
-/// extracted from a `CykAutomaton`.
-#[derive(Clone, Debug)]
-pub struct Chart<T: Eq + Hash, W>(
-    // Contains the actual chart, a relation between `TwinRange`s and
-    // backtraces.
-    FnvHashMap<TwinRange, Vec<(ChartEntry<W>, W)>>,
-    // The root entry; it's the same as the initial/final state range of the
-    // `CykAutomaton`. 
-    TwinRange,
-
-    // Contains the terminal symbols.
-    Rc<HashIntegeriser<T>>
-);
-
-impl<T: Eq + Hash + Clone, W: Ord + Mul<Output=W> + Copy + One> IntoIterator for Chart<T, W> {
-    type Item = Vec<Bracket<T>>;
-    type IntoIter = ChartIterator<T, W>;
-    fn into_iter(self) -> Self::IntoIter {
-        ChartIterator::new(self)
+        SparseChart::new(map, self.finals)
     }
 }
 
@@ -518,26 +569,5 @@ mod test {
         );
 
         assert_eq!(twin_arcs.values().flat_map(|v| v).count(), 15)
-    }
-
-    #[test]
-    fn chart_construction () {
-        let rules = example_grammar();
-        let mut r_integeriser = HashIntegeriser::new();
-        for rule in &rules {
-            r_integeriser.integerise(rule.clone());
-        }
-        let initials: Vec<(TwinRange, usize, LogDomain<f64>)> = vec![(TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } }, 0, LogDomain::one())];
-        let twin_arcs = vec![
-            (TwinState{ left: 0, right: 1 }, vec![TwinArc{ left: 2, right: 3, label: 1, weight: LogDomain::new(0.75).unwrap() }]),
-            (TwinState{ left: 2, right: 3 }, vec![TwinArc{ left: 4, right: 5, label: 2, weight: LogDomain::one() }]),
-            (TwinState{ left: 4, right: 5 }, vec![TwinArc{ left: 2, right: 3, label: 3, weight: LogDomain::new(0.25).unwrap() }]),
-        ].into_iter().collect();
-        let finals = TwinRange{ state: TwinState{ left: 2, right: 3 }, range: TwinState{ left: 0, right: 1 }};
-
-        let automaton = CykAutomaton{ initials, twin_arcs, finals, integeriser: Rc::new(r_integeriser) };
-        let Chart(map, _, _) = automaton.fill_chart();
-        
-        assert!(map.get(&finals).is_some());
     }
 }

@@ -2,7 +2,7 @@ mod fallback;
 mod automaton;
 mod rule_fragments;
 
-use self::automaton::{CykAutomatonPersistentStorage, CachedFilterPersistentStorage};
+use self::automaton::{CykAutomatonPersistentStorage, CachedFilterPersistentStorage, ChartIterator};
 use super::Lcfrs;
 
 use dyck::Bracket;
@@ -12,7 +12,7 @@ use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable
 use integeriser::{HashIntegeriser, Integeriser};
 use std::{ collections::{BTreeMap}, fmt::{Debug, Display, Error, Formatter}, hash::Hash, ops::Mul };
 use num_traits::{Zero, One};
-
+use std::rc::Rc;
 
 /// The indices of a bracket in a CS representation for MCFG.
 /// Assumes integerized rules.
@@ -89,14 +89,15 @@ where
         W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable
     {
         let automaton = self.generator.intersect(self.filter.instantiate(word), word);
-        let mut chart = match beam {
+        let chart = match beam {
             Capacity::Limit(beam) => automaton.fill_chart_beam(beam),
             Capacity::Infinite => automaton.fill_chart(),
-        }.into_iter().peekable();
+        };
+        let mut it = ChartIterator::new(chart, Rc::clone(&automaton.integeriser)).peekable();
 
-        let first = chart.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
+        let first = it.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
         
-        ( take_capacity(chart, candidates).filter_map(move |bs| self.toderiv(&bs))
+        ( take_capacity(it, candidates).filter_map(move |bs| self.toderiv(&bs))
         , first
         )
     }
@@ -112,11 +113,12 @@ where
         let (g_, intersection_time) =  with_time(|| self.generator.intersect(f.into_iter(), word));
 
         let (debug_result, ptime) = with_time(|| {
-            let chart = match beam {
-                    Capacity::Limit(beam) => g_.fill_chart_beam(beam),
-                    Capacity::Infinite => g_.fill_chart(),
-            };
-            let mut words = take_capacity(chart.into_iter(), candidates).peekable();
+            // let chart = match beam {
+            //         Capacity::Limit(beam) => g_.fill_chart_beam(beam),
+            //         Capacity::Infinite => g_.fill_chart(),
+            // };
+            let chart = g_.fill_chart_cyk(word.len());
+            let mut words = take_capacity(ChartIterator::new(chart, Rc::clone(&g_.integeriser)), candidates).peekable();
             let fallback_word = words.peek().cloned();
             let mut enumerated_words = 0;
             match words.filter_map(|candidate| { enumerated_words += 1; self.toderiv(&candidate) }).next() {
@@ -128,25 +130,6 @@ where
                             DebugResult::Noparse
                         }
             }
-
-            // if candidates == Capacity::Limit(0) {
-            //     match beam {
-            //         Capacity::Limit(beam) => g_.fill_chart_beam(beam),
-            //         Capacity::Infinite => g_.fill_chart(),
-            //     }.into_iter().next().map(|c| (fallback::FailedParseTree::new(&c).merge(&self.rules), 0))
-            // }
-            // else {
-            //     let mut it = take_capacity(
-            //         match beam {
-            //             Capacity::Limit(beam) => g_.fill_chart_beam(beam),
-            //             Capacity::Infinite => g_.fill_chart(),
-            //         }.into_iter().enumerate(), candidates).peekable();
-            //     let fb = it.peek().map(|(_, w)| fallback::FailedParseTree::new(w).merge(&self.rules));
-            //     match it.filter_map(|(i, candidate)| self.toderiv(&candidate).map(| t | (t, i + 1))).next() {
-            //         Some((t, i)) => Some((t.into_iter().map(|(k, v)| (k, v.clone())).collect(), i)), // valid candidate
-            //         None => fb.map(|t| (t, 0)),    // failed
-            //     }
-            // }
         });
         
         ( self.rules.size()

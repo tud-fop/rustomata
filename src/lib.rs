@@ -9,6 +9,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate fnv;
+extern crate unique_heap;
 
 extern crate search;
 

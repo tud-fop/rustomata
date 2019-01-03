@@ -5,21 +5,23 @@ use super::chart_entry::IndexedChartEntry;
 use super::twin_state::{TwinRange};
 use super::Chart;
 use dyck::Bracket;
+use std::rc::Rc;
 
 use std::{ ops::Mul, hash::Hash };
 use fnv::FnvHashMap;
-use integeriser::Integeriser;
+use integeriser::{HashIntegeriser, Integeriser};
 
-extern crate unique_heap;
-use self::unique_heap::FnvUniqueHeap;
+use unique_heap::FnvUniqueHeap;
 
 /// Stores the information for the lazy enumeration of hyperpaths.
-pub struct ChartIterator<T, W>
+pub struct ChartIterator<C, T, W>
 where
     T: Hash + Eq,
-    W: Ord
+    W: Ord,
+    C: Chart<Weight=W>
 {
-    chart: Chart<T, W>,
+    chart: C,
+    integeriser: Rc<HashIntegeriser<T>>,
     
     // caches already queried hyperpaths
     d: FnvHashMap<TwinRange, Vec<(IndexedChartEntry<W>, W)>>,
@@ -30,14 +32,16 @@ where
     k: usize
 }
 
-impl<T, W> ChartIterator<T, W>
+impl<C, T, W> ChartIterator<C, T, W>
 where
-    T: Eq + Hash,
-    W: Mul<Output=W> + Ord + Copy
+    T: Hash + Eq,
+    W: Mul<Output=W> + Ord + Copy,
+    C: Chart<Weight=W>
 {
-    pub fn new(chart: Chart<T, W>) -> Self {
+    pub fn new(chart: C, integeriser: Rc<HashIntegeriser<T>>) -> Self {
         ChartIterator {
             chart,
+            integeriser,
             d: FnvHashMap::default(),
             c: FnvHashMap::default(),
             k: 0
@@ -70,14 +74,9 @@ where
         }
 
         if self.c.get(&state).is_none() {
-            self.c.insert(
-                state, 
-                self.chart.0.get(&state).into_iter().flat_map(|v| v).map(|&(ce, w)| (ce.into(), w)).collect()
-            );
-            self.d.insert(
-                state,
-                self.c.get_mut(&state).and_then(|h| h.pop()).map(|(ce, w)| (ce, w)).into_iter().collect()
-            );
+            let (fst, w, h) = self.chart.get_entries(state)?;
+            self.c.insert(state, h);
+            self.d.insert(state, vec![(fst, w)]);
         }
 
         while self.d.get(&state).unwrap().len() < (k + 1) {
@@ -122,7 +121,7 @@ where
             Wrap{ label, index, inner, .. } => {
                 let (ce_, _) = self.kth(origin.apply_state(inner), index).unwrap();
                 let mut w = self.read(origin.apply_state(inner), &ce_);
-                let t = self.chart.2.find_value(label).unwrap();
+                let t = self.integeriser.find_value(label).unwrap();
                 // let t = self.fsa.bracket_i.find_value(ti).unwrap();
                 
                 w.insert(0, Bracket::Open(t.clone()));
@@ -131,23 +130,24 @@ where
             }
             Initial{ label, .. } => {
                 // self.fsa.terminal_i.find_value(wi).unwrap().clone()
-                let t = self.chart.2.find_value(label).unwrap();
+                let t = self.integeriser.find_value(label).unwrap();
                 vec![Bracket::Open(t.clone()), Bracket::Close(t.clone())]
             }
         }
     }
 }
 
-impl<T, W> Iterator for ChartIterator<T, W>
+impl<C, T, W> Iterator for ChartIterator<C, T, W>
 where
     T: Eq + Hash + Clone,
-    W: Ord + Mul<Output=W> + Copy
+    W: Ord + Mul<Output=W> + Copy,
+    C: Chart<Weight=W>
 {
     type Item = Vec<Bracket<T>>;
     fn next(&mut self) -> Option<Self::Item> {
         let k = self.k;
         self.k += 1;
-        let root = self.chart.1;
+        let root = self.chart.get_root();
 
         self.kth(root, k).map(
             |(ce, _)| self.read(root, &ce)
@@ -184,15 +184,16 @@ mod tests {
         let w2 = LogDomain::new(0.75).unwrap();
         
         use self::IndexedChartEntry::*;
-        let chart = example_automaton().fill_chart();
+        let chart = example_automaton().fill_chart_cyk(1);
+        let integeriser = example_automaton().integeriser;
 
-        let t1 = chart.2.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
-        let t2 = chart.2.find_key(&BracketContent::Component(0, 0)).unwrap();
-        let t3 = chart.2.find_key(&BracketContent::Component(1, 0)).unwrap();
+        let t1 = integeriser.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
+        let t2 = integeriser.find_key(&BracketContent::Component(0, 0)).unwrap();
+        let t3 = integeriser.find_key(&BracketContent::Component(1, 0)).unwrap();
         
-        let mut it = chart.into_iter();
+        let mut it = ChartIterator::new(chart, integeriser);
 
-        let state1 = it.chart.1;
+        let state1 = it.chart.get_root();
         let state2 = TwinRange{ state: TwinState{ left: 4, right: 5 }, range: TwinState{ left: 0, right: 1 } };
 
         assert_eq!(
@@ -225,12 +226,12 @@ mod tests {
         let w1: LogDomain<f64> = LogDomain::new(0.25).unwrap();
         let w2 = LogDomain::new(0.75).unwrap();
 
-        let mut it = example_automaton().fill_chart().into_iter();
+        let mut it = ChartIterator::new(example_automaton().fill_chart_cyk(1), example_automaton().integeriser);
 
-        let t1 = it.chart.2.find_key(&BracketContent::Component(0, 0)).unwrap();
-        let t2 = it.chart.2.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
-        let t3 = it.chart.2.find_key(&BracketContent::Component(1, 0)).unwrap();
-        let ta = it.chart.2.find_key(&BracketContent::Terminal("a")).unwrap();
+        let t1 = example_automaton().integeriser.find_key(&BracketContent::Component(0, 0)).unwrap();
+        let t2 = example_automaton().integeriser.find_key(&BracketContent::Variable(0, 0, 0)).unwrap();
+        let t3 = example_automaton().integeriser.find_key(&BracketContent::Component(1, 0)).unwrap();
+        let ta = example_automaton().integeriser.find_key(&BracketContent::Terminal("a")).unwrap();
 
         assert!(it.d.is_empty());
         assert!(it.c.is_empty());
@@ -238,7 +239,7 @@ mod tests {
 
         assert!(it.next().is_some());
 
-        let state1 = it.chart.1;
+        let state1 = it.chart.get_root();
         let state2 = TwinRange{ state: TwinState{ left: 4, right: 5 }, range: TwinState{ left: 0, right: 1 } };
         let state3 = TwinRange{ state: TwinState{ left: 0, right: 1 }, range: TwinState{ left: 0, right: 1 } };
 
@@ -296,15 +297,15 @@ mod tests {
 
     #[test]
     fn elements() {
-        let chart = example_automaton().fill_chart();
+        let chart = example_automaton().fill_chart_cyk(1);
 
         assert_eq!(
-            chart.clone().into_iter().take(10).count(),
+            ChartIterator::new(chart.clone(), example_automaton().integeriser).take(10).count(),
             10
         );
 
         assert_eq!(
-            chart.into_iter().take(4).collect::<Vec<_>>(),
+            ChartIterator::new(chart, example_automaton().integeriser).take(4).collect::<Vec<_>>(),
             vec![
                 vec![
                     Bracket::Open(BracketContent::Component(1, 0)),
@@ -360,12 +361,10 @@ mod tests {
 
     #[test]
     fn kth2 () {
-        let chart = example_automaton2().fill_chart();
-        let state = chart.1;
+        let chart = example_automaton2().fill_chart_cyk(5);
+        let state = chart.get_root();
 
-        assert_eq!(chart.0.get(&state).expect("missing root entry").len(), 1);
-        
-        let mut it = chart.into_iter();
+        let mut it = ChartIterator::new(chart, example_automaton2().integeriser);
 
         for i in 1..10 {
             assert!(it.kth(state, i).is_none(), "failed at {}", i);
@@ -374,14 +373,16 @@ mod tests {
 
     #[test]
     fn elements2 () {
-        let chart = example_automaton2().fill_chart();
+        let chart = example_automaton2().fill_chart_cyk(5);
+        eprintln!("{}", chart.to_pretty_string(&example_automaton2().integeriser));
+        eprintln!("{}", example_automaton2().fill_chart().to_pretty_string(&example_automaton2().integeriser));
 
         assert_eq!(
-            chart.clone().into_iter().take(10).count(),
+            ChartIterator::new(chart.clone(), example_automaton2().integeriser).take(10).count(),
             1
         );
 
-        let it = chart.into_iter();
+        let it = ChartIterator::new(chart, example_automaton2().integeriser).take(10);
         
         let some_words = it.collect::<Vec<_>>();
         let first_three = example_words2();
@@ -390,6 +391,28 @@ mod tests {
             some_words,
             first_three
         );
+    }
+
+    #[test]
+    fn elements3 () {
+        use std::fs::File;
+        use grammars::lcfrs::csparsing::CSRepresentation;
+        extern crate flate2;
+        extern crate bincode;
+        use std::borrow::Borrow;
+
+        let gr: CSRepresentation<String, String, LogDomain<f64>>
+            = { let mut gs = String::new(); bincode::deserialize_from(&mut flate2::read::GzDecoder::new(File::open("gmr.cs").unwrap()),  bincode::Infinite).unwrap() };
+        let word: Vec<String> = vec!["Milch", "macht", "müde", "Männer" , "munter", "."].into_iter().map(|s| s.to_owned()).collect();
+        let automaton = gr.generator.intersect(gr.filter.instantiate(&word).into_iter(), &word);
+
+        eprintln!("{}", automaton.clone().fill_chart_cyk(word.len()).to_pretty_string(automaton.clone().integeriser.borrow()));
+        eprintln!("{}", automaton.clone().fill_chart().to_pretty_string(automaton.clone().integeriser.borrow()));
+
+        assert_eq!(
+            ChartIterator::new(automaton.clone().fill_chart_cyk(word.len()), automaton.clone().integeriser).take(1).collect::<Vec<_>>(),
+            ChartIterator::new(automaton.clone().fill_chart(), automaton.integeriser).take(1).collect::<Vec<_>>()
+        )
     }
 
     fn example_automaton2 () -> CykAutomaton<BracketContent<String>, LogDomain<f64>> {

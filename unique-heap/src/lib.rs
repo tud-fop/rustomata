@@ -99,8 +99,13 @@ where
     where
         T: IntoIterator<Item = (I, W)>
     {
-        let mut heap = BinaryHeap::new();
-        let mut current_items = HashSet::default();
+        let iter = iter.into_iter();
+        let n = match iter.size_hint() {
+            (_, Some(upper)) => upper,
+            (lower, None) => lower
+        };
+        let mut heap = BinaryHeap::with_capacity(n);
+        let mut current_items = HashSet::with_capacity_and_hasher(n, Default::default());
         
         for (item, weight) in iter {
             if current_items.insert(item.clone()) {
@@ -109,6 +114,18 @@ where
         }
 
         UniqueHeap { heap, current_items }
+    }
+}
+
+impl<I, W, B> From<Vec<(W, I)>> for UniqueHeap<I, W, B>
+where
+    I: Ord + Hash + Clone,
+    W: Ord,
+    B: BuildHasher + Default
+{
+    fn from(vec: Vec<(W, I)>) -> Self {
+        let current_items = vec.iter().map(|(_, i)| i).cloned().collect();
+        UniqueHeap { heap: vec.into(), current_items }
     }
 }
 
