@@ -110,46 +110,46 @@ pub fn get_sub_command(name: &str) -> App {
         )
 }
 
+enum FileReader<R: Read> {
+    Plain(R),
+    GZipped(R)
+}
+
+impl<R: Read> FileReader<R> {
+    fn new(file: R, zipped: bool) -> Self {
+        if zipped { FileReader::GZipped(file) }
+        else { FileReader::Plain(file) }
+    }
+
+    fn read(self) -> Result<String, ::std::io::Error> {
+        let mut s = String::new();
+        match self {
+            FileReader::Plain(mut f) => {
+                f.read_to_string(&mut s)?;
+            },
+            FileReader::GZipped(f) => {
+                read::GzDecoder::new(f).read_to_string(&mut s)?;
+            }
+        }
+        Ok(s)
+    }
+}
+
 pub fn handle_sub_matches(submatches: &ArgMatches) {
     match submatches.subcommand() {
         ("extract", Some(params)) => {
-            let mut grammar_string = String::new();
-            if let Some(path) = params.value_of("grammar") { 
-                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
-                    read::GzDecoder::new(File::open(path).expect("Could not open grammar file."))
-                        .read_to_string(&mut grammar_string)
-                        .expect("Could not read the provided grammar file.");
-                } else {
-                    File::open(path).expect("Could not open grammar file.")
-                        .read_to_string(&mut grammar_string)
-                        .expect("Could not read the provided grammar file.");
-                }
+            let grammar_is_gzipped = (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped");
+            let grammar_string = if let Some(path) = params.value_of("grammar") {
+                FileReader::new(File::open(path).expect("could not open grammar file"), grammar_is_gzipped).read().expect("could not read grammar file")
             } else {
-                if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
-                    read::GzDecoder::new(stdin())
-                        .read_to_string(&mut grammar_string)
-                        .expect("Could not read the provided grammar file.");
-                } else {
-                    stdin().read_to_string(&mut grammar_string)
-                           .expect("Could not read the provided grammar file.");
-                }
-            }
+                FileReader::new(stdin(), grammar_is_gzipped).read().expect("could not read grammar file")
+            };
 
             let gmr: Lcfrs<String, String, LogDomain<f64>> = if params.is_present("disco-grammar") {
                 let dgmr: DiscoDopGrammar<_, _, _> = grammar_string.parse().expect("Could not parse grammar.");
                 if params.is_present("disco-lexer") {
-                    let mut lexer_string = String::new();
-                    if (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped") {
-                        read::GzDecoder::new(File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
-                                                .expect("Could not open lexer file."))
-                            .read_to_string(&mut lexer_string)
-                            .expect("Could not read the provided lexer file.");
-                    } else {
-                        File::open(params.value_of("disco-lexer").expect("Missing lexer file"))
-                            .expect("Could not open lexer file.")
-                            .read_to_string(&mut lexer_string)
-                            .expect("Could not read lexer. Be sure to provide the Gzipped lexer file as input.");
-                    }
+                    let lexer = File::open(params.value_of("disco-lexer").expect("Missing lexer file as argument")).expect("could not open lexer file");
+                    let mut lexer_string = FileReader::new(lexer, grammar_is_gzipped).read().expect("could not read lexer file");
                     dgmr.with_lexer(lexer_string.parse().expect("Could not parse lexer file.")).into()
                 } else {
                     dgmr.with_default_lexer().into()
