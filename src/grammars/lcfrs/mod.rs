@@ -64,6 +64,20 @@ impl<N, T, W> Lcfrs<N, T, W> {
     }
 }
 
+impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for Lcfrs<N, T, W> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut buffer = "".to_string();
+
+        buffer.push_str(format!("initial: [{}]\n\n", self.init).as_str());
+
+        for r in &self.rules {
+            buffer.push_str(format!("{}\n", r).as_str());
+        }
+
+        write!(f, "{}", buffer)
+    }
+}
+
 /// Reads the fanout off `PMCFGRules`.
 /// Will return `None` if rule fanouts are inconsistent for same nonterminals.
 fn read_fanouts<'a, R, N, T, W>(rules: R) -> Option<HashMap<&'a N, usize>>
