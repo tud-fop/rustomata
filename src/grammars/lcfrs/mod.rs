@@ -31,6 +31,11 @@ where
         {
             // scope for lieftime of `fanouts` that borrows from rules
             let fanouts = read_fanouts(&rules)?;
+            let check_fanouts = |rule: &PMCFGRule<N, T, W>| -> bool {
+                let fanouts: Vec<usize>
+                    = rule.tail.iter().map(|nt| fanouts[nt]).collect();
+                check_composition(&rule.composition.composition, &fanouts)
+            };
 
             // check initial fanout
             if fanouts.get(&&init) != Some(&1) {
@@ -38,18 +43,7 @@ where
             }
 
             // check variables
-            if !rules.iter().all(|rule| {
-                let fanouts: Option<Vec<usize>> = rule.tail
-                    .iter()
-                    .map(|nt| fanouts.get(nt).map(|u| *u))
-                    .collect();
-                if let Some(fanouts) = fanouts {
-                    check_composition(&rule.composition.composition, &fanouts)
-                } else {
-                    false
-                }
-            })
-            {
+            if !rules.iter().all(check_fanouts) {
                 return None;
             }
         }
@@ -90,10 +84,9 @@ where
 {
     let mut fanouts: HashMap<&N, usize> = HashMap::new();
     for rule in rules {
-        if fanouts.entry(&rule.head).or_insert_with(|| {
-            rule.composition.composition.len()
-        }) != &rule.composition.composition.len()
-        {
+        let lhs_fanout = fanouts.entry(&rule.head)
+                                .or_insert_with(|| rule.composition.composition.len());
+        if lhs_fanout != &rule.composition.composition.len() {
             return None;
         }
     }
@@ -102,8 +95,8 @@ where
 
 /// Checks a composition for linearity.
 /// Will return true if each variable occurs exactly once according to the given fanouts.
-fn check_composition<T>(composition: &Vec<Vec<VarT<T>>>, fanouts: &[usize]) -> bool {
-    use util::vec_entry;
+fn check_composition<T>(composition: &[Vec<VarT<T>>], fanouts: &[usize]) -> bool {
+    use vecmultimap::VecMultiMapAdapter;
 
     let mut variable_occurances: Vec<Vec<usize>> = Vec::new();
     for (i, j) in composition
@@ -114,7 +107,7 @@ fn check_composition<T>(composition: &Vec<Vec<VarT<T>>>, fanouts: &[usize]) -> b
             _ => None,
         })
     {
-        vec_entry(&mut variable_occurances, i).push(j);
+        VecMultiMapAdapter(&mut variable_occurances)[i].push(j);
     }
 
     variable_occurances.len() == fanouts.len() &&

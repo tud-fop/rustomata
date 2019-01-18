@@ -33,7 +33,7 @@ where
             for rule in rulemap.get(a).unwrap_or(&Vec::new()) {
                 let localfanouts_: Option<Vec<usize>> = rule.tail
                     .iter()
-                    .map(|nt| fanouts.get(&nt).map(|f| *f))
+                    .map(|nt| fanouts.get(&nt).cloned())
                     .collect();
                 let rem_comp: Vec<_> = rule.composition
                     .composition

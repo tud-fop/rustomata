@@ -1,20 +1,21 @@
 use super::*;
 use grammars::pmcfg::{PMCFGRule, VarT, Composition};
-use util::{tree::GornTree, IntMap, IntSet, vec_entry };
-use integeriser::{Integeriser};
+use util::{tree::GornTree, IntMap };
 use std::collections::{BTreeSet, BTreeMap};
 use dyck::Bracket;
+use fnv::{FnvHashMap, FnvHashSet};
+use vecmultimap::VecMultiMapAdapter;
 
 /// The node in a `FailedParseTree`.
 #[derive(PartialEq, Debug)]
 pub struct FailedParseTreeNode {
     // the applied grammar rule
-    rule: usize,
+    rule: u32,
     // the components this grammar rule was used in
-    components: IntSet,
+    components: FnvHashSet<u8>,
     
     // successor -> rule -> tree
-    children: BTreeMap< usize, IntMap<usize> >
+    children: BTreeMap< u8, FnvHashMap<u32, usize> >
 }
 
 /// Represents a failed attempt to parse a word using the Chomsky-Schützenberger parser.
@@ -23,10 +24,7 @@ pub struct FailedParseTree(IntMap<FailedParseTreeNode>);
 
 impl FailedParseTree {
     /// Reads off a `FailedParseTree` from a Dyck word over `Delta`.
-    pub fn new<T>(word: &[Delta<T>]) -> Self
-    where
-        T: PartialEq
-    {
+    pub fn new(word: &[Delta]) -> Self {
         let mut tree = IntMap::default();
         let mut unique = 0;
         let mut pos = 0;
@@ -51,9 +49,9 @@ impl FailedParseTree {
                     match word[i+1] {
                         Bracket::Open(BracketContent::Component(rule, _)) => {
                             let t: usize = *tree.get_mut(&pos).unwrap().children
-                                                .entry(succ).or_insert_with(IntMap::default)
+                                                .entry(succ).or_insert_with(FnvHashMap::default)
                                                 .entry(rule).or_insert_with(|| { unique += 1; unique });
-                            tree.entry(t).or_insert(FailedParseTreeNode{ rule, components: IntSet::default(), children: BTreeMap::new() })
+                            tree.entry(t).or_insert(FailedParseTreeNode{ rule, components: FnvHashSet::default(), children: BTreeMap::new() })
                                             .components.insert(comp);
                             position_stack.push(pos);
                             pos = t;
@@ -76,7 +74,7 @@ impl FailedParseTree {
     pub fn fails(&self) -> usize {
         self.0.values()
             .flat_map(|node| node.children.values().map(|rs| rs.len()))
-            .filter(|numer_of_applied_rules| numer_of_applied_rules > &1)
+            .filter(|numer_of_applied_rules| *numer_of_applied_rules > 1)
             .count()
     }
 
@@ -90,9 +88,8 @@ impl FailedParseTree {
     ///   different successors, and
     /// * we filter the list of successor nonterminals for each rule s.t. they only contain those that are
     ///   referenced by some variable in the merged components.
-    pub fn merge<I, N, T, W>(&self, integeriser: &I) -> GornTree<PMCFGRule<N, T, W>>
+    pub fn merge<N, T, W>(&self, rules: &[PMCFGRule<N, T, W>]) -> GornTree<PMCFGRule<N, T, W>>
     where
-        I: Integeriser<Item=PMCFGRule<N, T, W>>,
         N: Clone,
         T: Clone,
         W: Copy + Zero
@@ -139,7 +136,7 @@ impl FailedParseTree {
                 let (rule, child_tree_nodess) = merge_rules(
                     ft_poss.into_iter().map(
                         |i| self.0.get(&i).map(
-                            |tn| (&tn.components, integeriser.find_value(tn.rule).unwrap(), &tn.children)
+                            |tn| (&tn.components, &rules[tn.rule as usize], &tn.children)
                         ).unwrap()
                     )
                 );
@@ -161,31 +158,31 @@ impl FailedParseTree {
 /// Analyzes some of the components in the composition of a rule and returns
 /// * a map that assigns a new successor index to the variables in the composition components, and
 /// * an iterator over the old successor indices filtered by occurrence in the given components.
-fn successors_used_in_comps<'a, N, T, W>(rule: &'a PMCFGRule<N, T, W>, comps: &'a IntSet) -> (IntMap<usize>, impl Iterator<Item=usize>)
+fn successors_used_in_comps<'a, N, T, W>(rule: &'a PMCFGRule<N, T, W>, comps: &'a FnvHashSet<u8>) -> (FnvHashMap<u8, u8>, impl Iterator<Item=u8>)
 where
     N: Clone
 {
     let successors = rule.composition.composition.iter().enumerate().filter_map(
-        |(c,v)| if comps.contains(&c) { Some(v) } else { None }
+        |(c,v)| if comps.contains(&(c as u8)) { Some(v) } else { None }
     ).flat_map(
         |v| v.iter().filter_map(
-            |x| match x { &VarT::Var(i, _) => Some(i), _ => None }
+            |x| match *x { VarT::Var(i, _) => Some(i as u8), _ => None }
         )
-    ).collect::<BTreeSet<usize>>();
+    ).collect::<BTreeSet<u8>>();
     
-    ( successors.iter().enumerate().map(|(i, j)| (*j, i)).collect(),
+    ( successors.iter().enumerate().map(|(i, j)| (*j as u8, i as u8)).collect(),
       successors.into_iter()
     )
 }
 
 /// Changes the first index of all Variables according to `reordering` and adds `offset`.
-fn reorder_successors<'a, T>(component: &'a [VarT<T>], reordering: &'a IntMap<usize>, offset: usize) -> impl Iterator<Item=VarT<T>> + 'a
+fn reorder_successors<'a, T>(component: &'a [VarT<T>], reordering: &'a FnvHashMap<u8, u8>, offset: u8) -> impl Iterator<Item=VarT<T>> + 'a
 where
     T: Clone + 'a
 {
     component.iter().map(
         move |s| match s { 
-            &VarT::Var(ref i, j) => VarT::Var(*reordering.get(i).unwrap() + offset, j),
+            &VarT::Var(i, j) => VarT::Var(*reordering.get(&(i as u8)).unwrap() as usize + offset as usize, j),
             t => t.clone()
         }
     )
@@ -199,7 +196,7 @@ where
 /// It returns
 /// * a constructed grammar rule with weight 0, and
 /// * a sorted list of maps (rule -> node_id) for each child with occuring variable in the components.
-fn merge_rules<'a, 'b, N, T, W>(nodes: impl Iterator<Item=(&'a IntSet, &'b PMCFGRule<N, T, W>, &'a BTreeMap<usize, IntMap<usize>>)>) -> (PMCFGRule<N, T, W>, Vec<&'a IntMap<usize>>)
+fn merge_rules<'a, 'b, N, T, W>(nodes: impl Iterator<Item=(&'a FnvHashSet<u8>, &'b PMCFGRule<N, T, W>, &'a BTreeMap<u8, FnvHashMap<u32, usize>>)>) -> (PMCFGRule<N, T, W>, Vec<&'a FnvHashMap<u32, usize>>)
 where
     'b: 'a,
     N: Clone + 'b,
@@ -219,11 +216,12 @@ where
         let (ordering, succ_indices) = successors_used_in_comps(rule, components);
         heads.push(rule.head.clone());
         for c in components {
-            vec_entry(&mut composition, *c).extend(reorder_successors(rule.composition.composition.get(*c).unwrap(), &ordering, successors.len()));
+            VecMultiMapAdapter(&mut composition)[*c as usize]
+                .extend(reorder_successors(&rule.composition.composition[*c as usize], &ordering, successors.len() as u8));
         }
 
         for successor_index in succ_indices {
-            successors.push(rule.tail.get(successor_index).unwrap().clone());
+            successors.push(rule.tail[successor_index as usize].clone());
             successor_tree_nodes.push(successor_trees.get(&successor_index).unwrap())
         }
     }
@@ -233,7 +231,7 @@ where
             head: heads.into_iter().next().unwrap(),
             tail: successors,
             weight: W::zero(),
-            composition: Composition{ composition: composition }
+            composition: Composition{ composition }
         },
         successor_tree_nodes
     )
@@ -249,14 +247,14 @@ mod test {
         use self::VarT::*;
         let one: LogDomain<f64> = LogDomain::one();
 
-        let rules: Vec<(PMCFGRule<char, &str, _>, IntSet)> = vec![
+        let rules: Vec<(PMCFGRule<char, &str, _>, FnvHashSet<u8>)> = vec![
             (   PMCFGRule{
                     head: 'A',
                     tail: vec![ 'B', 'C' ],
                     weight: one,
                     composition: Composition{ composition: vec![vec![Var(1, 0)], vec![Var(0, 0)]] }
                 },
-                vec![0].into_iter().collect()
+                vec![0u8].into_iter().collect()
             ),
             (   PMCFGRule{
                     head: 'A',
@@ -264,13 +262,13 @@ mod test {
                     weight: one,
                     composition: Composition{ composition: vec![vec![], vec![Var(0, 0), Var(1, 0)]] }
                 },
-                vec![1].into_iter().collect()
+                vec![1u8].into_iter().collect()
             )
         ];
 
-        let maps: Vec<BTreeMap<usize, IntMap<usize>>> = vec![
-            vec![ vec![(1, 1)].into_iter().collect(), vec![(2, 2)].into_iter().collect() ].into_iter().enumerate().collect(),
-            vec![ vec![(3, 3)].into_iter().collect(), vec![(4, 4)].into_iter().collect() ].into_iter().enumerate().collect()
+        let maps: Vec<BTreeMap<u8, FnvHashMap<u32, usize>>> = vec![
+            vec![ (0u8, vec![(1u32, 1)].into_iter().collect()), (1u8, vec![(2u32, 2)].into_iter().collect()) ].into_iter().collect(),
+            vec![ (0u8, vec![(3u32, 3)].into_iter().collect()), (1u8, vec![(4u32, 4)].into_iter().collect()) ].into_iter().collect()
         ];
 
         assert_eq!(
@@ -327,24 +325,21 @@ mod test {
 
     #[test]
     fn tree_merging () {
-        let integerizer = rules();
-        
-
         for (word, _, tree) in fails_with_fallbacks() {
             assert_eq!(
-                FailedParseTree::new(&word).merge(&integerizer),
+                FailedParseTree::new(&word).merge(&rules()),
                 tree
             );
         }
     }
 
-    fn rules () -> HashIntegeriser<PMCFGRule<char, &'static str, LogDomain<f64>>> {
+    fn rules () -> Vec<PMCFGRule<char, &'static str, LogDomain<f64>>> {
         use self::VarT::*;
         let one: LogDomain<f64> = LogDomain::one();
         
-        let mut integeriser = HashIntegeriser::new();
+        let mut vec = Vec::new();
         
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'S', 
                        tail: vec!['A'], 
                        composition: Composition{ composition: vec![vec![Var(0, 0), Var(0, 1)]] },
@@ -352,14 +347,14 @@ mod test {
             }
         );
         
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'A', 
                        tail: Vec::new(), 
                        composition: Composition{ composition: vec![vec![], vec![T("asdf")]] },
                        weight: one
             }
         );
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'A', 
                        tail: Vec::new(),
                        composition: Composition{ composition: vec![vec![T("qwer")], vec![]] },
@@ -367,28 +362,28 @@ mod test {
             }
         );
         
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'A', 
                        tail: vec!['B', 'C'],
                        composition: Composition{ composition: vec![vec![Var(1, 1)], vec![]] },
                        weight: one
             }
         );
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'A', 
                        tail: vec!['D', 'E'],
                        composition: Composition{ composition: vec![vec![], vec![Var(1, 1)]] },
                        weight: one
             }
         );
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'C', 
                        tail: vec!['A'],
                        composition: Composition{ composition: vec![vec![Var(0, 0)], vec![Var(0, 1)]] },
                        weight: one
             }
         );
-        integeriser.integerise(
+        vec.push(
             PMCFGRule{ head: 'E', 
                        tail: vec!['A'],
                        composition: Composition{ composition: vec![vec![Var(0, 1)], vec![Var(0, 0)]] },
@@ -396,10 +391,10 @@ mod test {
             }
         );
 
-        integeriser
+        vec
     }
 
-    fn fails_with_fallbacks () -> Vec<(Vec<Delta<&'static str>>, usize, GornTree<PMCFGRule<char, &'static str, LogDomain<f64>>>)> {
+    fn fails_with_fallbacks () -> Vec<(Vec<Delta>, usize, GornTree<PMCFGRule<char, &'static str, LogDomain<f64>>>)> {
         use self::Bracket::*;
         use self::BracketContent::*;
         use self::VarT::*;
@@ -424,7 +419,7 @@ mod test {
                 vec![
                     (
                         vec![],
-                        rules.find_value(0).unwrap().clone()
+                        rules[0].clone()
                     ),
                     (
                         vec![0],
@@ -469,7 +464,7 @@ mod test {
                 vec![
                     (
                         vec![],
-                        rules.find_value(0).unwrap().clone()
+                        rules[0].clone()
                     ),
                     (
                         vec![0],

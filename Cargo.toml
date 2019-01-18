@@ -5,7 +5,7 @@ authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 autobins = false
 
 [workspace]
-members = ["unique-heap", "search"]
+members = ["unique-heap", "search", "vecmultimap"]
 
 [lib]
 name = "rustomata"
@@ -31,6 +31,7 @@ fnv = "1.0"
 flate2 = "1.0"
 unique-heap = { path = "unique-heap", features = ["fnvtype"] }
 search = { path = "search" }
+vecmultimap = { path = "vecmultimap" }
 
 [profile.release]
 debug = true

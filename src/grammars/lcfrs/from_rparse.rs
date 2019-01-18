@@ -26,7 +26,7 @@ named!(parse_rparse_yield<&str, Yield>,
                     tag!(", "),
                     map!(
                         alt!(tag!("true") | tag!("false")),
-                        |s| if s == "true" { true } else { false }
+                        |s| s == "true"
                     )
                 ),
                 tag!("]")
@@ -60,7 +60,7 @@ where
                 (weight.parse().unwrap(), lhs.parse().unwrap(), if let Some(rhs2) = o_rhs2 { Rhs::Binary(rhs1.parse().unwrap(), rhs2.parse().unwrap()) } else { Rhs::Chain(rhs1.parse().unwrap()) }, y)
             )
         ),
-        |v| RparseClauses(v)
+        RparseClauses
     )
 }
 

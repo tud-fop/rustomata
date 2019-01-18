@@ -8,7 +8,6 @@ use rustomata::grammars::lcfrs::from_discodop::DiscoDopGrammar;
 use rustomata::grammars::{lcfrs::{csparsing::{CSRepresentation, DebugResult},
                                   Lcfrs},
                           pmcfg::negra::{to_negra, DumpMode, noparse}};
-use rustomata::util::Capacity;
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -18,6 +17,13 @@ pub fn get_sub_command(name: &str) -> App {
                 .about(
                     "Reads a grammar from stdin and prints an object
                                        that Chomsky-Schützenberger-represents the grammar.",
+                )
+                .arg(
+                    Arg::with_name("sxlen")
+                        .short("s")
+                        .long("sxlen")
+                        .takes_value(true)
+                        .help("maximum length to compute the sx estimate for")
                 )
                 .arg(
                     Arg::with_name("disco-grammar")
@@ -74,7 +80,14 @@ pub fn get_sub_command(name: &str) -> App {
                         .short("b")
                         .long("beam")
                         .takes_value(true)
-                        .help("Beam with during search."),
+                        .help("limits the number of constituents for each span during parsing."),
+                )
+                .arg(
+                    Arg::with_name("threshold")
+                        .short("t")
+                        .long("threshold")
+                        .takes_value(true)
+                        .help("Limits the constituents to a certain weight range during parsing."),
                 )
                 .arg(
                     Arg::with_name("candidates")
@@ -144,6 +157,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
             } else {
                 FileReader::new(stdin(), grammar_is_gzipped).read().expect("could not read grammar file")
             };
+            let sxlen = params.value_of("sxlen").map_or(0usize, |s| s.parse().unwrap());
 
             let gmr: Lcfrs<String, String, LogDomain<f64>> = if params.is_present("disco-grammar") {
                 let dgmr: DiscoDopGrammar<_, _, _> = grammar_string.parse().expect("Could not parse grammar.");
@@ -162,7 +176,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
 
             bincode::serialize_into(
                 &mut write::GzEncoder::new(stdout(), Compression::best()),
-                &CSRepresentation::new(gmr),
+                &CSRepresentation::new(gmr, sxlen),
                 bincode::Infinite,
             ).unwrap()
         }
@@ -177,29 +191,32 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 None => 1usize,
             };
             
-            let beam: Capacity = match params.value_of("beam") {
-                Some(b) => b.parse().unwrap(),
-                None => Capacity::Infinite,
-            };
-            let candidates: Capacity = match params.value_of("candidates") {
-                Some(c) => c.parse().unwrap(),
-                None => Capacity::Infinite,
-            };
+            let beam_width: Option<usize>
+                = params.value_of("beam").map(|s| s.parse().unwrap());
+            let beam_threshold: Option<LogDomain<f64>>
+                = params.value_of("threshold").map(|s| s.parse().unwrap());
+            let candidates: Option<usize>
+                = params.value_of("candidates").map(|s| s.parse().unwrap());
+
 
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
 
             let csrep: CSRepresentation<String, String, LogDomain<f64>> =
                 bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite)
                     .unwrap();
+            let mut parser = csrep.build_generator();
+            if let Some(beam) = beam_width { parser.set_beam(beam) };
+            if let Some(delta) = beam_threshold { parser.set_delta(delta) };
+            if let Some(candidates) = candidates { parser.set_candidates(candidates) };
 
             for (i, sentence) in word_strings.lines().enumerate() {
                 let (i, words) = split_line(sentence, params.is_present("with-lines"), i);
                 let (words, negra_mode) = split_pos(words, params.is_present("with-pos"));
 
                 if params.is_present("debugmode") {
-                    let tuple = csrep.debug(words.as_slice(), beam, candidates);
-                    eprint!("{} {} {} {} ", tuple.0, tuple.1, tuple.2, tuple.3);
-                    match tuple.4 {
+                    let tuple = parser.debug(words.as_slice());
+                    eprint!("{} {} {:?} ", tuple.0, tuple.1, tuple.2);
+                    match tuple.3 {
                         DebugResult::Parse(t, n) => {
                             eprintln!("parse {}", n);
                             println!("{}", to_negra(&t, i, negra_mode));
@@ -215,7 +232,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                     }
                 } else {
                     let mut found_trees = false;
-                    let (iterator, fallback) = csrep.generate(words.as_slice(), beam, candidates);
+                    let (iterator, fallback) = parser.with_fallback(words.as_slice());
                     for derivation in iterator.take(k) {
                         found_trees = true;
                         println!(

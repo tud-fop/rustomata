@@ -76,6 +76,10 @@ where
     pub fn peek(&self) -> Option<&(Wt, It)> {
         self.heap.peek()
     }
+
+    pub fn len(&self) -> usize {
+        self.heap.len()
+    }
 }
 
 impl<I, W, B> Default for UniqueHeap<I, W, B>

@@ -35,7 +35,7 @@ impl<N, T, W> Mcfg<N, T, W> {
             let mut variables: BTreeSet<(usize, usize)> = BTreeSet::new();
             for (i, j) in rule.composition.composition.iter().flat_map(|component| {
                 component.iter().filter_map(
-                    |s| if let &VarT::Var(i, j) = s {
+                    |s| if let VarT::Var(i, j) = *s {
                         Some((i, j))
                     } else {
                         None

@@ -10,7 +10,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate fnv;
 extern crate unique_heap;
-
+extern crate vecmultimap;
 extern crate search;
 
 pub mod approximation;

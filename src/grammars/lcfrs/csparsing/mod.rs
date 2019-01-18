@@ -1,39 +1,52 @@
 mod fallback;
 mod automaton;
-mod rule_fragments;
+mod parameter;
 
-use self::automaton::{CykAutomatonPersistentStorage, CachedFilterPersistentStorage, ChartIterator};
 use super::Lcfrs;
 
 use dyck::Bracket;
 use grammars::pmcfg::PMCFGRule;
-use util::{ with_time, take_capacity, tree::GornTree, factorizable::Factorizable, Capacity };
-
-use integeriser::{HashIntegeriser, Integeriser};
-use std::{ collections::{BTreeMap}, fmt::{Debug, Display, Error, Formatter}, hash::Hash, ops::Mul };
+use util::{ tree::GornTree, factorizable::Factorizable };
+use std::{ collections::{BTreeMap}, fmt::{Display, Error, Formatter}, hash::Hash, ops::Mul };
 use num_traits::{Zero, One};
-use std::rc::Rc;
+use std::time::{Instant, Duration};
 
-/// The indices of a bracket in a CS representation for MCFG.
-/// Assumes integerized rules.
-#[derive(PartialEq, Eq, Hash, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum BracketContent<T> {
-    Terminal(T),
-    Component(usize, usize),
-    Variable(usize, usize, usize),
+use self::automaton::{Automaton, SxOutside};
+pub use self::parameter::GeneratorParameter;
+
+/// The indices of a bracket in a CS representation for an lcfrs.
+/// Assumes integerized an itergerized set of (at most 2^32) rules and fanouts
+/// and arities ≤ 2^8.
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum BracketContent {
+    /// We construe `Ignore` as a parenthesis without index; it is introduced
+    /// for binarization.
+    Ignore,
+    /// We do not store the specific terminal as bracket index.
+    Terminal,
+    Component(u32, u8),
+    Variable(u32, u8, u8),
 }
 
-type Delta<T> = Bracket<BracketContent<T>>;
+impl BracketContent {
+    #[inline(always)]
+    pub fn is_ignore(self) -> bool {
+        match self {
+            BracketContent::Ignore => true,
+            _ => false
+        }
+    }
+}
 
-impl<T> Display for BracketContent<T>
-where
-    T: Display,
-{
+type Delta = Bracket<BracketContent>;
+
+impl Display for BracketContent {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match *self {
-            BracketContent::Terminal(ref t) => write!(f, "_{{{}}}", t),
             BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
             BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{},{}}}^{}", rule_id, i, j),
+            BracketContent::Terminal => write!(f, "_{{TERM}}"),
+            _ => Ok(())
         }
     }
 }
@@ -42,13 +55,83 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CSRepresentation<N, T, W>
 where
-    N: Ord + Hash + Debug + Clone,
-    T: Ord + Hash + Clone,
-    W: Ord + Clone
+    T: Eq + Hash,
 {
-    generator: CykAutomatonPersistentStorage<BracketContent<T>, W>,
-    filter: CachedFilterPersistentStorage<T>,
-    rules: HashIntegeriser<PMCFGRule<N, T, W>>,
+    generator: Automaton<T, W>,
+    estimates: SxOutside<W>,
+    rules: Vec<PMCFGRule<N, T, W>>,
+}
+
+pub struct GeneratorBuilder<'a, N, T: Eq + Hash, W> {
+    grammar: &'a CSRepresentation<N, T, W>,
+    candidates: Option<usize>,
+    beam: Option<usize>,
+    delta: W,
+    root_prediction: bool,
+}
+
+impl<'a, N, T, W> GeneratorBuilder<'a, N, T, W>
+where
+    T: Eq + Hash + Clone,
+    W: Zero + Ord + Copy + One + Mul<Output=W>,
+    N: Clone
+{
+    pub fn set_candidates(&mut self, c: usize) { self.candidates = Some(c); }
+    pub fn set_beam(&mut self, b: usize) { self.beam = Some(b); }
+    pub fn set_delta(&mut self, d: W) { self.delta = d; }
+    pub fn allow_root_prediction(&mut self) { self.root_prediction = true; }
+
+    pub fn with_fallback(&self, word: &[T]) -> (impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a, Option<GornTree<PMCFGRule<N, T, W>>>) {
+        let &Self { grammar, mut candidates, beam, delta, .. } = self;
+        let realbeam = beam.unwrap_or(grammar.generator.states());
+        let mut word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates).peekable();
+        let first = word_iterator.peek().map(|w| fallback::FailedParseTree::new(w).merge(&grammar.rules));
+
+        let count_candidates = move |_: &Vec<Delta>| -> bool {
+            candidates.as_mut().map_or(true, |c| if *c == 0 { false } else { *c -= 1; true } )
+        };
+        
+        ( word_iterator.take_while(count_candidates).filter_map(move |bs| grammar.toderiv(&bs))
+        , first
+        )
+    }
+
+    pub fn debug(&self, word: &[T]) -> (usize, usize, Duration, DebugResult<N, T, W>) {
+        let starting_time = Instant::now();
+        let &Self { grammar, mut candidates, beam, delta, .. } = self;
+        let realbeam = beam.unwrap_or(grammar.generator.states());
+        let count_candidates = move |_: &Vec<Delta>| -> bool {
+            candidates.as_mut().map_or(true, |c| if *c == 0 { false } else { *c -= 1; true } )
+        };
+        let word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates);
+        let mut word_iterator = word_iterator.take_while(count_candidates).peekable();
+
+        let mut enumerated_words = 0;
+
+        let o_fallback_word = word_iterator.peek().cloned();
+        let o_parse_tree = word_iterator.filter_map(
+            |cfg_deriv| {
+                enumerated_words += 1;
+                grammar.toderiv(&cfg_deriv)
+            }).next();
+        
+        let debug_result = match (o_parse_tree, o_fallback_word) {
+                (Some(t), _)
+                    => DebugResult::Parse(t.cloned(), enumerated_words),
+                (None, Some(w)) => {
+                    let tree = fallback::FailedParseTree::new(&w).merge(&grammar.rules);
+                    DebugResult::Fallback(tree, enumerated_words)
+                },
+                (None, None)
+                    => DebugResult::Noparse
+        };
+        
+        ( grammar.rules.len()
+        , word.len()
+        , starting_time.elapsed()
+        , debug_result
+        )
+    }
 }
 
 pub enum DebugResult<N, T, W> {
@@ -59,89 +142,45 @@ pub enum DebugResult<N, T, W> {
 
 impl<N, T, W> CSRepresentation<N, T, W>
 where
-    N: Ord + Hash + Debug + Clone,
-    T: Ord + Hash + Clone + ::std::fmt::Debug,
-    W: Ord + Clone + ::std::fmt::Debug
+    T: Ord + Hash + Clone,
+    W: Ord + Copy + One + Mul<Output=W>,
+    N: Clone,
 {
     /// Instantiates a CS representation for an `LCFRS`.
-    pub fn new<M>(grammar: M) -> Self
+    pub fn new<M>(grammar: M, estimates_max_width: usize) -> Self
     where
         M: Into<Lcfrs<N, T, W>>,
-        W: Copy + One + Factorizable + Mul<Output=W>
+        W: Factorizable + Zero,
+        N: Hash + Eq
     {
+        assert!(estimates_max_width <= u8::max_value() as usize);
         let (rules, initial) = grammar.into().destruct();
-        let mut irules = HashIntegeriser::new();
-        for rule in rules {
-            irules.integerise(rule);
-        }
-        
-        CSRepresentation {
-            generator: CykAutomatonPersistentStorage::from_grammar(irules.values().iter(), &irules, initial.clone()),
-            filter: CachedFilterPersistentStorage::new(irules.values().iter().enumerate(), &initial),
-            rules: irules,
-        }
-    }
-
-    /// Produces a `CSGenerator` for a Chomsky-Schützenberger characterization and a `word` in the first component.
-    /// The second component contains a fallback parse tree that is built using a context-free approximation of the grammar.
-    pub fn generate<'a>(&'a self, word: &[T], beam: Capacity, candidates: Capacity) -> (impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a, Option<GornTree<PMCFGRule<N, T, W>>>)
-    where
-        W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable
-    {
-        let automaton = self.generator.intersect(self.filter.instantiate(word), word);
-        let chart = match beam {
-            Capacity::Limit(beam) => automaton.fill_chart_beam(beam),
-            Capacity::Infinite => automaton.fill_chart(),
+        let generator = {
+            let mut rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
+            Automaton::from_grammar(rules_with_id, initial.clone())
         };
-        let mut it = ChartIterator::new(chart, Rc::clone(&automaton.integeriser)).peekable();
-
-        let first = it.peek().map(|w| fallback::FailedParseTree::new(w).merge(&self.rules));
+        let estimates = SxOutside::from_automaton(&generator, estimates_max_width as u8);
         
-        ( take_capacity(it, candidates).filter_map(move |bs| self.toderiv(&bs))
-        , first
-        )
+        CSRepresentation { generator, estimates, rules }
     }
 
-    /// Produces additional output to stderr that logs construction times and the parsing time.
-    pub fn debug(&self, word: &[T], beam: Capacity, candidates: Capacity) -> (usize, usize, usize, i64, DebugResult<N, T, W>)
+    pub fn build_generator<'a>(&'a self) -> GeneratorBuilder<'a, N, T, W>
     where
-        W: One + Zero + Mul<Output=W> + Copy + Ord + Factorizable,
-        T: ::std::fmt::Debug
+        W: Zero
     {
-        let (f, filter_const) = with_time(|| self.filter.instantiate(word));
-        let filter_size = f.len();
-        let (g_, intersection_time) =  with_time(|| self.generator.intersect(f.into_iter(), word));
-
-        let (debug_result, ptime) = with_time(|| {
-            // let chart = match beam {
-            //         Capacity::Limit(beam) => g_.fill_chart_beam(beam),
-            //         Capacity::Infinite => g_.fill_chart(),
-            // };
-            let chart = g_.fill_chart_cyk(word.len());
-            let mut words = take_capacity(ChartIterator::new(chart, Rc::clone(&g_.integeriser)), candidates).peekable();
-            let fallback_word = words.peek().cloned();
-            let mut enumerated_words = 0;
-            match words.filter_map(|candidate| { enumerated_words += 1; self.toderiv(&candidate) }).next() {
-                Some(t) => DebugResult::Parse(t.cloned(), enumerated_words),
-                None => if let Some(w) = fallback_word { 
-                            let tree = fallback::FailedParseTree::new(&w).merge(&self.rules);
-                            DebugResult::Fallback(tree, enumerated_words)
-                        } else {
-                            DebugResult::Noparse
-                        }
-            }
-        });
-        
-        ( self.rules.size()
-        , word.len()
-        , filter_size
-        , filter_const.num_nanoseconds().unwrap() + intersection_time.num_nanoseconds().unwrap() + ptime.num_nanoseconds().unwrap()
-        , debug_result
-        )
+        GeneratorBuilder{
+            grammar: self,
+            beam: None,
+            delta: W::zero(),
+            candidates: None,
+            root_prediction: false
+        }
     }
+}
 
+impl<N, T, W> CSRepresentation<N, T, W> where T: Hash + Eq {
     /// Reads off a parse tree from a multiply Dyck word. Fails if the word is not in R ∩ D.
-    fn toderiv<'a>(&'a self, word: &[Delta<T>]) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
+    fn toderiv<'a>(&'a self, word: &[Delta]) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
         let mut tree = BTreeMap::new();
         let mut pos = Vec::new();
 
@@ -154,7 +193,7 @@ where
                     }
                 }
                 Bracket::Open(BracketContent::Variable(_, i, _)) => {
-                    pos.push(i);
+                    pos.push(i as usize);
                 }
                 Bracket::Close(BracketContent::Variable(_, _, _)) => {
                     pos.pop();
@@ -165,7 +204,7 @@ where
 
         Some(
             tree.into_iter()
-                .map(|(pos, i)| (pos, self.rules.find_value(i).unwrap()))
+                .map(|(pos, i)| (pos, &self.rules[i as usize]))
                 .collect(),
         )
     }
@@ -174,7 +213,7 @@ where
 #[cfg(test)]
 mod test {
     use grammars::pmcfg::{VarT, PMCFGRule, Composition};
-    use super::{Capacity, CSRepresentation, Lcfrs};
+    use super::{CSRepresentation, Lcfrs};
     use log_domain::LogDomain;
 
     #[test]
@@ -188,10 +227,10 @@ mod test {
         ].into_iter()
             .collect();
 
-        let cs = CSRepresentation::new(grammar.clone());
-        assert_eq!(cs.generate(&['A'], Capacity::Infinite, Capacity::Infinite).0.next(), Some(d1));
+        let cs = CSRepresentation::new(grammar.clone(), 0);
+        assert_eq!(cs.build_generator().with_fallback(&['A']).0.next(), Some(d1));
         assert_eq!(
-            cs.generate(&['A', 'A'], Capacity::Infinite, Capacity::Infinite).0.next(),
+            cs.build_generator().with_fallback(&['A', 'A']).0.next(),
             Some(d2)
         );
     }

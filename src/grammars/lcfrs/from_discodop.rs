@@ -37,9 +37,9 @@ fn from_binary(s: &str) -> Option<u64> {
 
 impl<N> DiscoDeriv<N> {
     fn get_lhs(&self) -> &N {
-        match self {
-            &DiscoDeriv::Chain{ ref lhs, .. } => lhs,
-            &DiscoDeriv::Binary{ ref lhs, .. } => lhs
+        match *self {
+            DiscoDeriv::Chain{ ref lhs, .. } => lhs,
+            DiscoDeriv::Binary{ ref lhs, .. } => lhs
         }
     }
 }
@@ -164,7 +164,7 @@ where
                 }
             )
         ),
-        |v| DiscoConstituents(v)
+        DiscoConstituents
     )
 }
 
@@ -191,7 +191,7 @@ where
             let mut composition: Vec<Vec<VarT<T>>> = Vec::with_capacity(y.len());
             let mut sind1: usize = 0;
             let mut sind2: usize = 0;
-            weight /= *normalization_denominators.get(nts.get_lhs()).unwrap();
+            weight /= normalization_denominators[nts.get_lhs()];
 
             // read yield function
             for (clen, c) in y {
@@ -215,7 +215,7 @@ where
         }
 
         for (word, pos, mut weight) in gmr.lexer.into_iter().flat_map(|dl| dl.0) {
-            weight /= *normalization_denominators.get(&pos).unwrap();
+            weight /= normalization_denominators[&pos];
             rules.push(PMCFGRule{ head: pos, tail: vec![], weight, composition: vec![vec![VarT::T(word)]].into() })
         }
 
@@ -234,12 +234,12 @@ impl<N, W> DiscoDopGrammar<N, (), W> {
         {
             let mut is_only_on_rhs: FnvHashMap<&N, bool> = HashMap::default();
             for &(ref deriv, _, _) in &self.constituents.0 {
-                match deriv {
-                    &DiscoDeriv::Chain{ ref lhs, ref rhs } => {
+                match *deriv {
+                    DiscoDeriv::Chain{ ref lhs, ref rhs } => {
                         *is_only_on_rhs.entry(lhs).or_insert(false) = false;
                         is_only_on_rhs.entry(rhs).or_insert(true);
                     },
-                    &DiscoDeriv::Binary{ ref lhs, ref rhs1, ref rhs2 } => {
+                    DiscoDeriv::Binary{ ref lhs, ref rhs1, ref rhs2 } => {
                         *is_only_on_rhs.entry(lhs).or_insert(false) = false;
                         is_only_on_rhs.entry(rhs1).or_insert(true);
                         is_only_on_rhs.entry(rhs2).or_insert(true);

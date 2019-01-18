@@ -34,12 +34,32 @@ impl<T> VarT<T> {
             _ => false,
         }
     }
+
+    pub fn unwrap_var(&self) -> (usize, usize) {
+        if let &VarT::Var(i, j) = self { (i, j) }
+        else { panic!("unwrapped VarT was not a variable") }
+    }
+
+    pub fn unwrap_t(&self) -> &T {
+        if let &VarT::T(ref t) = self { t }
+        else { panic!("unwrapped VarT was not a terminal") }
+    }
 }
 
 /// Composition function in a PMCFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub struct Composition<T> {
     pub composition: Vec<Vec<VarT<T>>>,
+}
+
+impl<T> Composition<T> {
+    pub fn len(&self) -> usize {
+        self.composition.len()
+    }
+
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        self.into_iter()
+    }
 }
 
 impl<T> From<Vec<Vec<VarT<T>>>> for Composition<T> {
