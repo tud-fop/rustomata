@@ -128,7 +128,7 @@ where
     let mut rules: Vec<R> = Vec::new();
 
     while let Some(l) = it.next() {
-        if l.trim_left().starts_with("initial:") {
+        if l.trim_start().starts_with("initial:") {
             match parse_initials(l.as_bytes()) {
                 IResult::Done(_, mut result) => initial.append(&mut result),
                 _ => {
@@ -137,7 +137,7 @@ where
                     )
                 }
             }
-        } else if !l.is_empty() && !l.trim_left().starts_with("%") {
+        } else if !l.is_empty() && !l.trim_start().starts_with("%") {
             rules.push(l.trim().parse()?);
         }
     }

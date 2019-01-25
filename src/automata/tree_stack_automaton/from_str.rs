@@ -28,14 +28,14 @@ where
         let mut it = s.lines();
 
         while let Some(l) = it.next() {
-            if l.trim_left().starts_with("initial:") {
-                match parse_initial(l.trim_left().as_bytes()) {
+            if l.trim_start().starts_with("initial:") {
+                match parse_initial(l.trim_start().as_bytes()) {
                     IResult::Done(_, result) => {
                         initial = Some(result);
                     }
                     _ => return Err(format!("Malformed initial declaration: {}", l)),
                 }
-            } else if !l.is_empty() && !l.trim_left().starts_with("%") {
+            } else if !l.is_empty() && !l.trim_start().starts_with("%") {
                 transitions.push(l.trim().parse()?);
             }
         }
