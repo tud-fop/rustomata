@@ -2,6 +2,7 @@ use grammars::pmcfg::PMCFGRule;
 use grammars::pmcfg::VarT;
 use std::hash::Hash;
 use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 
 mod conversion;
 mod from_str;
@@ -64,8 +65,8 @@ impl<N, T, W> Lcfrs<N, T, W> {
     }
 }
 
-impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for Lcfrs<N, T, W> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl<N: Display, T: Display, W: Display> Display for Lcfrs<N, T, W> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut buffer = "".to_string();
 
         buffer.push_str(format!("initial: [{}]\n\n", self.init).as_str());
