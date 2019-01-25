@@ -84,6 +84,22 @@ where
 }
 
 
+/// Parses a string of the form `finals: [...]` as a vector of final symbols of type `I`.
+pub fn parse_finals<I>(input: &[u8]) -> IResult<&[u8], Vec<I>>
+where
+    I: FromStr,
+    I::Err: Debug,
+{
+    do_parse!(
+        input,
+        tag!("final:") >>
+            take_while!(is_space) >>
+            result: call!(|x| parse_vec(x, parse_token, "[", "]", ",")) >>
+            (result)
+    )
+}
+
+
 /// Parses a string of the form `initials: [...]` as a vector of initial symbols of type `I`.
 pub fn parse_initials<I>(input: &[u8]) -> IResult<&[u8], Vec<I>>
 where
