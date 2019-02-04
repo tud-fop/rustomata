@@ -68,6 +68,13 @@ impl<W: Copy> DenseChart<W> {
         if w == W::zero() { None }
         else { Some(w) }
     }
+
+    pub fn get_best(&self, i: RangeT, j: RangeT) -> Option<(StateT, W)> where W: Zero + PartialEq {
+        let index = index(i, j, self.3) * self.5 as usize;
+        let (state, w) = self.1[index];
+        if w == W::zero() { None }
+        else { Some((state, w)) }
+    }
 }
 
 impl<W> DenseChart<W> {
