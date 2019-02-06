@@ -1,6 +1,5 @@
 mod fallback;
 mod automaton;
-mod parameter;
 
 use super::Lcfrs;
 
@@ -11,8 +10,7 @@ use std::{ collections::{BTreeMap}, fmt::{Display, Error, Formatter}, hash::Hash
 use num_traits::{Zero, One};
 use std::time::{Instant, Duration};
 
-use self::automaton::{Automaton, SxOutside};
-pub use self::parameter::GeneratorParameter;
+use self::automaton::{Automaton, SxOutside, RuleMaskBuilder};
 
 /// The indices of a bracket in a CS representation for an lcfrs.
 /// Assumes integerized an itergerized set of (at most 2^32) rules and fanouts
@@ -59,6 +57,7 @@ where
 {
     generator: Automaton<T, W>,
     estimates: SxOutside<W>,
+    rulemaskbuilder: RuleMaskBuilder<T>,
     rules: Vec<PMCFGRule<N, T, W>>,
 }
 
@@ -84,7 +83,8 @@ where
     pub fn with_fallback(&self, word: &[T]) -> (impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a, Option<GornTree<PMCFGRule<N, T, W>>>) {
         let &Self { grammar, mut candidates, beam, delta, .. } = self;
         let realbeam = beam.unwrap_or(grammar.generator.states());
-        let mut word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates).peekable();
+        let rulemask = grammar.rulemaskbuilder.build(word);
+        let mut word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates, rulemask).peekable();
         let first = word_iterator.peek().map(|w| fallback::FailedParseTree::new(w).merge(&grammar.rules));
 
         let count_candidates = move |_: &Vec<Delta>| -> bool {
@@ -99,11 +99,12 @@ where
     pub fn debug(&self, word: &[T]) -> (usize, usize, Duration, DebugResult<N, T, W>) {
         let starting_time = Instant::now();
         let &Self { grammar, mut candidates, beam, delta, .. } = self;
+        let rulemask = grammar.rulemaskbuilder.build(word);
         let realbeam = beam.unwrap_or(grammar.generator.states());
         let count_candidates = move |_: &Vec<Delta>| -> bool {
             candidates.as_mut().map_or(true, |c| if *c == 0 { false } else { *c -= 1; true } )
         };
-        let word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates);
+        let word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates, rulemask);
         let mut word_iterator = word_iterator.take_while(count_candidates).peekable();
 
         let mut enumerated_words = 0;
@@ -159,9 +160,10 @@ where
             let mut rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
             Automaton::from_grammar(rules_with_id, initial.clone())
         };
+        let rulemaskbuilder = RuleMaskBuilder::new(rules.iter(), &initial);
         let estimates = SxOutside::from_automaton(&generator, estimates_max_width as u8);
         
-        CSRepresentation { generator, estimates, rules }
+        CSRepresentation { generator, rulemaskbuilder, estimates, rules }
     }
 
     pub fn build_generator<'a>(&'a self) -> GeneratorBuilder<'a, N, T, W>

@@ -48,7 +48,7 @@ impl<W: Zero + Copy + Ord + Mul<Output=W>> SxInside<W> {
 
         for range_size in 1..=maxrange {
             if range_size == 1 {
-                queue.extend(automaton.2.values().flat_map(|v| v.iter().map(|&(w, q)| (w, q))));
+                queue.extend(automaton.2.values().flat_map(|v| v.iter().map(|&(_, (w, q))| (w, q))));
             }
 
             for left_portion in 1..range_size {
@@ -56,7 +56,7 @@ impl<W: Zero + Copy + Ord + Mul<Output=W>> SxInside<W> {
                 for (ql, wl) in insides.iterate_states(left_portion) {
                     queue.extend(
                         automaton.0[ql as usize].iter().filter_map(
-                            |&(qr, (w0, q0))|
+                            |&(_, qr, (w0, q0))|
                             insides.get(qr, right_portion).map(move |wr| (wl * w0 * wr, q0))
                         )
                     );
@@ -69,7 +69,7 @@ impl<W: Zero + Copy + Ord + Mul<Output=W>> SxInside<W> {
                 insides.insert(q1, range_size, w1);
                 queue.extend(
                     automaton.1[q1 as usize].iter().filter_map(
-                        |&(w0, q0)| if !filter[q0 as usize] { Some((w0, q0)) } else { None }
+                        |&(_, (w0, q0))| if !filter[q0 as usize] { Some((w0, q0)) } else { None }
                     )
                 );
             }

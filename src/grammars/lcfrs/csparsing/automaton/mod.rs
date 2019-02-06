@@ -10,11 +10,12 @@ use num_traits::Zero;
 mod chart;
 mod kbest;
 mod estimates;
+mod rulemask;
 
 use self::chart::DenseChart;
 use self::kbest::ChartIterator;
 pub use self::estimates::SxOutside;
-
+pub use self::rulemask::RuleMaskBuilder;
 
 pub type RuleIdT = u32;
 pub type StateT = u32;
@@ -44,9 +45,9 @@ pub static NOSTATE: u32 = -1i32 as StateT;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Automaton<T: Eq + Hash, W> (
     // rules indexed by successor nonterminals and terminals for bottom-up processing
-    Vec<Vec<(StateT, BuRule<W>)>>,   // binary compatability: left state -> [(right state, action)]
-    Vec<Vec<BuRule<W>>>,             // unary wraps: state -> [action]
-    FnvHashMap<T, Vec<BuRule<W>>>,   // terminals: termial -> [action]
+    Vec<Vec<(RuleIdT, StateT, BuRule<W>)>>,   // binary compatability: left state -> [(right state, action)]
+    Vec<Vec<(RuleIdT, BuRule<W>)>>,             // unary wraps: state -> [action]
+    FnvHashMap<T, Vec<(RuleIdT, BuRule<W>)>>,   // terminals: termial -> [action]
     // rules indexed by lhs nonterminal for top-down processing
     Vec<Vec<TdBinary<W>>>,
     Vec<Vec<TdUnary<W>>>,
@@ -75,7 +76,7 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
         use self::State::*;
         use self::BracketContent::*;
 
-        let mut bu_initials: FnvHashMap<T, Vec<BuRule<W>>> = FnvHashMap::default();
+        let mut bu_initials: FnvHashMap<T, Vec<(RuleIdT, BuRule<W>)>> = FnvHashMap::default();
         let mut bu_unaries = VecMultiMap::new();
         let mut bu_binaries = VecMultiMap::new();
         let mut td_initials = VecMultiMap::new();
@@ -95,14 +96,14 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
                 if component.len() == 1 {
                     match component[0] {
                         VarT::T(ref t) => {
-                            bu_initials.entry(t.clone()).or_default().push((component_weight, state_i));
+                            bu_initials.entry(t.clone()).or_default().push((rule_to_brackets.len() as RuleIdT, (component_weight, state_i)));
                             td_initials.push_to(state_i as usize, (rule_to_brackets.len() as RuleIdT, component_weight));
                             rule_to_brackets.push((component_t, Terminal, Ignore));
                         },
                         VarT::Var(i, j) => {
                             let variable_t = Variable(rule_id as u32, i as u8, j as u8);
                             let successor_state_i = state_integerizer.integerise(Non(&rule.tail[i], j)) as StateT;
-                            bu_unaries.push_to(successor_state_i as usize, (component_weight, state_i));
+                            bu_unaries.push_to(successor_state_i as usize, (rule_to_brackets.len() as RuleIdT, (component_weight, state_i)));
                             td_unaries.push_to(state_i as usize, (rule_to_brackets.len() as RuleIdT, successor_state_i, component_weight));
                             rule_to_brackets.push((component_t, variable_t, Ignore));
                         }
@@ -123,7 +124,7 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
                     } else {
                         (state_integerizer.integerise(Unique(rule_id, component_id, 0)) as StateT, Ignore)
                     };  
-                    bu_binaries.push_to(successors.0 as usize, (successors.1, (component_weight, targetstate)));
+                    bu_binaries.push_to(successors.0 as usize, (rule_to_brackets.len() as RuleIdT, successors.1, (component_weight, targetstate)));
                     td_binaries.push_to(targetstate as usize, (rule_to_brackets.len() as RuleIdT, successors.0, successors.1, component_weight));
                     rule_to_brackets.push((outer_t, vt1, vt2));
                     // continue for the remaining nonterminals in the same manner
@@ -139,7 +140,7 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
                             targetstate = state_integerizer.integerise(Unique(rule_id, component_id, succ_offset)) as StateT;
                             outer_t = Ignore;
                         };
-                        bu_binaries.push_to(l_successor as usize, (r_successor, (W::one(), targetstate)));
+                        bu_binaries.push_to(l_successor as usize, (rule_to_brackets.len() as RuleIdT, r_successor, (W::one(), targetstate)));
                         td_binaries.push_to(targetstate as usize, (rule_to_brackets.len() as RuleIdT, l_successor, r_successor, W::one()));
                         rule_to_brackets.push((outer_t, Ignore, vt));
                     }
@@ -149,7 +150,7 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
 
         let binaries = bu_binaries.into_vec_with_size(state_integerizer.size());
         let mut binaries_mirrorred = VecMultiMap::new();
-        for (ql, qr, w, q0) in binaries.iter().enumerate().flat_map(|(ql, v)| v.iter().map(move |&(qr, (w, q0))| (ql, qr, w, q0))) {
+        for (ql, qr, w, q0) in binaries.iter().enumerate().flat_map(|(ql, v)| v.iter().map(move |&(_, qr, (w, q0))| (ql, qr, w, q0))) {
             binaries_mirrorred.push_to(qr as usize, (ql as StateT, w, q0));
         }
         Automaton(
@@ -167,12 +168,12 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
 
     /// Create an Iteator for well bracketed words in the  language of the
     /// context-free approximation
-    pub fn generate(&self, word: &[T], beam: usize, delta: W, estimates: &SxOutside<W>) -> ChartIterator<W>
+    pub fn generate<'a>(&'a self, word: &[T], beam: usize, delta: W, estimates: &SxOutside<W>, rulefilter: Vec<bool>) -> ChartIterator<'a, W>
     where
         W: Ord + Copy + Mul<Output=W> + Zero + One,
     {
-        let chart = self.fill_chart(word, beam, delta, estimates);
-        ChartIterator::new(chart, self)
+        let chart = self.fill_chart(word, beam, delta, estimates, &rulefilter);
+        ChartIterator::new(chart, self, rulefilter)
     }
 
     pub fn states(&self) -> usize {
@@ -182,7 +183,7 @@ impl<T: Eq + Hash, W> Automaton<T, W> {
 
 impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
     /// implements the CKY algorithm with chain rules
-    pub fn fill_chart(&self, word: &[T], beam: usize, delta: W, outsides: &SxOutside<W>) -> DenseChart<W> {
+    pub fn fill_chart(&self, word: &[T], beam: usize, delta: W, outsides: &SxOutside<W>, rule_filter: &[bool]) -> DenseChart<W> {
         let n = word.len();
         let nonterminals = self.0.len();
 
@@ -200,7 +201,8 @@ impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
                 if range == 1 {
                     if let Some(initials) = self.2.get(&word[l]) {
                         heap_of_nonterminals.extend(initials.iter().filter_map(
-                            |&(w, q)| {
+                            |&(rid, (w, q))| {
+                                if !rule_filter[rid as usize] { return None; }
                                 let _ = outsides.get(q, l, r, n)?;
                                 Some((w, q))
                             }
@@ -214,7 +216,8 @@ impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
                         let available_rules = &self.0[lnt as usize];
                         let mut cache = (NOSTATE, None);
                         heap_of_nonterminals.extend(available_rules.iter().filter_map(
-                            |&(rnt, (ruw, lhs))| {
+                            |&(rid, rnt, (ruw, lhs))| {
+                                if !rule_filter[rid as usize] { return None; }
                                 let riw = if cache.0 == rnt { cache.1 }
                                           else { chart.get_weight(mid as u8, r as u8, rnt) }?;
                                 let _ = outsides.get(lhs, l, r, n)?;
@@ -232,7 +235,8 @@ impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
                     if replace(&mut skip[q as usize], true) { continue; }
                     chart.add_entry(l as u8, r as u8, q, w);
                     heap_of_nonterminals.extend(self.1[q as usize].iter().filter_map(
-                        |&(rw, q)| {
+                        |&(rid, (rw, q))| {
+                            if !rule_filter[rid as usize] { return None; }
                             let _ = outsides.get(q, l, r, n)?;
                             Some((rw * w, q))
                         }
