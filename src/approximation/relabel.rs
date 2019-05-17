@@ -21,29 +21,29 @@ impl<'a, A1, A2> RlbElement<'a, A1, A2> {
 }
 
 impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
-    where A1: Clone + Hash + Ord,
-          A2: Clone + Hash + Ord,
-          T: Clone + Eq + Hash + Ord,
-          W: AddAssign + Copy + MulAssign + One + Ord + Zero,
+where
+    A1: Clone + Hash + Ord,
+    A2: Clone + Hash + Ord,
+    T: Clone + Eq + Hash + Ord,
+    W: AddAssign + Copy + MulAssign + One + Ord + Zero,
 {
     type I1 = PushDownInstruction<A1>;
     type I2 = PushDownInstruction<A2>;
     type A1 = PushDownAutomaton<A1, T, W>;
     type A2 = PushDownAutomaton<A2, T, W>;
 
-    fn approximate_storage(&self, pd: PushDown<A1>)-> PushDown<A2> {
+    fn approximate_storage(&self, pd: PushDown<A1>) -> PushDown<A2> {
         pd.map(&self.mapping)
     }
 
-    fn approximate_instruction(&self, instr: &PushDownInstruction<A1>)
-                               -> PushDownInstruction<A2>
-    {
+    fn approximate_instruction(&self, instr: &PushDownInstruction<A1>) -> PushDownInstruction<A2> {
         match *instr {
-            PushDownInstruction::Replace { ref current_val, ref new_val } => {
-                PushDownInstruction::Replace {
-                    current_val: current_val.iter().map(self.mapping).collect(),
-                    new_val: new_val.iter().map(self.mapping).collect(),
-                }
+            PushDownInstruction::Replace {
+                ref current_val,
+                ref new_val,
+            } => PushDownInstruction::Replace {
+                current_val: current_val.iter().map(self.mapping).collect(),
+                new_val: new_val.iter().map(self.mapping).collect(),
             },
         }
     }
@@ -51,8 +51,8 @@ impl<'a, A1, A2, T, W> ApproximationStrategy<T, W> for RlbElement<'a, A1, A2>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::equivalence_classes::EquivalenceRelation;
+    use super::*;
     use std::str::FromStr;
 
     #[test]
@@ -84,7 +84,9 @@ mod tests {
 
         assert_eq!(
             control_pushdown,
-            <RlbElement<_, _> as ApproximationStrategy<char, u8>>::approximate_storage(&rlb, pushdown)
+            <RlbElement<_, _> as ApproximationStrategy<char, u8>>::approximate_storage(
+                &rlb, pushdown
+            )
         );
     }
 

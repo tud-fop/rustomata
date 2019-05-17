@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-
 /// A trait that gives an interface for a weight assignment.
 pub trait Weighted {
     type Weight;
@@ -14,7 +13,6 @@ impl Weighted for usize {
         *self
     }
 }
-
 
 /// A `WeightedItem` implements the `PartialEq`, `PartialOrd`, `Eq` and `Ord`
 /// traits only with respect to the weight type `W`.
@@ -43,7 +41,7 @@ impl<I, W: Ord> Ord for WeightedItem<I, W> {
 
 impl<I, W> Weighted for WeightedItem<I, W>
 where
-    W: Clone
+    W: Clone,
 {
     type Weight = W;
     fn get_weight(&self) -> Self::Weight {
@@ -53,12 +51,14 @@ where
 
 /// An adapter for `Iterator` that removes the weight type `W` from
 /// `WeightedItem` and just yields the item type `I`.
-pub struct RemoveWeight<I, W, II>(II) where II: Iterator<Item=WeightedItem<I, W>>;
+pub struct RemoveWeight<I, W, II>(II)
+where
+    II: Iterator<Item = WeightedItem<I, W>>;
 
 impl<I, W, Iter, IntoIter> From<IntoIter> for RemoveWeight<I, W, Iter>
 where
-    IntoIter: IntoIterator<Item=WeightedItem<I, W>,IntoIter=Iter>,
-    Iter: Iterator<Item=WeightedItem<I, W>>
+    IntoIter: IntoIterator<Item = WeightedItem<I, W>, IntoIter = Iter>,
+    Iter: Iterator<Item = WeightedItem<I, W>>,
 {
     fn from(ii: IntoIter) -> Self {
         RemoveWeight(ii.into_iter())
@@ -67,7 +67,7 @@ where
 
 impl<I, W, II> Iterator for RemoveWeight<I, W, II>
 where
-    II: Iterator<Item=WeightedItem<I, W>>
+    II: Iterator<Item = WeightedItem<I, W>>,
 {
     type Item = I;
     fn next(&mut self) -> Option<Self::Item> {

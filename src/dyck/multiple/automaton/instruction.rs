@@ -1,7 +1,6 @@
-use std::collections::BTreeSet;
-use crate::recognisable::Instruction;
 use crate::automata::tree_stack_automaton::TreeStack;
-
+use crate::recognisable::Instruction;
+use std::collections::BTreeSet;
 
 /// An element of the tree push-down for recognizing a MDL.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -23,7 +22,6 @@ impl<T: Ord> MDTreeElem<T> {
     }
 }
 
-
 /// Instruction of an `Automaton` that recognizes multiple Dyck languages
 /// over an alphabet of elements in `T`.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +38,6 @@ pub enum MultipleDyckInstruction<T: Ord> {
     Down(T),
 }
 
-
 impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
     type Storage = TreeStack<MDTreeElem<T>>;
 
@@ -54,23 +51,22 @@ impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
                     let mut c = cell.clone();
                     c.remove(symbol);
                     MDTreeElem::Node(Some(symbol.clone()), c)
-                }) { // if node is blocked check the set in it and go up
+                }) {
+                    // if node is blocked check the set in it and go up
                     Ok(ts) => vec![ts],
                     Err(ts) => {
                         let ts_ = ts.up(position).ok().unwrap();
-                        if let Some(mut succset) =
-                            {
-                                if let MDTreeElem::Node(None, ref subset) = *ts_.current_symbol() {
-                                    if subset.contains(symbol) {
-                                        Some(subset.clone())
-                                    } else {
-                                        None
-                                    }
+                        if let Some(mut succset) = {
+                            if let MDTreeElem::Node(None, ref subset) = *ts_.current_symbol() {
+                                if subset.contains(symbol) {
+                                    Some(subset.clone())
                                 } else {
                                     None
                                 }
+                            } else {
+                                None
                             }
-                        {
+                        } {
                             succset.remove(symbol);
                             vec![ts_.set(MDTreeElem::Node(Some(symbol.clone()), succset))]
                         } else {
@@ -85,9 +81,10 @@ impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
                 // option 1: push a new child
                 let mut subset = cell.clone();
                 subset.remove(symbol);
-                succ.push(ts.clone().push_next(
-                    MDTreeElem::Node(Some(symbol.clone()), subset),
-                ));
+                succ.push(
+                    ts.clone()
+                        .push_next(MDTreeElem::Node(Some(symbol.clone()), subset)),
+                );
 
                 // option 2: up nondeterministcally
                 for ts_ in ts.ups() {
@@ -95,9 +92,10 @@ impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
                         if subset.contains(symbol) {
                             let mut succset = subset.clone();
                             succset.remove(symbol);
-                            succ.push(ts_.clone().set(
-                                MDTreeElem::Node(Some(symbol.clone()), succset),
-                            ));
+                            succ.push(
+                                ts_.clone()
+                                    .set(MDTreeElem::Node(Some(symbol.clone()), succset)),
+                            );
                         }
                     }
                 }
@@ -111,9 +109,11 @@ impl<T: Clone + Ord> Instruction for MultipleDyckInstruction<T> {
                             Vec::new()
                         } else {
                             // down
-                            match ts.clone()
+                            match ts
+                                .clone()
                                 .set(MDTreeElem::Node(None, subset.clone()))
-                                .down() {
+                                .down()
+                            {
                                 Ok(t) => vec![t],
                                 _ => Vec::new(),
                             }

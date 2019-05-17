@@ -1,4 +1,4 @@
-use min_max_heap::{MinMaxHeap, IntoIter};
+use min_max_heap::{IntoIter, MinMaxHeap};
 use std::iter::IntoIterator;
 
 use super::weighted::WeightedItem;
@@ -8,10 +8,10 @@ use super::weighted::WeightedItem;
 #[derive(Clone)]
 pub struct LimitedHeap<I, W>
 where
-    W: Ord
+    W: Ord,
 {
     heap: MinMaxHeap<WeightedItem<I, W>>,
-    capacity: usize
+    capacity: usize,
 }
 
 impl<I, W: Ord> LimitedHeap<I, W> {
@@ -54,11 +54,12 @@ pub mod weighted {
     /// An adapter for `super::LimitedHeap` that uses the priority given by the
     /// items' implementation of `Weighted`.
     pub struct LimitedHeap<I: Weighted>(super::LimitedHeap<I, I::Weight>)
-        where I::Weight: Ord;
+    where
+        I::Weight: Ord;
 
     impl<I: Weighted> LimitedHeap<I>
     where
-        I::Weight: Ord
+        I::Weight: Ord,
     {
         pub fn with_capacity(capacity: usize) -> Self {
             LimitedHeap(super::LimitedHeap::with_capacity(capacity))
@@ -86,10 +87,9 @@ pub mod weighted {
         }
     }
 
-
     impl<I: Weighted> IntoIterator for LimitedHeap<I>
     where
-        I::Weight: Ord
+        I::Weight: Ord,
     {
         type IntoIter = <super::LimitedHeap<I, I::Weight> as IntoIterator>::IntoIter;
         type Item = I;
@@ -103,7 +103,7 @@ use super::weighted::RemoveWeight;
 
 impl<I, W> IntoIterator for LimitedHeap<I, W>
 where
-    W: Ord
+    W: Ord,
 {
     type IntoIter = RemoveWeight<I, W, IntoIter<WeightedItem<I, W>>>;
     type Item = I;

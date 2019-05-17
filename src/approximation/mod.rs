@@ -1,9 +1,9 @@
 use num_traits::One;
-use std::collections::{BinaryHeap, BTreeMap};
+use std::collections::{BTreeMap, BinaryHeap};
 use std::ops::MulAssign;
 
-use crate::recognisable::{Instruction, Transition};
 use crate::recognisable::automaton::Automaton;
+use crate::recognisable::{Instruction, Transition};
 use crate::util::push_down::Pushdown;
 
 pub mod equivalence_classes;
@@ -116,7 +116,8 @@ where
         run2: Pushdown<Transition<Strategy::I2, T, W>>,
     ) -> BinaryHeap<Pushdown<Transition<Strategy::I1, T, W>>> {
         let f = |h: BinaryHeap<Pushdown<_>>, ts1: Vec<_>| {
-            let new_runs: Vec<Pushdown<_>> = h.into_iter()
+            let new_runs: Vec<Pushdown<_>> = h
+                .into_iter()
                 .flat_map(|run: Pushdown<_>| -> Vec<Pushdown<_>> {
                     let push_transition = |t1: &Transition<_, _, _>| run.clone().push(t1.clone());
                     ts1.iter().map(push_transition).collect()

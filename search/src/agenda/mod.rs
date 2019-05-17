@@ -9,17 +9,16 @@
 //!   interfaces, we separated the elements and priorities. So, the elements
 //!   themselves do not need to implement `Ord`.
 
-
-pub mod weighted;
 pub mod beam_heap;
-pub mod limited_heap;
 pub mod binary_heap;
+pub mod limited_heap;
+pub mod weighted;
 
-pub use self::limited_heap::LimitedHeap;
 pub use self::beam_heap::BeamHeap;
+pub use self::limited_heap::LimitedHeap;
 use self::weighted::Weighted;
 
-use std::{ ops::Mul, collections::VecDeque };
+use std::{collections::VecDeque, ops::Mul};
 
 /// Generic interface to a data structure that can hold some amount of elements
 /// of type `Agenda::Item`.
@@ -30,12 +29,11 @@ pub trait Agenda {
     fn peek(&self) -> Option<&Self::Item>;
     fn len(&self) -> usize;
 
-
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    fn extend<I: IntoIterator<Item=Self::Item>>(&mut self, elements: I) {
+    fn extend<I: IntoIterator<Item = Self::Item>>(&mut self, elements: I) {
         for element in elements {
             self.push(element);
         }
@@ -84,7 +82,7 @@ impl<I> Agenda for VecDeque<I> {
 
 impl<I: Weighted> Agenda for binary_heap::weighted::BinaryHeap<I>
 where
-    I::Weight: Ord
+    I::Weight: Ord,
 {
     type Item = I;
 
@@ -107,7 +105,7 @@ where
 
 impl<I: Weighted> Agenda for beam_heap::weighted::BeamHeap<I>
 where
-    I::Weight: Ord + Mul<Output=I::Weight> + Clone
+    I::Weight: Ord + Mul<Output = I::Weight> + Clone,
 {
     type Item = I;
 
@@ -130,7 +128,7 @@ where
 
 impl<I: Weighted> Agenda for limited_heap::weighted::LimitedHeap<I>
 where
-    I::Weight: Ord
+    I::Weight: Ord,
 {
     type Item = I;
 

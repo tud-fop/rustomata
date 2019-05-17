@@ -1,9 +1,9 @@
-use nom::{IResult, digit, is_space};
+use nom::{digit, is_space, IResult};
 use num_traits::One;
 use std::fmt::Debug;
-use std::str::{FromStr, from_utf8};
+use std::str::{from_utf8, FromStr};
 
-use crate::grammars::pmcfg::{Composition, PMCFG, PMCFGRule, VarT};
+use crate::grammars::pmcfg::{Composition, PMCFGRule, VarT, PMCFG};
 use crate::util::parsing::*;
 
 impl<N, T, W> FromStr for PMCFG<N, T, W>
@@ -62,31 +62,30 @@ where
 {
     do_parse!(
         input,
-        head: parse_token >>
-            take_while!(is_space) >>
-            alt!(tag!("→") | tag!("->") | tag!("=>")) >>
-            take_while!(is_space) >>
-            composition: parse_composition >>
-            take_while!(is_space) >>
-            tail: parse_successors >>
-            take_while!(is_space) >>
-            weight_o: opt!(
-                complete!(
-                    do_parse!(
-                        tag!("#") >>
-                            take_while!(is_space) >>
-                            weight_s: map_res!(is_not!(" "), from_utf8) >>
-                            (weight_s.parse().unwrap())
-                    )
-                )
-            ) >>
-            take_while!(is_space) >>
-            many0!(tag!("%")) >>
-            take_while!(|_| true) >>
-            (PMCFGRule {
+        head: parse_token
+            >> take_while!(is_space)
+            >> alt!(tag!("→") | tag!("->") | tag!("=>"))
+            >> take_while!(is_space)
+            >> composition: parse_composition
+            >> take_while!(is_space)
+            >> tail: parse_successors
+            >> take_while!(is_space)
+            >> weight_o:
+                opt!(complete!(do_parse!(
+                    tag!("#")
+                        >> take_while!(is_space)
+                        >> weight_s: map_res!(is_not!(" "), from_utf8)
+                        >> (weight_s.parse().unwrap())
+                )))
+            >> take_while!(is_space)
+            >> many0!(tag!("%"))
+            >> take_while!(|_| true)
+            >> (PMCFGRule {
                 head: head,
                 tail: tail,
-                composition: Composition { composition: composition },
+                composition: Composition {
+                    composition: composition
+                },
                 weight: weight_o.unwrap_or(W::one()),
             })
     )
@@ -99,26 +98,23 @@ where
 {
     do_parse!(
         input,
-        result: alt!(
-            do_parse!(
-                tag!("Var") >>
-                    take_while!(is_space) >>
-                    i: digit >>
-                    take_while!(is_space) >>
-                    j: digit >>
-                    (VarT::Var(
-                        from_utf8(i).unwrap().parse().unwrap(),
-                        from_utf8(j).unwrap().parse().unwrap(),
-                    ))
-            ) |
-            do_parse!(
-                tag!("T") >>
-                    take_while!(is_space) >>
-                    token: parse_token >>
-                    (VarT::T(token))
+        result:
+            alt!(
+                do_parse!(
+                    tag!("Var")
+                        >> take_while!(is_space)
+                        >> i: digit
+                        >> take_while!(is_space)
+                        >> j: digit
+                        >> (VarT::Var(
+                            from_utf8(i).unwrap().parse().unwrap(),
+                            from_utf8(j).unwrap().parse().unwrap(),
+                        ))
+                ) | do_parse!(
+                    tag!("T") >> take_while!(is_space) >> token: parse_token >> (VarT::T(token))
+                )
             )
-        ) >>
-            (result)
+            >> (result)
     )
 }
 

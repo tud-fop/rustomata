@@ -1,9 +1,14 @@
-use std::{ collections::{BinaryHeap, HashMap}, hash::Hash, ops::MulAssign, rc::Rc };
 use num_traits::One;
+use std::{
+    collections::{BinaryHeap, HashMap},
+    hash::Hash,
+    ops::MulAssign,
+    rc::Rc,
+};
 
 use crate::recognisable::{Configuration, Instruction, Item, Transition};
-use crate::util::{  push_down::Pushdown };
-use search::{Search, agenda::limited_heap::weighted::LimitedHeap, Agenda };
+use crate::util::push_down::Pushdown;
+use search::{agenda::limited_heap::weighted::LimitedHeap, Agenda, Search};
 
 // map from key to transition
 pub type TransitionMap<K, I, T, W> = HashMap<K, BinaryHeap<Transition<I, T, W>>>;
@@ -37,7 +42,6 @@ where
     /// The internal representation of the terminal symbols
     type TInt;
 
-
     /// Builds an `Automaton` from transitions and an initial storage configuration.
     fn from_transitions<It>(transitions: It, initial: <Self::I as Instruction>::Storage) -> Self
     where
@@ -45,7 +49,6 @@ where
 
     /// Returns a boxed `Iterator` over the `Transitions` of this `Automaton`.
     fn transitions<'a>(&'a self) -> Box<Iterator<Item = Transition<Self::I, T, W>> + 'a>;
-
 
     /// Returns the initial storage configuration.
     fn initial(&self) -> <Self::I as Instruction>::Storage;
@@ -58,7 +61,6 @@ where
 
     /// Translates a terminal symbol to its internal representation.
     fn terminal_to_int(&self, t: &T) -> Option<Self::TInt>;
-
 
     /// Returns the `Self::Key` for the given `Configuration` (in its internal representation).
     fn extract_key(
@@ -110,7 +112,6 @@ where
     }
 }
 
-
 pub fn recognise<'a, A, T, W>(
     a: &'a A,
     word: Vec<T>,
@@ -146,15 +147,15 @@ where
         rules
             .iter()
             .flat_map(|r| {
-                r.apply(conf).into_iter().map(move |conf1| {
-                    Item(conf1, run.clone().push(r.clone()))
-                })
+                r.apply(conf)
+                    .into_iter()
+                    .map(move |conf1| Item(conf1, run.clone().push(r.clone())))
             })
             .collect::<Vec<_>>()
-    }).filter(move |Item(c, _)| a.is_terminal(c))
-        .map(move |i| a.item_map(&i))
+    })
+    .filter(move |Item(c, _)| a.is_terminal(c))
+    .map(move |i| a.item_map(&i))
 }
-
 
 pub fn recognise_beam<'a, A, T, W>(
     a: &'a A,
@@ -195,11 +196,12 @@ where
         rules
             .iter()
             .flat_map(|r| {
-                r.apply(conf).into_iter().map(move |conf1| {
-                    Item(conf1, run.clone().push(r.clone()))
-                })
+                r.apply(conf)
+                    .into_iter()
+                    .map(move |conf1| Item(conf1, run.clone().push(r.clone())))
             })
             .collect::<Vec<_>>()
-    }).filter(move |Item(c, _)| a.is_terminal(c))
-        .map(move |i| a.item_map(&i))
+    })
+    .filter(move |Item(c, _)| a.is_terminal(c))
+    .map(move |i| a.item_map(&i))
 }

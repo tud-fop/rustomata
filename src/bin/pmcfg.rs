@@ -1,13 +1,13 @@
-use clap::{Arg, ArgMatches, App, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use log_domain::LogDomain;
-use rustomata::grammars::pmcfg::PMCFG;
-use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
-use rustomata::recognisable::Recognisable;
-use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
 use rustomata::automata::tree_stack_automaton::to_abstract_syntax_tree;
+use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
+use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
+use rustomata::grammars::pmcfg::PMCFG;
+use rustomata::recognisable::Recognisable;
 
-use std::io::{self, Read};
 use std::fs::File;
+use std::io::{self, Read};
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("mcfg")

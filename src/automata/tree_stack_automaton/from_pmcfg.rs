@@ -1,15 +1,15 @@
 extern crate num_traits;
 
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::vec::Vec;
 
 use self::num_traits::One;
-use crate::grammars::pmcfg::{PMCFG, PMCFGRule, VarT};
-use crate::recognisable::Transition;
 use crate::automata::tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use crate::grammars::pmcfg::{PMCFGRule, VarT, PMCFG};
+use crate::recognisable::Transition;
 use crate::util::tree::GornTree;
 
 // types for analysis of derivation trees of PMCFGs
@@ -48,10 +48,11 @@ impl<X: Display> Display for PosState<X> {
 
 // TODO assumes that the PMCFG is monotonic on the visit-order of components
 impl<
-    N: Clone + Ord + PartialEq + Hash,
-    T: Clone + Ord + PartialEq + Hash,
-    W: Clone + Ord + PartialEq + One,
-> From<PMCFG<N, T, W>> for TreeStackAutomaton<PosState<PMCFGRule<N, T, W>>, T, W> {
+        N: Clone + Ord + PartialEq + Hash,
+        T: Clone + Ord + PartialEq + Hash,
+        W: Clone + Ord + PartialEq + One,
+    > From<PMCFG<N, T, W>> for TreeStackAutomaton<PosState<PMCFGRule<N, T, W>>, T, W>
+{
     fn from(g: PMCFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
 
@@ -150,25 +151,21 @@ impl<
                                         Some(_) => W::one(),
                                     },
                                     instruction: match previous_component[i1] {
-                                        None => {
-                                            TreeStackInstruction::Push {
-                                                n: i1,
-                                                current_val: PosState::Position(r.clone(), j, k),
-                                                new_val: PosState::Position(ri.clone(), j1, 0),
-                                            }
-                                        }
-                                        Some(j0) => {
-                                            TreeStackInstruction::Up {
-                                                n: i1,
-                                                current_val: PosState::Position(r.clone(), j, k),
-                                                old_val: PosState::Position(
-                                                    ri.clone(),
-                                                    j0,
-                                                    down_info[ri][j0].0,
-                                                ),
-                                                new_val: PosState::Position(ri.clone(), j1, 0),
-                                            }
-                                        }
+                                        None => TreeStackInstruction::Push {
+                                            n: i1,
+                                            current_val: PosState::Position(r.clone(), j, k),
+                                            new_val: PosState::Position(ri.clone(), j1, 0),
+                                        },
+                                        Some(j0) => TreeStackInstruction::Up {
+                                            n: i1,
+                                            current_val: PosState::Position(r.clone(), j, k),
+                                            old_val: PosState::Position(
+                                                ri.clone(),
+                                                j0,
+                                                down_info[ri][j0].0,
+                                            ),
+                                            new_val: PosState::Position(ri.clone(), j1, 0),
+                                        },
                                     },
                                 });
 
@@ -212,12 +209,12 @@ pub fn to_abstract_syntax_tree<A>(
     let mut abstract_syntax_tree = GornTree::new();
 
     for (address, pos_state) in tree_map {
-        let (curr_root_child, relative_address) =
-            if let Some((first, rest)) = address.split_first() {
-                (first.clone(), rest.to_vec())
-            } else {
-                continue;
-            };
+        let (curr_root_child, relative_address) = if let Some((first, rest)) = address.split_first()
+        {
+            (first.clone(), rest.to_vec())
+        } else {
+            continue;
+        };
 
         if curr_root_child != 0 {
             continue;
@@ -266,7 +263,9 @@ pub mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The given tree map contains 'designated' or 'initial' nodes that are not the root!")]
+    #[should_panic(
+        expected = "The given tree map contains 'designated' or 'initial' nodes that are not the root!"
+    )]
     fn test_to_abstract_syntax_tree_invalid_tree() {
         let mut tree_map: GornTree<PosState<u8>> = GornTree::new();
         tree_map.insert(vec![], PosState::Initial);

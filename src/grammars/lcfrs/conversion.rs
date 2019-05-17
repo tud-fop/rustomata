@@ -1,9 +1,14 @@
+use super::*;
 /// This module contains the implementation of the construction of an
 /// LCFRS for each MCFG.
-
-use crate::grammars::{ pmcfg::{PMCFGRule, VarT}, mcfg::Mcfg };
-use std::{ collections::{BTreeSet, HashMap}, hash::Hash };
-use super::*;
+use crate::grammars::{
+    mcfg::Mcfg,
+    pmcfg::{PMCFGRule, VarT},
+};
+use std::{
+    collections::{BTreeSet, HashMap},
+    hash::Hash,
+};
 
 use search::Search;
 
@@ -20,40 +25,49 @@ where
         let fanouts = read_fanouts(&mcfg_rules).unwrap();
         let mut rulemap: HashMap<&N, Vec<&PMCFGRule<N, T, W>>> = HashMap::new();
         for rule in &mcfg_rules {
-            rulemap.entry(&rule.head).or_insert_with(Vec::new).push(
-                rule,
-            );
+            rulemap
+                .entry(&rule.head)
+                .or_insert_with(Vec::new)
+                .push(rule);
         }
 
         let mut rules = Vec::new();
 
-        for (a, deletions) in Search::bfs(vec![(&mcfg_initial, BTreeSet::new())], |&(a,
-           ref deltetions)| {
-            let mut successors = Vec::new();
-            for rule in rulemap.get(a).unwrap_or(&Vec::new()) {
-                let localfanouts_: Option<Vec<usize>> = rule.tail
-                    .iter()
-                    .map(|nt| fanouts.get(&nt).cloned())
-                    .collect();
-                let rem_comp: Vec<_> = rule.composition
-                    .composition
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(j, c)| if deltetions.contains(&j) {
-                        None
-                    } else {
-                        Some(c)
-                    })
-                    .collect();
-                if let Some(localfanouts) = localfanouts_ {
-                    successors.extend(rule.tail.iter().zip(composition_deletes(
-                        &rem_comp,
-                        &localfanouts,
-                    )));
+        for (a, deletions) in Search::bfs(
+            vec![(&mcfg_initial, BTreeSet::new())],
+            |&(a, ref deltetions)| {
+                let mut successors = Vec::new();
+                for rule in rulemap.get(a).unwrap_or(&Vec::new()) {
+                    let localfanouts_: Option<Vec<usize>> = rule
+                        .tail
+                        .iter()
+                        .map(|nt| fanouts.get(&nt).cloned())
+                        .collect();
+                    let rem_comp: Vec<_> = rule
+                        .composition
+                        .composition
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(j, c)| {
+                            if deltetions.contains(&j) {
+                                None
+                            } else {
+                                Some(c)
+                            }
+                        })
+                        .collect();
+                    if let Some(localfanouts) = localfanouts_ {
+                        successors.extend(
+                            rule.tail
+                                .iter()
+                                .zip(composition_deletes(&rem_comp, &localfanouts)),
+                        );
+                    }
                 }
-            }
-            successors
-        }).uniques()
+                successors
+            },
+        )
+        .uniques()
         {
             for rule in rulemap.get(a).unwrap_or(&Vec::new()) {
                 rules.push(to_lcfrs_rule((*rule).clone(), deletions.clone(), &fanouts));
@@ -112,10 +126,12 @@ where
         .composition
         .into_iter()
         .enumerate()
-        .filter_map(|(j, c)| if deletions.contains(&j) {
-            None
-        } else {
-            Some(c)
+        .filter_map(|(j, c)| {
+            if deletions.contains(&j) {
+                None
+            } else {
+                Some(c)
+            }
         })
         .collect();
     let succ_fanouts: Vec<usize> = tail.iter().map(|n| *fanouts.get(&n).unwrap()).collect();
@@ -127,12 +143,10 @@ where
             component
                 .into_iter()
                 .map(|symbol| match symbol {
-                    VarT::Var(i, j) => {
-                        VarT::Var(
-                            i,
-                            j - successors_deletions[i].iter().filter(|j_| **j_ < j).count(),
-                        )
-                    }
+                    VarT::Var(i, j) => VarT::Var(
+                        i,
+                        j - successors_deletions[i].iter().filter(|j_| **j_ < j).count(),
+                    ),
                     t => t,
                 })
                 .collect()
@@ -141,8 +155,11 @@ where
 
     PMCFGRule {
         head: (head, deletions),
-        composition: Composition { composition: processed_composition },
-        tail: tail.into_iter()
+        composition: Composition {
+            composition: processed_composition,
+        },
+        tail: tail
+            .into_iter()
             .zip(successors_deletions.into_iter())
             .collect(),
         weight,

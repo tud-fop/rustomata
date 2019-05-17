@@ -1,16 +1,16 @@
 extern crate num_traits;
 
+use self::num_traits::{One, Zero};
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
-use std::vec::Vec;
-use std::ops::{AddAssign, Mul, Div};
-use self::num_traits::{One, Zero};
+use std::ops::{AddAssign, Div, Mul};
 use std::str::FromStr;
+use std::vec::Vec;
 
-use crate::recognisable::Transition;
-use crate::grammars::cfg::*;
 use crate::automata::push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
+use crate::grammars::cfg::*;
+use crate::recognisable::Transition;
 
 /// Symbols of a `PushDown` created by an `CFG`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -49,76 +49,75 @@ impl<X: fmt::Display, Y: fmt::Display> fmt::Display for PushState<X, Y> {
     }
 }
 
-impl<N: Clone + Ord + PartialEq + Hash,
-     T: Clone + Ord + PartialEq + Hash,
-     W: Clone + Ord + PartialEq + One + FromStr + AddAssign + Mul<Output = W> + Div<Output = W> + Zero
-     > From<CFG<N, T, W>> for PushDownAutomaton<PushState<N,T>, T, W>
+impl<
+        N: Clone + Ord + PartialEq + Hash,
+        T: Clone + Ord + PartialEq + Hash,
+        W: Clone
+            + Ord
+            + PartialEq
+            + One
+            + FromStr
+            + AddAssign
+            + Mul<Output = W>
+            + Div<Output = W>
+            + Zero,
+    > From<CFG<N, T, W>> for PushDownAutomaton<PushState<N, T>, T, W>
 {
-     fn from(g: CFG<N, T, W>) -> Self {
+    fn from(g: CFG<N, T, W>) -> Self {
         let mut transitions = Vec::new();
 
-        let mut t_buffer= HashSet::new();
+        let mut t_buffer = HashSet::new();
 
-// creates a Transition for every rule that replaces the nonterminal of the left side with the rightside of the rule
-        for r in g.rules.clone(){
+        // creates a Transition for every rule that replaces the nonterminal of the left side with the rightside of the rule
+        for r in g.rules.clone() {
             let mut st = Vec::new();
-            for v in r.composition.composition{
-
+            for v in r.composition.composition {
                 match v {
                     LetterT::Value(x) => {
                         t_buffer.insert(x.clone());
-                        st.insert(0,PushState::T(x.clone()));
-                    },
+                        st.insert(0, PushState::T(x.clone()));
+                    }
                     LetterT::Label(x) => {
-                        st.insert(0,PushState::Nt(x.clone()));
-                    },
+                        st.insert(0, PushState::Nt(x.clone()));
+                    }
                 }
             }
 
-            transitions.push(
-                Transition {
-                    word: Vec::new(),
-                    weight: r.weight.clone(),
-                    instruction: PushDownInstruction::Replace {
-                        current_val: vec![PushState::Nt(r.head.clone())],
-                        new_val: st.clone(),
-                    }
-                }
-            );
-
+            transitions.push(Transition {
+                word: Vec::new(),
+                weight: r.weight.clone(),
+                instruction: PushDownInstruction::Replace {
+                    current_val: vec![PushState::Nt(r.head.clone())],
+                    new_val: st.clone(),
+                },
+            });
         }
-// creates a transition for every terminal that reads the word
-        for t in t_buffer{
+        // creates a transition for every terminal that reads the word
+        for t in t_buffer {
             let mut tvec = Vec::new();
             tvec.push(t.clone());
-            transitions.push(
-                Transition {
-                    word: tvec.clone(),
-                    weight: W::one(),
-                    instruction: PushDownInstruction::Replace {
-                        current_val: vec![PushState::T(t.clone())],
-                        new_val: Vec::new(),
-                    }
-                }
-            );
-
-
+            transitions.push(Transition {
+                word: tvec.clone(),
+                weight: W::one(),
+                instruction: PushDownInstruction::Replace {
+                    current_val: vec![PushState::T(t.clone())],
+                    new_val: Vec::new(),
+                },
+            });
         }
 
-// creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `one`
-        for ini in g.initial{
+        // creates a transition for the `Initial` symbol to all Nonterminals in `initial` with weight `one`
+        for ini in g.initial {
             let mut tvec = Vec::new();
             tvec.push(PushState::Nt(ini));
-            transitions.push(
-                Transition {
-                    word: Vec::new(),
-                    weight: W::one(),
-                    instruction: PushDownInstruction::Replace {
-                        current_val: vec![PushState::Initial],
-                        new_val: tvec,
-                    }
-                }
-            );
+            transitions.push(Transition {
+                word: Vec::new(),
+                weight: W::one(),
+                instruction: PushDownInstruction::Replace {
+                    current_val: vec![PushState::Initial],
+                    new_val: tvec,
+                },
+            });
         }
 
         PushDownAutomaton::new(

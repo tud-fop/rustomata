@@ -8,11 +8,11 @@ use log_domain::LogDomain;
 use std::fs::File;
 use std::io::Read;
 
-use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::equivalence_classes::EquivalenceRelation;
 use rustomata::approximation::relabel::RlbElement;
-use rustomata::grammars::cfg::*;
+use rustomata::approximation::ApproximationStrategy;
 use rustomata::automata::push_down_automaton::*;
+use rustomata::grammars::cfg::*;
 use rustomata::recognisable::*;
 // TODO: Uncomment once PushDownAutomaton::FromStr has been implemented
 // use rustomata::recognisable::automaton::Automaton;
@@ -75,7 +75,9 @@ fn test_cfg_from_str_correctness() {
     };
     let rule_s1 = CFGRule {
         head: String::from("S"),
-        composition: CFGComposition { composition: vec![] },
+        composition: CFGComposition {
+            composition: vec![],
+        },
         weight: LogDomain::new(0.6).unwrap(),
     };
     let control_grammar = CFG {

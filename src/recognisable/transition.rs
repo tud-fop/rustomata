@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
-use std::ops::Mul;
 use std::fmt::{self, Debug, Display};
 use std::hash::{Hash, Hasher};
+use std::ops::Mul;
 
 use integeriser::{HashIntegeriser, Integeriser};
 
@@ -28,7 +28,8 @@ where
 
     fn integerise(&self, integeriser1: &mut Self::I1, integeriser2: &mut Self::I2) -> Self::AInt {
         Transition {
-            word: self.word
+            word: self
+                .word
                 .iter()
                 .map(|t| integeriser1.integerise(t.clone()))
                 .collect(),
@@ -39,7 +40,8 @@ where
 
     fn un_integerise(v: &Self::AInt, integeriser1: &Self::I1, integeriser2: &Self::I2) -> Self {
         Transition {
-            word: v.word
+            word: v
+                .word
                 .iter()
                 .map(|i| integeriser1.find_value(*i).unwrap().clone())
                 .collect(),
@@ -114,14 +116,10 @@ where
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {
-            None |
-            Some(Ordering::Equal) => {
-                match self.word.partial_cmp(&other.word) {
-                    None |
-                    Some(Ordering::Equal) => self.instruction.partial_cmp(&other.instruction),
-                    x => x,
-                }
-            }
+            None | Some(Ordering::Equal) => match self.word.partial_cmp(&other.word) {
+                None | Some(Ordering::Equal) => self.instruction.partial_cmp(&other.instruction),
+                x => x,
+            },
             x => x,
         }
     }
@@ -135,12 +133,10 @@ where
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.weight.cmp(&other.weight) {
-            Ordering::Equal => {
-                match self.word.cmp(&other.word) {
-                    Ordering::Equal => self.instruction.cmp(&other.instruction),
-                    x => x,
-                }
-            }
+            Ordering::Equal => match self.word.cmp(&other.word) {
+                Ordering::Equal => self.instruction.cmp(&other.instruction),
+                x => x,
+            },
             x => x,
         }
     }
@@ -156,9 +152,7 @@ where
         write!(
             f,
             "Transition {:?} {}  # {}",
-            self.word,
-            self.instruction,
-            self.weight
+            self.word, self.instruction, self.weight
         )
     }
 }

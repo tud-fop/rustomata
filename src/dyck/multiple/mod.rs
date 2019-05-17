@@ -1,8 +1,8 @@
 mod automaton;
 use crate::dyck::multiple::automaton::MultipleDyckAutomaton;
-use crate::util::partition::Partition;
 pub use crate::dyck::Bracket;
 use crate::recognisable::automaton::recognise;
+use crate::util::partition::Partition;
 
 /// An object that represents the mutliple Dyck language of an alphabet Σ with respect to
 /// a partition of Σ.
@@ -79,7 +79,8 @@ mod test {
         let partition = Partition::new(vec![
             vec![1, 2].into_iter().collect(),
             vec![3, 4].into_iter().collect(),
-        ]).unwrap();
+        ])
+        .unwrap();
 
         let mdl = MultipleDyckLanguage::new(partition);
 
@@ -100,7 +101,7 @@ mod test {
                 Close(3),
             ],
         ];
-        
+
         for not_dyckword in not_words {
             assert!(!mdl.recognize(&not_dyckword));
         }
@@ -111,7 +112,8 @@ mod test {
         let partition = Partition::new(vec![
             vec![1, 2].into_iter().collect(),
             vec![3, 4].into_iter().collect(),
-        ]).unwrap();
+        ])
+        .unwrap();
 
         let sort = |i: &usize| -> usize {
             if vec![1usize, 2usize].contains(i) {

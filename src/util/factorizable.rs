@@ -1,10 +1,9 @@
 use log_domain::LogDomain;
-use std::{ iter::repeat, marker::Sized };
-
+use std::{iter::repeat, marker::Sized};
 
 pub trait Factorizable
 where
-    Self: Sized
+    Self: Sized,
 {
     fn factorize(self, n: usize) -> Vec<Self>;
 }

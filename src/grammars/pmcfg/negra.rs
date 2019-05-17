@@ -70,12 +70,16 @@ where
 #[derive(Clone, Debug)]
 pub enum DumpMode<T> {
     FromPos(Vec<T>),
-    Default
+    Default,
 }
 
 /// Takes a tree stack _(encoded in a Gorn tree)_ of PMCFG rules and transforms it into a
 /// corresponding _NEGRA_ string.
-pub fn to_negra<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, sentence_id: usize, mode: DumpMode<T>) -> String
+pub fn to_negra<H, T, W>(
+    tree_map: &GornTree<PMCFGRule<H, T, W>>,
+    sentence_id: usize,
+    mode: DumpMode<T>,
+) -> String
 where
     H: Clone + ToString,
     T: Clone + ToString,
@@ -83,7 +87,7 @@ where
     if !meets_negra_criteria(&tree_map) {
         panic!(
             "The given tree does not meet the negra criteria! All rules must either consist \
-                only of nonterminals or of exactly one terminal symbol."
+             only of nonterminals or of exactly one terminal symbol."
         );
     }
 
@@ -100,12 +104,16 @@ where
 
 pub fn noparse<T>(sentence: &[T], sentence_id: usize, mode: DumpMode<T>) -> String
 where
-    T: ToString
+    T: ToString,
 {
     let mut output = format!("#BOS {}\n", sentence_id);
-    if  let DumpMode::FromPos(poss) = mode {
+    if let DumpMode::FromPos(poss) = mode {
         for (pos, word) in sentence.iter().zip(&poss) {
-            output.push_str(&format!("{}\t{}\t--\t--\t500\n", word.to_string(), pos.to_string()));
+            output.push_str(&format!(
+                "{}\t{}\t--\t--\t500\n",
+                word.to_string(),
+                pos.to_string()
+            ));
         }
     } else {
         for word in sentence.iter() {
@@ -152,7 +160,10 @@ pub fn meets_negra_criteria<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>) ->
     true
 }
 
-fn to_negra_vector<H, T, W>(tree_map: &GornTree<PMCFGRule<H, T, W>>, mut mode: DumpMode<T>) -> Vec<(String, String, usize)>
+fn to_negra_vector<H, T, W>(
+    tree_map: &GornTree<PMCFGRule<H, T, W>>,
+    mut mode: DumpMode<T>,
+) -> Vec<(String, String, usize)>
 where
     H: Clone + ToString,
     T: Clone + ToString,
@@ -178,7 +189,7 @@ where
                     } else {
                         terminal_map.get(&terminal_id).unwrap().to_string()
                     };
-                    
+
                     let address = terminal_id.address;
                     let rule_label = nonterminal_map.get(&address).unwrap();
 
@@ -193,11 +204,7 @@ where
                             &mut rule_counter,
                         )
                     };
-                    negra_vector.push((
-                        terminal_string,
-                        rule_label.to_string(),
-                        parent_number,
-                    ));
+                    negra_vector.push((terminal_string, rule_label.to_string(), parent_number));
                 }
             }
         }
@@ -249,9 +256,9 @@ fn get_rule_number(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::tests::*;
     use self::VarT::{Var, T};
+    use super::super::tests::*;
+    use super::*;
     use std::str::FromStr;
 
     #[test]
@@ -270,20 +277,16 @@ mod tests {
         let mut identified_tree_map = GornTree::new();
         identified_tree_map.insert(
             vec![],
-            Composition::from(vec![
-                vec![
-                    Var(0, 0),
-                    T(TermId::from((vec![], 1))),
-                    Var(0, 1),
-                    T(TermId::from((vec![], 3))),
-                ],
-            ]),
+            Composition::from(vec![vec![
+                Var(0, 0),
+                T(TermId::from((vec![], 1))),
+                Var(0, 1),
+                T(TermId::from((vec![], 3))),
+            ]]),
         );
         identified_tree_map.insert(
             vec![0],
-            Composition::from(
-                vec![vec![Var(1, 0)], vec![T(TermId::from((vec![0], 1)))]],
-            ),
+            Composition::from(vec![vec![Var(1, 0)], vec![T(TermId::from((vec![0], 1)))]]),
         );
         identified_tree_map.insert(
             vec![0, 1],
@@ -320,12 +323,8 @@ mod tests {
                             unidentified_compon.push(VarT::Var(x, y));
                         }
                         VarT::T(terminal_id) => {
-                            unidentified_compon.push(VarT::T(
-                                terminal_map
-                                    .get(&terminal_id)
-                                    .unwrap()
-                                    .clone(),
-                            ));
+                            unidentified_compon
+                                .push(VarT::T(terminal_map.get(&terminal_id).unwrap().clone()));
                         }
                     }
                 }
@@ -373,12 +372,17 @@ mod tests {
         ];
 
         assert_eq!(
-            negra_vector, 
+            negra_vector,
             to_negra_vector(
                 &tree_map,
-                DumpMode::FromPos(
-                    vec!["Ah".to_string(), "Ah".to_string(), "Beh".to_string(), "Zeh".to_string(), "Zeh".to_string(), "Deh".to_string()]
-                )
+                DumpMode::FromPos(vec![
+                    "Ah".to_string(),
+                    "Ah".to_string(),
+                    "Beh".to_string(),
+                    "Zeh".to_string(),
+                    "Zeh".to_string(),
+                    "Deh".to_string()
+                ])
             )
         );
     }
@@ -410,8 +414,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The given tree does not meet the negra criteria! All rules must either consist \
-         only of nonterminals or of exactly one terminal symbol.")]
+    #[should_panic(
+        expected = "The given tree does not meet the negra criteria! All rules must either consist \
+         only of nonterminals or of exactly one terminal symbol."
+    )]
     fn test_to_negra_violated_criteria() {
         let mut tree_map: GornTree<PMCFGRule<String, char, usize>> = GornTree::new();
         tree_map.insert(

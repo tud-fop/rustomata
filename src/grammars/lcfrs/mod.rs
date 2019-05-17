@@ -1,15 +1,14 @@
 use crate::grammars::pmcfg::PMCFGRule;
 use crate::grammars::pmcfg::VarT;
-use std::hash::Hash;
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
+use std::hash::Hash;
 
 mod conversion;
-mod from_str;
+pub mod csparsing;
 pub mod from_discodop;
 pub mod from_rparse;
-pub mod csparsing;
-
+mod from_str;
 
 /// A linear context-free rewriting system.
 #[derive(Debug, Clone)]
@@ -32,8 +31,7 @@ where
             // scope for lieftime of `fanouts` that borrows from rules
             let fanouts = read_fanouts(&rules)?;
             let check_fanouts = |rule: &PMCFGRule<N, T, W>| -> bool {
-                let fanouts: Vec<usize>
-                    = rule.tail.iter().map(|nt| fanouts[nt]).collect();
+                let fanouts: Vec<usize> = rule.tail.iter().map(|nt| fanouts[nt]).collect();
                 check_composition(&rule.composition.composition, &fanouts)
             };
 
@@ -84,8 +82,9 @@ where
 {
     let mut fanouts: HashMap<&N, usize> = HashMap::new();
     for rule in rules {
-        let lhs_fanout = fanouts.entry(&rule.head)
-                                .or_insert_with(|| rule.composition.composition.len());
+        let lhs_fanout = fanouts
+            .entry(&rule.head)
+            .or_insert_with(|| rule.composition.composition.len());
         if lhs_fanout != &rule.composition.composition.len() {
             return None;
         }
@@ -110,22 +109,23 @@ fn check_composition<T>(composition: &[Vec<VarT<T>>], fanouts: &[usize]) -> bool
         VecMultiMapAdapter(&mut variable_occurances)[i].push(j);
     }
 
-    variable_occurances.len() == fanouts.len() &&
-        variable_occurances.into_iter().enumerate().all(
-            |(i, mut js)| {
+    variable_occurances.len() == fanouts.len()
+        && variable_occurances
+            .into_iter()
+            .enumerate()
+            .all(|(i, mut js)| {
                 js.sort();
                 let js_: Vec<usize> = (0..fanouts[i]).collect();
                 js == js_
-            },
-        )
+            })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grammars::mcfg::Mcfg;
     use crate::grammars::pmcfg::{Composition, VarT};
     use std::collections::BTreeSet;
-    use crate::grammars::mcfg::Mcfg;
 
     #[test]
     fn fanouts() {
@@ -147,43 +147,47 @@ mod tests {
     #[test]
     fn conversion() {
         let lcfrs: Lcfrs<(usize, BTreeSet<usize>), usize, ()> = Mcfg::new(mcfg_rules(), 1).into();
-        
+
         let emptyset = BTreeSet::new();
         let set0: BTreeSet<_> = vec![0].into_iter().collect();
         let set01: BTreeSet<_> = vec![0, 1].into_iter().collect();
-        
-        assert_eq!(
-            lcfrs.init,
-            (1, BTreeSet::new())
-        );
 
-        let rules: Vec<PMCFGRule<(usize, BTreeSet<usize>), usize, ()>> =
-            vec![
-                PMCFGRule {
-                    weight: (),
-                    head: (1, emptyset.clone()),
-                    tail: vec![],
-                    composition: Composition { composition: vec![vec![VarT::T(0)]] },
+        assert_eq!(lcfrs.init, (1, BTreeSet::new()));
+
+        let rules: Vec<PMCFGRule<(usize, BTreeSet<usize>), usize, ()>> = vec![
+            PMCFGRule {
+                weight: (),
+                head: (1, emptyset.clone()),
+                tail: vec![],
+                composition: Composition {
+                    composition: vec![vec![VarT::T(0)]],
                 },
-                PMCFGRule {
-                    weight: (),
-                    head: (1, emptyset.clone()),
-                    tail: vec![(2, set0.clone())],
-                    composition: Composition { composition: vec![vec![VarT::Var(0, 0), VarT::T(0)]] },
+            },
+            PMCFGRule {
+                weight: (),
+                head: (1, emptyset.clone()),
+                tail: vec![(2, set0.clone())],
+                composition: Composition {
+                    composition: vec![vec![VarT::Var(0, 0), VarT::T(0)]],
                 },
-                PMCFGRule {
-                    weight: (),
-                    head: (2, set0.clone()),
-                    tail: vec![(2, set01.clone())],
-                    composition: Composition { composition: vec![vec![VarT::T(2)]] },
+            },
+            PMCFGRule {
+                weight: (),
+                head: (2, set0.clone()),
+                tail: vec![(2, set01.clone())],
+                composition: Composition {
+                    composition: vec![vec![VarT::T(2)]],
                 },
-                PMCFGRule {
-                    weight: (),
-                    head: (2, set01.clone()),
-                    tail: vec![(2, set01.clone())],
-                    composition: Composition { composition: vec![] },
+            },
+            PMCFGRule {
+                weight: (),
+                head: (2, set01.clone()),
+                tail: vec![(2, set01.clone())],
+                composition: Composition {
+                    composition: vec![],
                 },
-            ];
+            },
+        ];
 
         assert_eq!(
             lcfrs.rules.into_iter().collect::<BTreeSet<_>>(),
@@ -197,19 +201,25 @@ mod tests {
                 weight: (),
                 head: 2,
                 tail: vec![2],
-                composition: Composition { composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]],
+                },
             },
             PMCFGRule {
                 weight: (),
                 head: 1,
                 tail: vec![2],
-                composition: Composition { composition: vec![vec![VarT::Var(0, 1), VarT::T(0)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::Var(0, 1), VarT::T(0)]],
+                },
             },
             PMCFGRule {
                 weight: (),
                 head: 1,
                 tail: vec![],
-                composition: Composition { composition: vec![vec![VarT::T(0)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(0)]],
+                },
             },
         ]
     }
@@ -220,7 +230,9 @@ mod tests {
                 weight: (),
                 head: 2,
                 tail: vec![2],
-                composition: Composition { composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]],
+                },
             },
             PMCFGRule {
                 weight: (),
@@ -234,7 +246,9 @@ mod tests {
                 weight: (),
                 head: 1,
                 tail: vec![],
-                composition: Composition { composition: vec![vec![VarT::T(0)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(0)]],
+                },
             },
         ]
     }
@@ -245,7 +259,9 @@ mod tests {
                 weight: (),
                 head: 2,
                 tail: vec![],
-                composition: Composition { composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(1)], vec![VarT::T(2)]],
+                },
             },
             PMCFGRule {
                 weight: (),
@@ -259,13 +275,17 @@ mod tests {
                 weight: (),
                 head: 1,
                 tail: vec![1],
-                composition: Composition { composition: vec![vec![VarT::Var(0, 0)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::Var(0, 0)]],
+                },
             },
             PMCFGRule {
                 weight: (),
                 head: 1,
                 tail: vec![],
-                composition: Composition { composition: vec![vec![VarT::T(0)]] },
+                composition: Composition {
+                    composition: vec![vec![VarT::T(0)]],
+                },
             },
         ]
     }

@@ -4,18 +4,23 @@ use std::ops::MulAssign;
 use std::rc::Rc;
 
 use crate::approximation::{ApproximationInstance, ApproximationStrategy};
-use crate::recognisable::{Instruction, Item, Recognisable};
 use crate::recognisable::automaton::Automaton;
+use crate::recognisable::{Instruction, Item, Recognisable};
 use search::agenda::weighted::Weighted;
 
 pub struct CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
-    where Rec: Automaton<T, W>,
-          SubRec: Recognisable<T, W, Parse=Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>,
-          Strategy: ApproximationStrategy<T, W> + Sized,
-          Strategy::I1: Instruction,
-          Strategy::I2: Instruction,
-          T: Clone + Eq + Ord,
-          W: Clone + MulAssign + One + Ord,
+where
+    Rec: Automaton<T, W>,
+    SubRec: Recognisable<
+        T,
+        W,
+        Parse = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>,
+    >,
+    Strategy: ApproximationStrategy<T, W> + Sized,
+    Strategy::I1: Instruction,
+    Strategy::I2: Instruction,
+    T: Clone + Eq + Ord,
+    W: Clone + MulAssign + One + Ord,
 {
     pub recogniser: Rc<Rec>,
     pub sublevel: Rc<SubRec>,
@@ -39,13 +44,16 @@ where
 }
 
 impl<'a, Rec, Strategy, T, W> CoarseToFineParseForest<'a, Rec, Strategy, T, W>
-    where Rec: Automaton<T, W>,
-          Strategy: 'a + ApproximationStrategy<T, W>,
-          Strategy::I1: Instruction,
-          T: 'a + Clone + Eq + Ord,
-          W: 'a + Clone + MulAssign + One + Ord,
+where
+    Rec: Automaton<T, W>,
+    Strategy: 'a + ApproximationStrategy<T, W>,
+    Strategy::I1: Instruction,
+    T: 'a + Clone + Eq + Ord,
+    W: 'a + Clone + MulAssign + One + Ord,
 {
-    fn peek_input(&mut self) -> Option<&Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> {
+    fn peek_input(
+        &mut self,
+    ) -> Option<&Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> {
         if self.input_buffer.is_none() {
             self.input_buffer = Some(self.sublevel_parses.next());
         }
@@ -56,7 +64,9 @@ impl<'a, Rec, Strategy, T, W> CoarseToFineParseForest<'a, Rec, Strategy, T, W>
         }
     }
 
-    fn next_input(&mut self) -> Option<Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> {
+    fn next_input(
+        &mut self,
+    ) -> Option<Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> {
         if self.input_buffer.is_none() {
             self.input_buffer = Some(self.sublevel_parses.next());
         }
@@ -68,19 +78,21 @@ impl<'a, Rec, Strategy, T, W> CoarseToFineParseForest<'a, Rec, Strategy, T, W>
 }
 
 impl<'a, Rec, Strategy, T, W> Iterator for CoarseToFineParseForest<'a, Rec, Strategy, T, W>
-    where Rec: Automaton<T, W, I=Strategy::I1>,
-          Strategy: ApproximationStrategy<T, W>,
-          Strategy::I1: Instruction + Ord,
-          <Strategy::I1 as Instruction>::Storage: Ord,
-          T: Clone + Eq + Ord,
-          W: Clone + MulAssign + One + Ord,
+where
+    Rec: Automaton<T, W, I = Strategy::I1>,
+    Strategy: ApproximationStrategy<T, W>,
+    Strategy::I1: Instruction + Ord,
+    <Strategy::I1 as Instruction>::Storage: Ord,
+    T: Clone + Eq + Ord,
+    W: Clone + MulAssign + One + Ord,
 {
     type Item = Item<<Strategy::I1 as Instruction>::Storage, Strategy::I1, T, W>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.output_buffer.is_empty()
             || self.peek_input().is_some()
-            && self.output_buffer.peek().unwrap().get_weight() < self.peek_input().unwrap().get_weight()
+                && self.output_buffer.peek().unwrap().get_weight()
+                    < self.peek_input().unwrap().get_weight()
         {
             if let Some(Item(_, r2)) = self.next_input() {
                 let r1s = self.approximation_instance.unapproximate_run(r2);
@@ -101,7 +113,11 @@ impl<Rec, SubRec, Strategy, T, W> Recognisable<T, W>
     for CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>
 where
     Rec: Automaton<T, W, I = Strategy::I1>,
-    SubRec: Recognisable<T, W, Parse = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>,
+    SubRec: Recognisable<
+        T,
+        W,
+        Parse = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>,
+    >,
     Strategy: ApproximationStrategy<T, W>,
     Strategy::I1: Instruction + Ord,
     <Strategy::I1 as Instruction>::Storage: Ord,

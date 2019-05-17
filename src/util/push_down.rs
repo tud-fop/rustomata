@@ -3,8 +3,8 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::vec::IntoIter;
 
-use integeriser::{HashIntegeriser, Integeriser};
 use crate::util::integerisable::Integerisable1;
+use integeriser::{HashIntegeriser, Integeriser};
 
 #[derive(Debug, Clone, PartialOrd, Ord)]
 pub enum Pushdown<A> {
@@ -16,14 +16,16 @@ impl<A: PartialEq> PartialEq for Pushdown<A> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (&Pushdown::Empty, &Pushdown::Empty) => true,
-            (&Pushdown::Cons {
-                 value: ref a1,
-                 below: ref b1,
-             },
-             &Pushdown::Cons {
-                 value: ref a2,
-                 below: ref b2,
-             }) => a1 == a2 && (Rc::ptr_eq(b1, b2) || b1 == b2),
+            (
+                &Pushdown::Cons {
+                    value: ref a1,
+                    below: ref b1,
+                },
+                &Pushdown::Cons {
+                    value: ref a2,
+                    below: ref b2,
+                },
+            ) => a1 == a2 && (Rc::ptr_eq(b1, b2) || b1 == b2),
             _ => false,
         }
     }
