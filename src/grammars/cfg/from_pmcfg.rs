@@ -1,5 +1,5 @@
-use grammars::pmcfg::*;
-use grammars::cfg::{LetterT, CFGComposition, CFGRule, CFG};
+use crate::grammars::pmcfg::*;
+use crate::grammars::cfg::{LetterT, CFGComposition, CFGRule, CFG};
 
 impl<
     N: Clone + Ord + PartialEq,

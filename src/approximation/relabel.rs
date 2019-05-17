@@ -2,8 +2,8 @@ use num_traits::Zero;
 use std::hash::Hash;
 use std::ops::{AddAssign, MulAssign};
 
-use approximation::*;
-use automata::push_down_automaton::*;
+use crate::approximation::*;
+use crate::automata::push_down_automaton::*;
 
 /// `ApproximationStrategy` that uses the `Relabel` trait to relabel internal values via an `EquivalenceClass`
 pub struct RlbElement<'a, A1, A2>

@@ -7,10 +7,10 @@ use std::iter::FromIterator;
 use std::vec::Vec;
 
 use self::num_traits::One;
-use grammars::pmcfg::{PMCFG, PMCFGRule, VarT};
-use recognisable::Transition;
-use automata::tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
-use util::tree::GornTree;
+use crate::grammars::pmcfg::{PMCFG, PMCFGRule, VarT};
+use crate::recognisable::Transition;
+use crate::automata::tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use crate::util::tree::GornTree;
 
 // types for analysis of derivation trees of PMCFGs
 pub type RuleCallerMap<N, T, W> = BTreeMap<PMCFGRule<N, T, W>, Vec<(usize, Vec<T>)>>;

@@ -5,8 +5,8 @@ use std::iter::Extend;
 use std::slice;
 use std::vec;
 
-use util::tree::GornTree;
-use grammars::mcfg::Mcfg;
+use crate::util::tree::GornTree;
+use crate::grammars::mcfg::Mcfg;
 
 mod from_str;
 pub mod negra;

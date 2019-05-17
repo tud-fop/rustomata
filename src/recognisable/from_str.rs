@@ -4,8 +4,8 @@ use std::fmt::Debug;
 use std::vec::Vec;
 use std::str::{FromStr, from_utf8};
 
-use recognisable::{Instruction, Transition};
-use util::parsing::{parse_comment, parse_token, parse_vec};
+use crate::recognisable::{Instruction, Transition};
+use crate::util::parsing::{parse_comment, parse_token, parse_vec};
 
 
 impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I, T, W>

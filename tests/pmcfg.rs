@@ -183,7 +183,7 @@ fn test_pmcfg_from_str_correctness() {
 
 #[test]
 fn test_tree_stack_automaton_from_str() {
-    use TreeStackInstruction::{Up, Down, Push};
+    use crate::TreeStackInstruction::{Up, Down, Push};
 
     let unprocessed_transitions = vec![
         (

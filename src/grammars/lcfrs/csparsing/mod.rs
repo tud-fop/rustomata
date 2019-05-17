@@ -3,9 +3,9 @@ mod automaton;
 
 use super::Lcfrs;
 
-use dyck::Bracket;
-use grammars::pmcfg::PMCFGRule;
-use util::{ tree::GornTree, factorizable::Factorizable };
+use crate::dyck::Bracket;
+use crate::grammars::pmcfg::PMCFGRule;
+use crate::util::{ tree::GornTree, factorizable::Factorizable };
 use std::{ collections::{BTreeMap}, fmt::{Display, Error, Formatter}, hash::Hash, ops::Mul };
 use num_traits::{Zero, One};
 use std::time::{Instant, Duration};
@@ -157,7 +157,7 @@ where
         assert!(estimates_max_width <= u8::max_value() as usize);
         let (rules, initial) = grammar.into().destruct();
         let generator = {
-            let mut rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
+            let rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
             Automaton::from_grammar(rules_with_id, initial.clone())
         };
         let rulemaskbuilder = RuleMaskBuilder::new(rules.iter(), &initial);
@@ -214,7 +214,7 @@ impl<N, T, W> CSRepresentation<N, T, W> where T: Hash + Eq {
 
 #[cfg(test)]
 mod test {
-    use grammars::pmcfg::{VarT, PMCFGRule, Composition};
+    use crate::grammars::pmcfg::{VarT, PMCFGRule, Composition};
     use super::{CSRepresentation, Lcfrs};
     use log_domain::LogDomain;
 

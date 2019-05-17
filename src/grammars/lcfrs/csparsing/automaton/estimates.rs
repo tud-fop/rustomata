@@ -180,7 +180,7 @@ impl<W: Copy + Ord + Mul<Output=W> + Zero> SxOutside<W> {
 
 #[cfg(test)]
 mod test {
-    use grammars::{pmcfg::{VarT, PMCFGRule, Composition}, lcfrs::Lcfrs};
+    use crate::grammars::{pmcfg::{VarT, PMCFGRule, Composition}, lcfrs::Lcfrs};
     use log_domain::LogDomain;
     use super::*;
 

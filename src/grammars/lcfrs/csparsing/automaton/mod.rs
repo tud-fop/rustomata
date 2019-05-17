@@ -2,8 +2,8 @@ use num_traits::One;
 use std::{collections::{BinaryHeap}, ops::Mul, mem::replace, hash::Hash, default::Default};
 use vecmultimap::VecMultiMap;
 use integeriser::{HashIntegeriser, Integeriser};
-use grammars::{pmcfg::{PMCFGRule, VarT}, lcfrs::csparsing::{BracketContent, Bracket}};
-use util::factorizable::Factorizable;
+use crate::grammars::{pmcfg::{PMCFGRule, VarT}, lcfrs::csparsing::{BracketContent, Bracket}};
+use crate::util::factorizable::Factorizable;
 use fnv::FnvHashMap;
 use num_traits::Zero;
 
@@ -214,7 +214,7 @@ impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
                 for mid in l+1..r {
                     for &(lnt, lew) in chart.iterate_nont(l as u8, mid as u8) {
                         let available_rules = &self.0[lnt as usize];
-                        let mut cache = (NOSTATE, None);
+                        let cache = (NOSTATE, None);
                         heap_of_nonterminals.extend(available_rules.iter().filter_map(
                             |&(rid, rnt, (ruw, lhs))| {
                                 if !rule_filter[rid as usize] { return None; }
@@ -230,7 +230,7 @@ impl<T: Eq + Hash, W: Ord + Mul<Output=W> + Copy + Zero + One> Automaton<T, W> {
                 // unary step and insertion into chart
                 let mut skip = vec![false; self.0.len()];
                 let mut i = beam;
-                let mut worst_weight = delta * heap_of_nonterminals.peek().map_or(W::zero(), |&(w, _)| w);
+                let worst_weight = delta * heap_of_nonterminals.peek().map_or(W::zero(), |&(w, _)| w);
                 while let Some((w, q)) = heap_of_nonterminals.pop() {
                     if replace(&mut skip[q as usize], true) { continue; }
                     chart.add_entry(l as u8, r as u8, q, w);

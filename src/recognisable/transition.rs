@@ -5,8 +5,8 @@ use std::hash::{Hash, Hasher};
 
 use integeriser::{HashIntegeriser, Integeriser};
 
-use recognisable::{Configuration, Instruction};
-use util::integerisable::{Integerisable1, Integerisable2};
+use crate::recognisable::{Configuration, Instruction};
+use crate::util::integerisable::{Integerisable1, Integerisable2};
 
 /// Transition of an automaton with `weight`, reading the sequence `word`, and applying the `instruction`.
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -160,7 +160,7 @@ where
                 let ce2 = self.kth(m, j, rs, rk as usize).unwrap().0;
 
                 let (ob, lb, rb) = self.rules_to_brackets[rid as usize];
-                let mut additional_elements = 2 + if ob.is_ignore() { 0 } else { 2 } + if lb.is_ignore() { 0 } else { 2 };
+                let additional_elements = 2 + if ob.is_ignore() { 0 } else { 2 } + if lb.is_ignore() { 0 } else { 2 };
                 
                 let mut w1 = self.read(i, m, &ce1);
                 let w2 = self.read(m, j, &ce2);
@@ -223,7 +223,7 @@ mod test {
         extern crate flate2;
 
     pub fn example_automaton() -> Automaton<String, LogDomain<f64>> {
-        use grammars::lcfrs::Lcfrs;
+        use crate::grammars::lcfrs::Lcfrs;
         let g: Lcfrs<String, String, LogDomain<f64>>
             = "initial: [S]\n\n
                S → [[T a]] () # 0.7\n
@@ -402,7 +402,7 @@ mod test {
     }
 
     fn example_automaton2 () -> Automaton<String, LogDomain<f64>> {
-        use grammars::lcfrs::Lcfrs;
+        use crate::grammars::lcfrs::Lcfrs;
         let Lcfrs{ rules, init }: Lcfrs<String, String, LogDomain<f64>>
                     = "initial: [S]\n\n
                        S → [[Var 0 0, Var 1 0, Var 0 1, Var 1 1]] (A, B) # 1\n

@@ -4,8 +4,8 @@ use std::rc::Rc;
 use std::hash::Hash;
 
 use integeriser::{HashIntegeriser, Integeriser};
-use util::integerisable::Integerisable1;
-use util::tree::GornTree;
+use crate::util::integerisable::Integerisable1;
+use crate::util::tree::GornTree;
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
 #[derive(Clone, Debug)]
@@ -236,7 +236,7 @@ impl<A: Clone> TreeStack<A> {
 
         for (num, maybe_child) in self.children.iter().enumerate() {
             if let &Some(ref child) = maybe_child {
-                let (mut child_map, _) = child.to_tree();
+                let (child_map, _) = child.to_tree();
 
                 for (path, value) in child_map {
                     let mut new_path = curr_path.clone();

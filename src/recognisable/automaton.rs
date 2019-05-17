@@ -1,8 +1,8 @@
 use std::{ collections::{BinaryHeap, HashMap}, hash::Hash, ops::MulAssign, rc::Rc };
 use num_traits::One;
 
-use recognisable::{Configuration, Instruction, Item, Transition};
-use util::{  push_down::Pushdown };
+use crate::recognisable::{Configuration, Instruction, Item, Transition};
+use crate::util::{  push_down::Pushdown };
 use search::{Search, agenda::limited_heap::weighted::LimitedHeap, Agenda };
 
 // map from key to transition

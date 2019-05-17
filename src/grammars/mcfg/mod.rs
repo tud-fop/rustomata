@@ -1,5 +1,5 @@
-use grammars::pmcfg::{PMCFG, PMCFGRule};
-use grammars::lcfrs::Lcfrs;
+use crate::grammars::pmcfg::{PMCFG, PMCFGRule};
+use crate::grammars::lcfrs::Lcfrs;
 
 /// A mutliple context-free grammar.
 #[derive(Clone, Debug)]
@@ -28,7 +28,7 @@ impl<N, T, W> Mcfg<N, T, W> {
     /// As long as `TryFrom` is unstable ...
     pub fn from_pmcfg(mut pmcfg: PMCFG<N, T, W>) -> Option<Self> {
         use std::collections::BTreeSet;
-        use grammars::pmcfg::VarT;
+        use crate::grammars::pmcfg::VarT;
 
         for rule in &pmcfg.rules {
             // check variables, return none if one occurs more than once

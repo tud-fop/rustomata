@@ -1,8 +1,8 @@
 mod automaton;
-use dyck::multiple::automaton::MultipleDyckAutomaton;
-use util::partition::Partition;
-pub use dyck::Bracket;
-use recognisable::automaton::recognise;
+use crate::dyck::multiple::automaton::MultipleDyckAutomaton;
+use crate::util::partition::Partition;
+pub use crate::dyck::Bracket;
+use crate::recognisable::automaton::recognise;
 
 /// An object that represents the mutliple Dyck language of an alphabet Σ with respect to
 /// a partition of Σ.
@@ -38,7 +38,7 @@ impl<'a, T: Clone + Eq + Ord> MultipleDyckLanguage<T> {
 mod test {
     use super::Bracket::*;
     use super::MultipleDyckLanguage;
-    use util::partition::Partition;
+    use crate::util::partition::Partition;
 
     #[test]
     fn mutliple_dyck_language() {

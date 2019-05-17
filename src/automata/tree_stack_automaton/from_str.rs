@@ -6,9 +6,9 @@ use std::vec::Vec;
 use std::str::FromStr;
 use std::num::ParseIntError;
 
-use recognisable::Transition;
-use automata::tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
-use util::parsing::parse_initial;
+use crate::recognisable::Transition;
+use crate::automata::tree_stack_automaton::{TreeStack, TreeStackAutomaton, TreeStackInstruction};
+use crate::util::parsing::parse_initial;
 
 impl<A, T, W> FromStr for TreeStackAutomaton<A, T, W>
 where

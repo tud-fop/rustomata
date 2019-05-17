@@ -1,5 +1,5 @@
-use grammars::pmcfg::PMCFGRule;
-use grammars::pmcfg::VarT;
+use crate::grammars::pmcfg::PMCFGRule;
+use crate::grammars::pmcfg::VarT;
 use std::hash::Hash;
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
@@ -123,9 +123,9 @@ fn check_composition<T>(composition: &[Vec<VarT<T>>], fanouts: &[usize]) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use grammars::pmcfg::{Composition, VarT};
+    use crate::grammars::pmcfg::{Composition, VarT};
     use std::collections::BTreeSet;
-    use grammars::mcfg::Mcfg;
+    use crate::grammars::mcfg::Mcfg;
 
     #[test]
     fn fanouts() {

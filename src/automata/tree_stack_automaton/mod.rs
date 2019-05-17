@@ -11,10 +11,10 @@ use std::vec::Vec;
 use num_traits::One;
 
 use integeriser::{HashIntegeriser, Integeriser};
-use recognisable::{Configuration, Item, Recognisable, Transition};
-use recognisable::automaton::{Automaton, recognise, recognise_beam};
-use util::integerisable::{Integerisable1, Integerisable2};
-use util::push_down::Pushdown;
+use crate::recognisable::{Configuration, Item, Recognisable, Transition};
+use crate::recognisable::automaton::{Automaton, recognise, recognise_beam};
+use crate::util::integerisable::{Integerisable1, Integerisable2};
+use crate::util::push_down::Pushdown;
 
 mod from_pmcfg;
 mod from_str;

@@ -3,8 +3,8 @@ use num_traits::One;
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
-use grammars::pmcfg::{Composition, PMCFG, PMCFGRule, VarT};
-use util::parsing::*;
+use crate::grammars::pmcfg::{Composition, PMCFG, PMCFGRule, VarT};
+use crate::util::parsing::*;
 
 impl<N, T, W> FromStr for PMCFG<N, T, W>
 where

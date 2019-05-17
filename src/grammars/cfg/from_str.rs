@@ -3,8 +3,8 @@ use num_traits::One;
 use std::fmt::Debug;
 use std::str::{FromStr, from_utf8};
 
-use grammars::cfg::{CFG, CFGComposition, CFGRule, LetterT};
-use util::parsing::*;
+use crate::grammars::cfg::{CFG, CFGComposition, CFGRule, LetterT};
+use crate::util::parsing::*;
 
 impl<N, T, W> FromStr for CFG<N, T, W>
 where

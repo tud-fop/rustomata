@@ -1,7 +1,7 @@
 /// This module contains the implementation of the construction of an
 /// LCFRS for each MCFG.
 
-use grammars::{ pmcfg::{PMCFGRule, VarT}, mcfg::Mcfg };
+use crate::grammars::{ pmcfg::{PMCFGRule, VarT}, mcfg::Mcfg };
 use std::{ collections::{BTreeSet, HashMap}, hash::Hash };
 use super::*;
 
@@ -99,7 +99,7 @@ fn to_lcfrs_rule<N, T, W>(
 where
     N: Hash + Eq,
 {
-    use grammars::pmcfg::Composition;
+    use crate::grammars::pmcfg::Composition;
 
     let PMCFGRule {
         head,

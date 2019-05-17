@@ -1,16 +1,16 @@
 pub mod instruction;
 
 use std::collections::{BinaryHeap, HashMap};
-pub use dyck::multiple::automaton::instruction::{MDTreeElem, MultipleDyckInstruction};
-use util::partition::Partition;
-use recognisable::Transition;
-use automata::tree_stack_automaton::TreeStack;
-use recognisable::Configuration;
+pub use crate::dyck::multiple::automaton::instruction::{MDTreeElem, MultipleDyckInstruction};
+use crate::util::partition::Partition;
+use crate::recognisable::Transition;
+use crate::automata::tree_stack_automaton::TreeStack;
+use crate::recognisable::Configuration;
 
-use dyck::Bracket;
-use recognisable::automaton::{Automaton, TransitionMap};
+use crate::dyck::Bracket;
+use crate::recognisable::automaton::{Automaton, TransitionMap};
 
-use recognisable::Item;
+use crate::recognisable::Item;
 use std::rc::Rc;
 type MDTransition<T> = Transition<MultipleDyckInstruction<T>, Bracket<T>, u8>;
 
@@ -82,7 +82,7 @@ impl<T: Clone + Ord> MultipleDyckAutomaton<T> {
     }
 }
 
-use recognisable::Instruction;
+use crate::recognisable::Instruction;
 
 impl<T> Automaton<Bracket<T>, u8> for MultipleDyckAutomaton<T>
 where

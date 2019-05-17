@@ -3,9 +3,9 @@ use std::collections::BinaryHeap;
 use std::ops::MulAssign;
 use std::rc::Rc;
 
-use approximation::{ApproximationInstance, ApproximationStrategy};
-use recognisable::{Instruction, Item, Recognisable};
-use recognisable::automaton::Automaton;
+use crate::approximation::{ApproximationInstance, ApproximationStrategy};
+use crate::recognisable::{Instruction, Item, Recognisable};
+use crate::recognisable::automaton::Automaton;
 use search::agenda::weighted::Weighted;
 
 pub struct CoarseToFineRecogniser<Rec, SubRec, Strategy, T, W>

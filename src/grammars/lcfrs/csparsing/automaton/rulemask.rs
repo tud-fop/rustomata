@@ -1,6 +1,6 @@
 use super::{StateT, RuleIdT};
 
-use grammars::pmcfg::PMCFGRule;
+use crate::grammars::pmcfg::PMCFGRule;
 
 use std::{ hash::Hash, collections::HashSet };
 use integeriser::{HashIntegeriser, Integeriser};
@@ -129,7 +129,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use grammars::pmcfg::{Composition, VarT};
+    use crate::grammars::pmcfg::{Composition, VarT};
 
     fn hots<I: IntoIterator<Item=usize>>(is: I, len: usize) -> Vec<bool> {
         let mut v = vec![false; len];

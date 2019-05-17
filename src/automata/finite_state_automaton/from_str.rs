@@ -4,9 +4,9 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::vec::Vec;
 use std::str::FromStr;
-use recognisable::Transition;
-use automata::finite_state_automaton::{FiniteStateAutomaton, FiniteStateInstruction};
-use util::parsing::{parse_finals, parse_initial};
+use crate::recognisable::Transition;
+use crate::automata::finite_state_automaton::{FiniteStateAutomaton, FiniteStateInstruction};
+use crate::util::parsing::{parse_finals, parse_initial};
 
 impl<Q, T, W> FromStr for FiniteStateAutomaton<Q, T, W>
 where

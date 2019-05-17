@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::vec::IntoIter;
 
 use integeriser::{HashIntegeriser, Integeriser};
-use util::integerisable::Integerisable1;
+use crate::util::integerisable::Integerisable1;
 
 #[derive(Debug, Clone, PartialOrd, Ord)]
 pub enum Pushdown<A> {

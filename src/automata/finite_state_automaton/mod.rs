@@ -2,14 +2,14 @@ extern crate bit_set;
 
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::One;
-use recognisable::{automaton::Automaton,Configuration, Instruction, Item, Transition};
+use crate::recognisable::{automaton::Automaton,Configuration, Instruction, Item, Transition};
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::MulAssign;
 use std::rc::Rc;
-use util::integerisable::{Integerisable1, Integerisable2};
-use util::push_down::Pushdown;
+use crate::util::integerisable::{Integerisable1, Integerisable2};
+use crate::util::push_down::Pushdown;
 
 use self::bit_set::BitSet;
 

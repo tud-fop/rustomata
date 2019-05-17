@@ -163,7 +163,7 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 let dgmr: DiscoDopGrammar<_, _, _> = grammar_string.parse().expect("Could not parse grammar.");
                 if params.is_present("disco-lexer") {
                     let lexer = File::open(params.value_of("disco-lexer").expect("Missing lexer file as argument")).expect("could not open lexer file");
-                    let mut lexer_string = FileReader::new(lexer, grammar_is_gzipped).read().expect("could not read lexer file");
+                    let lexer_string = FileReader::new(lexer, grammar_is_gzipped).read().expect("could not read lexer file");
                     dgmr.with_lexer(lexer_string.parse().expect("Could not parse lexer file.")).into()
                 } else {
                     dgmr.with_default_lexer().into()

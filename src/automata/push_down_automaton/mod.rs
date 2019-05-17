@@ -2,8 +2,8 @@ extern crate num_traits;
 
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::{One, Zero};
-use recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
-use recognisable::automaton::Automaton;
+use crate::recognisable::{self, Configuration, Instruction, Item, Recognisable, Transition};
+use crate::recognisable::automaton::Automaton;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -13,8 +13,8 @@ use std::rc::Rc;
 use std::slice::Iter;
 use std::vec::Vec;
 
-use util::integerisable::{Integerisable1, Integerisable2};
-use util::push_down::Pushdown;
+use crate::util::integerisable::{Integerisable1, Integerisable2};
+use crate::util::push_down::Pushdown;
 
 mod from_cfg;
 // TODO: mod from_str;

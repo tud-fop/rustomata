@@ -2,9 +2,9 @@ use num_traits::One;
 use std::collections::{BinaryHeap, BTreeMap};
 use std::ops::MulAssign;
 
-use recognisable::{Instruction, Transition};
-use recognisable::automaton::Automaton;
-use util::push_down::Pushdown;
+use crate::recognisable::{Instruction, Transition};
+use crate::recognisable::automaton::Automaton;
+use crate::util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
@@ -27,10 +27,10 @@ where
 
     fn approximate_storage(
         &self,
-        <Self::I1 as Instruction>::Storage,
+        _: <Self::I1 as Instruction>::Storage,
     ) -> <Self::I2 as Instruction>::Storage;
 
-    fn approximate_instruction(&self, &Self::I1) -> Self::I2;
+    fn approximate_instruction(&self, _: &Self::I1) -> Self::I2;
 
     fn approximate_automaton(
         self,

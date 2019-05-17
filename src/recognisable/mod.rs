@@ -8,7 +8,7 @@ pub mod coarse_to_fine;
 
 use std::vec::Vec;
 use search::agenda::weighted::Weighted;
-use util::push_down::Pushdown;
+use crate::util::push_down::Pushdown;
 
 pub use self::configuration::Configuration;
 pub use self::transition::Transition;
@@ -18,7 +18,7 @@ pub use self::transition::Transition;
 pub trait Instruction {
     type Storage;
 
-    fn apply(&self, Self::Storage) -> Vec<Self::Storage>;
+    fn apply(&self, _: Self::Storage) -> Vec<Self::Storage>;
 }
 
 

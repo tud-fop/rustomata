@@ -1,8 +1,8 @@
 use super::*;
-use grammars::pmcfg::{PMCFGRule, VarT, Composition};
-use util::{tree::GornTree, IntMap };
+use crate::grammars::pmcfg::{PMCFGRule, VarT, Composition};
+use crate::util::{tree::GornTree, IntMap };
 use std::collections::{BTreeSet, BTreeMap};
-use dyck::Bracket;
+use crate::dyck::Bracket;
 use fnv::{FnvHashMap, FnvHashSet};
 use vecmultimap::VecMultiMapAdapter;
 

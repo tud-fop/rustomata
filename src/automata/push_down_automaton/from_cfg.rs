@@ -8,9 +8,9 @@ use std::ops::{AddAssign, Mul, Div};
 use self::num_traits::{One, Zero};
 use std::str::FromStr;
 
-use recognisable::Transition;
-use grammars::cfg::*;
-use automata::push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
+use crate::recognisable::Transition;
+use crate::grammars::cfg::*;
+use crate::automata::push_down_automaton::{PushDown, PushDownAutomaton, PushDownInstruction};
 
 /// Symbols of a `PushDown` created by an `CFG`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

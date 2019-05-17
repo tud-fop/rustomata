@@ -3,9 +3,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, MulAssign};
 
-use approximation::*;
-use automata::push_down_automaton::*;
-use automata::tree_stack_automaton::*;
+use crate::approximation::*;
+use crate::automata::push_down_automaton::*;
+use crate::automata::tree_stack_automaton::*;
 
 /// `ApproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]
