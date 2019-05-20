@@ -168,7 +168,7 @@ impl<W: Factorizable> Factorizable for Reverse<W> {
         self.0
             .factorize(n)
             .into_iter()
-            .map(|v| Reverse(v))
+            .map(Reverse)
             .collect()
     }
 }

@@ -107,7 +107,7 @@ where
             delta,
             ..
         } = self;
-        let realbeam = beam.unwrap_or(grammar.generator.states());
+        let realbeam = beam.unwrap_or_else(|| grammar.generator.states());
         let rulemask = grammar.rulemaskbuilder.build(word);
         let mut word_iterator = grammar
             .generator
@@ -146,7 +146,7 @@ where
             ..
         } = self;
         let rulemask = grammar.rulemaskbuilder.build(word);
-        let realbeam = beam.unwrap_or(grammar.generator.states());
+        let realbeam = beam.unwrap_or_else(|| grammar.generator.states());
         let count_candidates = move |_: &Vec<Delta>| -> bool {
             candidates.as_mut().map_or(true, |c| {
                 if *c == 0 {
@@ -227,7 +227,7 @@ where
         }
     }
 
-    pub fn build_generator<'a>(&'a self) -> GeneratorBuilder<'a, N, T, W>
+    pub fn build_generator(&self) -> GeneratorBuilder<N, T, W>
     where
         W: Zero,
     {

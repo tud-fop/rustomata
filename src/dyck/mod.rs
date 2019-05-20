@@ -61,11 +61,6 @@ mod tests {
             assert!(super::recognize(&dyckword));
         }
 
-        assert!(super::recognize(&vec![
-            Open("one"),
-            Close("one"),
-            Open("two"),
-            Close("two")
-        ],));
+        assert!(super::recognize(&[Open("one"), Close("one"), Open("two"), Close("two")]));
     }
 }

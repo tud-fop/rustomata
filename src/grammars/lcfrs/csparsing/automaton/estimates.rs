@@ -173,11 +173,11 @@ impl<W: Copy + Ord + Mul<Output = W> + Zero> SxOutside<W> {
         if i + n - j >= self.1 {
             return Some(W::one());
         }
-        let w = self.0[self.index_usize(q, i, j + self.1 - n)];
-        if w == W::zero() {
+        let weight = self.0[self.index_usize(q, i, j + self.1 - n)];
+        if weight == W::zero() {
             None
         } else {
-            Some(w)
+            Some(weight)
         }
     }
 

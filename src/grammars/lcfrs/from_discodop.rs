@@ -54,10 +54,10 @@ impl<N> DiscoDeriv<N> {
     }
 }
 
-/// Parses a yield function given in binary format.
-/// Assuming a binary, sorted lcfrs rule, each consecutive 0 is a new variable of the first
-/// successor, and each 1 is a new variable for the second successor. We represent this
-/// for each component by the length of the composition component and a bitmask.
+// Parses a yield function given in binary format.
+// Assuming a binary, sorted lcfrs rule, each consecutive 0 is a new variable of the first
+// successor, and each 1 is a new variable for the second successor. We represent this
+// for each component by the length of the composition component and a bitmask.
 named!(parse_yield<&str,DiscoYield>,
     separated_nonempty_list_complete!(
         tag!(","),
@@ -223,7 +223,7 @@ where
             for (clen, c) in y {
                 let mut component = Vec::with_capacity(clen as usize);
                 for i in 0..clen {
-                    if 2u64.pow(i as u32) & c == 0 {
+                    if 2u64.pow(u32::from(i)) & c == 0 {
                         component.push(VarT::Var(0, sind1));
                         sind1 += 1;
                     } else {
@@ -240,7 +240,7 @@ where
                     rules.push(PMCFGRule {
                         head: lhs,
                         tail: vec![rhs],
-                        weight: weight,
+                        weight,
                         composition: composition.into(),
                     });
                 }

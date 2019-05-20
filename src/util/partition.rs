@@ -22,7 +22,7 @@ where
         for cell in cells {
             let ptr = Rc::new(cell);
             for symbol in ptr.iter().cloned() {
-                if !partition.insert(symbol, Rc::clone(&ptr)).is_none() {
+                if partition.insert(symbol, Rc::clone(&ptr)).is_some() {
                     return None;
                 }
             }

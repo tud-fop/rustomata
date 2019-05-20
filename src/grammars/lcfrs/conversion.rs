@@ -83,7 +83,7 @@ where
 
 /// For each successor, yields a set of components that are deleted in this composition.
 fn composition_deletes<T>(
-    composition: &Vec<&Vec<VarT<T>>>,
+    composition: &[&Vec<VarT<T>>],
     fanouts: &[usize],
 ) -> Vec<BTreeSet<usize>> {
     let mut deletions: Vec<BTreeSet<usize>> = (0..fanouts.len())
@@ -135,7 +135,7 @@ where
         })
         .collect();
     let succ_fanouts: Vec<usize> = tail.iter().map(|n| *fanouts.get(&n).unwrap()).collect();
-    let successors_deletions = composition_deletes(&rem_comp.iter().collect(), &succ_fanouts);
+    let successors_deletions = composition_deletes(&rem_comp.iter().collect::<Vec<_>>(), &succ_fanouts);
 
     let processed_composition: Vec<Vec<VarT<T>>> = rem_comp
         .into_iter()

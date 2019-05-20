@@ -1,10 +1,11 @@
 use std::collections::btree_map;
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
+use std::borrow::Borrow;
 
 /// A tree map where each node has a _Gorn address_, i.e. a sequence of integers that describes the
 /// path one has to follow to get from the root to the particular node.
-#[derive(Clone, Debug, Eq)]
+#[derive(Default, Clone, Debug, Eq)]
 pub struct GornTree<V> {
     map: BTreeMap<Vec<usize>, V>,
 }
@@ -20,15 +21,24 @@ impl<V> GornTree<V> {
         self.map.clear()
     }
 
-    pub fn get(&self, key: &Vec<usize>) -> Option<&V> {
+    pub fn get<K: Ord>(&self, key: &K) -> Option<&V>
+    where
+        Vec<usize>: Borrow<K>
+    {
         self.map.get(key)
     }
 
-    pub fn contains_key(&self, key: &Vec<usize>) -> bool {
+    pub fn contains_key<K: Ord>(&self, key: &K) -> bool
+    where
+        Vec<usize>: Borrow<K>
+    {
         self.map.contains_key(key)
     }
 
-    pub fn get_mut(&mut self, key: &Vec<usize>) -> Option<&mut V> {
+    pub fn get_mut<K: Ord>(&mut self, key: &K) -> Option<&mut V>
+    where
+        Vec<usize>: Borrow<K>
+    {
         self.map.get_mut(key)
     }
 
@@ -36,7 +46,10 @@ impl<V> GornTree<V> {
         self.map.insert(key, value)
     }
 
-    pub fn remove(&mut self, key: &Vec<usize>) -> Option<V> {
+    pub fn remove<K: Ord>(&mut self, key: &K) -> Option<V>
+    where
+        Vec<usize>: Borrow<K>
+    {
         self.map.remove(key)
     }
 
@@ -48,7 +61,10 @@ impl<V> GornTree<V> {
         self.map.entry(key)
     }
 
-    pub fn split_off(&mut self, key: &Vec<usize>) -> GornTree<V> {
+    pub fn split_off<K: Ord>(&mut self, key: &K) -> GornTree<V>
+    where
+        Vec<usize>: Borrow<K>
+    {
         GornTree {
             map: self.map.split_off(key),
         }
@@ -95,7 +111,7 @@ impl<'a, V> IntoIterator for &'a GornTree<V> {
     type IntoIter = btree_map::Iter<'a, Vec<usize>, V>;
 
     fn into_iter(self) -> btree_map::Iter<'a, Vec<usize>, V> {
-        (&self.map).into_iter()
+        self.map.iter()
     }
 }
 
@@ -104,7 +120,7 @@ impl<'a, V> IntoIterator for &'a mut GornTree<V> {
     type IntoIter = btree_map::IterMut<'a, Vec<usize>, V>;
 
     fn into_iter(self) -> btree_map::IterMut<'a, Vec<usize>, V> {
-        (&mut self.map).into_iter()
+        self.map.iter_mut()
     }
 }
 

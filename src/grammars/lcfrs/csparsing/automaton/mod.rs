@@ -39,7 +39,7 @@ pub type TdNullary<W> = (RuleIdT, W);
 /// some of them may be BracketContent::Ignore.
 pub type TdBrackets = (BracketContent, BracketContent, BracketContent);
 /// non-existent integerized state
-pub static NOSTATE: u32 = -1i32 as StateT;
+pub static NOSTATE: u32 = u32::max_value();
 
 /// Stores binarized rules of the context-free approximation of an lcfrs
 /// with brackets of the chomsky-schützenberger construction.

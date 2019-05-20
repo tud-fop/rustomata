@@ -86,7 +86,7 @@ where
         }
     }
 
-    /// extracts the backtraces for a spand and a constituents in a
+    /// extracts the backtraces for a span and a constituents in a
     /// top-down approach
     fn backtraces(
         chart: &DenseChart<W>,
@@ -148,7 +148,7 @@ where
         // todo skip fetch if vec_len > k
         let (mut vec_len, mut last_deriv, mut last_weight) = {
             let ChartIterator {
-                ref mut d,
+                d: ref mut deriv_cache,
                 ref chart,
                 ref binaries,
                 ref unaries,
@@ -156,7 +156,7 @@ where
                 ref rulefilter,
                 ..
             } = *self;
-            match d.entry((i, j, q)) {
+            match deriv_cache.entry((i, j, q)) {
                 Entry::Vacant(ve) => {
                     let mut bts =
                         Self::backtraces(chart, binaries, unaries, nullaries, &rulefilter, i, j, q);
@@ -171,9 +171,9 @@ where
                     }
                 }
                 Entry::Occupied(oe) => {
-                    let &(ref d, _) = oe.get();
-                    if let Some(&(deriv, w)) = d.last() {
-                        (d.len(), deriv, w)
+                    let &(ref derivs, _) = oe.get();
+                    if let Some(&(deriv, w)) = derivs.last() {
+                        (derivs.len(), deriv, w)
                     } else {
                         return None;
                     }
@@ -255,15 +255,15 @@ where
             }
             Unary(rid, q, _, k) => {
                 let ice = self.kth(i, j, q, k as usize).unwrap().0;
-                let mut w = self.read(i, j, &ice);
-                w.reserve(4);
+                let mut derivation = self.read(i, j, &ice);
+                derivation.reserve(4);
                 let (ob, ib, _) = self.rules_to_brackets[rid as usize];
 
-                w.insert(0, Bracket::Open(ob));
-                w.insert(1, Bracket::Open(ib));
-                w.push(Bracket::Close(ib));
-                w.push(Bracket::Close(ob));
-                w
+                derivation.insert(0, Bracket::Open(ob));
+                derivation.insert(1, Bracket::Open(ib));
+                derivation.push(Bracket::Close(ib));
+                derivation.push(Bracket::Close(ob));
+                derivation
             }
             Nullary(rid, _) => {
                 let (ob, ib, _) = self.rules_to_brackets[rid as usize];
@@ -319,7 +319,7 @@ mod test {
         let automaton = example_automaton();
         let estimates = SxOutside::from_automaton(&automaton, 0);
         let chart =
-            automaton.fill_chart(&[String::from("a")], 1, zero, &estimates, &vec![true, true]);
+            automaton.fill_chart(&[String::from("a")], 1, zero, &estimates, &[true, true]);
         let mut it = ChartIterator::new(chart, &automaton, vec![true, true]);
 
         assert_eq!(
