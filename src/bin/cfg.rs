@@ -1,11 +1,11 @@
-use clap::{Arg, ArgMatches, App, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use log_domain::LogDomain;
+use rustomata::automata::push_down_automaton::PushDownAutomaton;
 use rustomata::grammars::cfg::CFG;
 use rustomata::recognisable::Recognisable;
-use rustomata::automata::push_down_automaton::PushDownAutomaton;
 
-use std::io::{self, Read};
 use std::fs::File;
+use std::io::{self, Read};
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("cfg")
@@ -41,9 +41,7 @@ pub fn get_sub_command() -> App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("automaton")
                 .author("Max Korn <max.korn@tu-dresden.de>")
-                .about(
-                    "constructs a pushdown automaton from the given context-free grammar",
-                )
+                .about("constructs a pushdown automaton from the given context-free grammar")
                 .arg(
                     Arg::with_name("grammar")
                         .help("grammar file to use")

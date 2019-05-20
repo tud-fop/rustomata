@@ -1,10 +1,10 @@
 use num_traits::One;
-use std::collections::{BinaryHeap, BTreeMap};
+use std::collections::{BTreeMap, BinaryHeap};
 use std::ops::MulAssign;
 
-use recognisable::{Instruction, Transition};
-use recognisable::automaton::Automaton;
-use util::push_down::Pushdown;
+use crate::recognisable::automaton::Automaton;
+use crate::recognisable::{Instruction, Transition};
+use crate::util::push_down::Pushdown;
 
 pub mod equivalence_classes;
 pub mod relabel;
@@ -27,10 +27,10 @@ where
 
     fn approximate_storage(
         &self,
-        <Self::I1 as Instruction>::Storage,
+        _: <Self::I1 as Instruction>::Storage,
     ) -> <Self::I2 as Instruction>::Storage;
 
-    fn approximate_instruction(&self, &Self::I1) -> Self::I2;
+    fn approximate_instruction(&self, _: &Self::I1) -> Self::I2;
 
     fn approximate_automaton(
         self,
@@ -116,7 +116,8 @@ where
         run2: Pushdown<Transition<Strategy::I2, T, W>>,
     ) -> BinaryHeap<Pushdown<Transition<Strategy::I1, T, W>>> {
         let f = |h: BinaryHeap<Pushdown<_>>, ts1: Vec<_>| {
-            let new_runs: Vec<Pushdown<_>> = h.into_iter()
+            let new_runs: Vec<Pushdown<_>> = h
+                .into_iter()
                 .flat_map(|run: Pushdown<_>| -> Vec<Pushdown<_>> {
                     let push_transition = |t1: &Transition<_, _, _>| run.clone().push(t1.clone());
                     ts1.iter().map(push_transition).collect()

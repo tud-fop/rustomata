@@ -1,12 +1,11 @@
 use std::fmt;
 use std::hash::Hash;
 
-use recognisable::Instruction;
-use util::integerisable::Integerisable1;
-use automata::tree_stack_automaton::TreeStack;
+use crate::automata::tree_stack_automaton::TreeStack;
+use crate::recognisable::Instruction;
+use crate::util::integerisable::Integerisable1;
 
 use integeriser::{HashIntegeriser, Integeriser};
-
 
 /// Instruction on `TreeStack<A>`s.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Hash)]
@@ -28,7 +27,6 @@ pub enum TreeStackInstruction<A> {
         new_val: A,
     },
 }
-
 
 impl<A> TreeStackInstruction<A> {
     fn map<F, B>(&self, mut f: F) -> TreeStackInstruction<B>
@@ -68,7 +66,6 @@ impl<A> TreeStackInstruction<A> {
         }
     }
 }
-
 
 impl<A: Ord + PartialEq + Clone + Hash> Instruction for TreeStackInstruction<A> {
     type Storage = TreeStack<A>;
@@ -131,7 +128,6 @@ impl<A: Ord + PartialEq + Clone + Hash> Instruction for TreeStackInstruction<A> 
     }
 }
 
-
 impl<A: Clone + Eq + Hash> Integerisable1 for TreeStackInstruction<A> {
     type AInt = TreeStackInstruction<usize>;
     type I = HashIntegeriser<A>;
@@ -144,7 +140,6 @@ impl<A: Clone + Eq + Hash> Integerisable1 for TreeStackInstruction<A> {
         v.map(|i| integeriser.find_value(*i).unwrap().clone())
     }
 }
-
 
 impl<A: fmt::Display> fmt::Display for TreeStackInstruction<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -188,7 +183,7 @@ mod tests {
                     current_val: 2,
                     old_val: 4,
                     new_val: 6,
-                }
+                },
             ),
             (
                 TreeStackInstruction::Down {
@@ -200,7 +195,7 @@ mod tests {
                     current_val: 2,
                     old_val: 4,
                     new_val: 6,
-                }
+                },
             ),
             (
                 TreeStackInstruction::Push {
@@ -212,7 +207,7 @@ mod tests {
                     n: 1,
                     current_val: 2,
                     new_val: 4,
-                }
+                },
             ),
         ];
 

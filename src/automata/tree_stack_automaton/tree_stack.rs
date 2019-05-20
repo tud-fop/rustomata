@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
 use std::fmt;
-use std::rc::Rc;
 use std::hash::Hash;
+use std::rc::Rc;
 
+use crate::util::integerisable::Integerisable1;
+use crate::util::tree::GornTree;
 use integeriser::{HashIntegeriser, Integeriser};
-use util::integerisable::Integerisable1;
-use util::tree::GornTree;
 
 /// upside-down tree with a designated position (the *stack pointer*) and *nodes* of type `A`.
 #[derive(Clone, Debug)]
@@ -35,7 +35,8 @@ impl<A> TreeStack<A> {
             Some((i, ref p)) => Some((i, Rc::new(p.map(f)))),
             None => None,
         };
-        let new_children = self.children
+        let new_children = self
+            .children
             .iter()
             .map(|o| o.clone().map(|v| Rc::new(v.map(f))))
             .collect();
@@ -107,11 +108,13 @@ impl<A> TreeStack<A> {
     /// Writes a value in the first free child position.
     pub fn push_next(self, a: A) -> Self {
         let index = {
-            match self.children
+            match self
+                .children
                 .iter()
                 .enumerate()
                 .filter(|&(_i, e)| e.is_none())
-                .next() {
+                .next()
+            {
                 None => self.children.len(),
                 Some((i, _)) => i,
             }
@@ -128,8 +131,8 @@ impl<A> TreeStack<A> {
     where
         F: Fn(&A) -> bool,
     {
-        predicate(&self.value) &&
-            self.children.iter().all(|maybe_child| {
+        predicate(&self.value)
+            && self.children.iter().all(|maybe_child| {
                 if let &Some(ref child) = maybe_child {
                     child.all(predicate)
                 } else {
@@ -236,7 +239,7 @@ impl<A: Clone> TreeStack<A> {
 
         for (num, maybe_child) in self.children.iter().enumerate() {
             if let &Some(ref child) = maybe_child {
-                let (mut child_map, _) = child.to_tree();
+                let (child_map, _) = child.to_tree();
 
                 for (path, value) in child_map {
                     let mut new_path = curr_path.clone();
@@ -264,16 +267,16 @@ impl<A: Clone + Eq + Hash> Integerisable1 for TreeStack<A> {
     }
 }
 
-
 impl<A: PartialEq> PartialEq for TreeStack<A> {
     fn eq(&self, other: &Self) -> bool {
         let comp = |p1, p2| Rc::ptr_eq(p1, p2) || p1 == p2;
-        self.value == other.value &&
-            match (&self.parent, &other.parent) {
+        self.value == other.value
+            && match (&self.parent, &other.parent) {
                 (&Some((i1, ref p1)), &Some((i2, ref p2))) => i1 == i2 && comp(p1, p2),
                 (&None, &None) => true,
                 _ => false,
-            } && self.children == other.children
+            }
+            && self.children == other.children
     }
 }
 
@@ -282,14 +285,10 @@ impl<A: Eq> Eq for TreeStack<A> {}
 impl<A: PartialOrd> PartialOrd for TreeStack<A> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.value.partial_cmp(&other.value) {
-            None |
-            Some(Ordering::Equal) => {
-                match self.parent.partial_cmp(&other.parent) {
-                    None |
-                    Some(Ordering::Equal) => self.children.partial_cmp(&other.children),
-                    x => x,
-                }
-            }
+            None | Some(Ordering::Equal) => match self.parent.partial_cmp(&other.parent) {
+                None | Some(Ordering::Equal) => self.children.partial_cmp(&other.children),
+                x => x,
+            },
             x => x,
         }
     }
@@ -298,12 +297,10 @@ impl<A: PartialOrd> PartialOrd for TreeStack<A> {
 impl<A: Ord> Ord for TreeStack<A> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.value.cmp(&other.value) {
-            Ordering::Equal => {
-                match self.parent.cmp(&other.parent) {
-                    Ordering::Equal => self.children.cmp(&other.children),
-                    x => x,
-                }
-            }
+            Ordering::Equal => match self.parent.cmp(&other.parent) {
+                Ordering::Equal => self.children.cmp(&other.children),
+                x => x,
+            },
             x => x,
         }
     }

@@ -3,9 +3,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, MulAssign};
 
-use approximation::*;
-use automata::push_down_automaton::*;
-use automata::tree_stack_automaton::*;
+use crate::approximation::*;
+use crate::automata::push_down_automaton::*;
+use crate::automata::tree_stack_automaton::*;
 
 /// `ApproximationStrategy` that approximates a `TreeStackAutomaton` into a `PushDownAutomaton`
 #[derive(Clone, Debug)]
@@ -15,7 +15,9 @@ pub struct TTSElement<A> {
 
 impl<A> TTSElement<A> {
     pub fn new() -> Self {
-        TTSElement { _dummy: PhantomData }
+        TTSElement {
+            _dummy: PhantomData,
+        }
     }
 }
 
@@ -23,12 +25,7 @@ impl<A, T, W> ApproximationStrategy<T, W> for TTSElement<A>
 where
     A: Clone + Hash + Ord,
     T: Clone + Eq + Hash + Ord,
-    W: AddAssign
-        + Copy
-        + MulAssign
-        + One
-        + Ord
-        + Zero,
+    W: AddAssign + Copy + MulAssign + One + Ord + Zero,
 {
     type I1 = TreeStackInstruction<A>;
     type I2 = PushDownInstruction<A>;
@@ -54,27 +51,23 @@ where
                 ref current_val,
                 ref new_val,
                 ..
-            } |
-            TreeStackInstruction::Push {
+            }
+            | TreeStackInstruction::Push {
                 ref current_val,
                 ref new_val,
                 ..
-            } => {
-                PushDownInstruction::Replace {
-                    current_val: vec![current_val.clone()],
-                    new_val: vec![current_val.clone(), new_val.clone()],
-                }
-            }
+            } => PushDownInstruction::Replace {
+                current_val: vec![current_val.clone()],
+                new_val: vec![current_val.clone(), new_val.clone()],
+            },
             TreeStackInstruction::Down {
                 ref current_val,
                 ref old_val,
                 ref new_val,
-            } => {
-                PushDownInstruction::Replace {
-                    current_val: vec![current_val.clone(), old_val.clone()],
-                    new_val: vec![new_val.clone()],
-                }
-            }
+            } => PushDownInstruction::Replace {
+                current_val: vec![current_val.clone(), old_val.clone()],
+                new_val: vec![new_val.clone()],
+            },
         }
     }
 }
@@ -116,7 +109,7 @@ mod tests {
                 PushDownInstruction::Replace {
                     current_val: vec!['@'],
                     new_val: vec!['@', '3'],
-                }
+                },
             ),
             (
                 TreeStackInstruction::Down {
@@ -127,7 +120,7 @@ mod tests {
                 PushDownInstruction::Replace {
                     current_val: vec!['4', '2'],
                     new_val: vec!['3'],
-                }
+                },
             ),
             (
                 TreeStackInstruction::Push {
@@ -138,7 +131,7 @@ mod tests {
                 PushDownInstruction::Replace {
                     current_val: vec!['2'],
                     new_val: vec!['2', '3'],
-                }
+                },
             ),
         ];
 

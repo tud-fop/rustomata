@@ -18,23 +18,21 @@ pub fn recognize<A: PartialEq>(word: &[Bracket<A>]) -> bool {
             Bracket::Open(ref symbol) => {
                 stack.push(symbol);
             }
-            Bracket::Close(ref symbol) => {
-                match stack.pop() {
-                    None => return false,
-                    Some(symbol_) => {
-                        if symbol != symbol_ {
-                            return false;
-                        }
+            Bracket::Close(ref symbol) => match stack.pop() {
+                None => return false,
+                Some(symbol_) => {
+                    if symbol != symbol_ {
+                        return false;
                     }
                 }
-            }
+            },
         }
     }
 
     stack.is_empty()
 }
 
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Display, Error, Formatter};
 
 impl<T> Display for Bracket<T>
 where
@@ -63,8 +61,11 @@ mod tests {
             assert!(super::recognize(&dyckword));
         }
 
-        assert!(super::recognize(
-            &vec![Open("one"), Close("one"), Open("two"), Close("two")],
-        ));
+        assert!(super::recognize(&vec![
+            Open("one"),
+            Close("one"),
+            Open("two"),
+            Close("two")
+        ],));
     }
 }

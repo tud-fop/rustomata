@@ -8,15 +8,15 @@ use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
 
-use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::equivalence_classes::EquivalenceRelation;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
-use rustomata::grammars::pmcfg::*;
-use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
-use rustomata::recognisable::*;
-use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
+use rustomata::approximation::ApproximationStrategy;
 use rustomata::automata::tree_stack_automaton::*;
+use rustomata::grammars::pmcfg::negra::{to_negra, DumpMode};
+use rustomata::grammars::pmcfg::*;
+use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
+use rustomata::recognisable::*;
 
 fn pmcfg_from_file(grammar_file_path: &str) -> PMCFG<String, String, LogDomain<f64>> {
     let mut grammar_file = File::open(grammar_file_path).unwrap();
@@ -66,9 +66,7 @@ fn test_coarse_to_fine_recogniser_correctness() {
     let tts = TTSElement::new();
     let rel: EquivalenceRelation<String, String> = "0 [A, B]\n1 *".parse().unwrap();
     let mapping = |ps: &PosState<_>| {
-        ps.map(|r: &PMCFGRule<_, _, _>| {
-            r.map_nonterminals(|nt| rel.project(nt))
-        })
+        ps.map(|r: &PMCFGRule<_, _, _>| r.map_nonterminals(|nt| rel.project(nt)))
     };
     let rlb = RlbElement::new(&mapping);
     let recogniser = coarse_to_fine_recogniser!(automaton.clone(); tts, rlb);
@@ -115,14 +113,12 @@ fn test_pmcfg_from_str_correctness() {
         head: String::from("S"),
         tail: vec![String::from("A"), String::from("B")],
         composition: Composition {
-            composition: vec![
-                vec![
-                    VarT::Var(0, 0),
-                    VarT::Var(1, 0),
-                    VarT::Var(0, 1),
-                    VarT::Var(1, 1),
-                ],
-            ],
+            composition: vec![vec![
+                VarT::Var(0, 0),
+                VarT::Var(1, 0),
+                VarT::Var(0, 1),
+                VarT::Var(1, 1),
+            ]],
         },
         weight: LogDomain::new(1.0).unwrap(),
     };
@@ -140,7 +136,9 @@ fn test_pmcfg_from_str_correctness() {
     let rule_a1 = PMCFGRule {
         head: String::from("A"),
         tail: vec![],
-        composition: Composition { composition: vec![vec![], vec![]] },
+        composition: Composition {
+            composition: vec![vec![], vec![]],
+        },
         weight: LogDomain::new(0.5).unwrap(),
     };
     let rule_b0 = PMCFGRule {
@@ -157,7 +155,9 @@ fn test_pmcfg_from_str_correctness() {
     let rule_b1 = PMCFGRule {
         head: String::from("B"),
         tail: vec![],
-        composition: Composition { composition: vec![vec![], vec![]] },
+        composition: Composition {
+            composition: vec![vec![], vec![]],
+        },
         weight: LogDomain::new(0.5).unwrap(),
     };
     let control_grammar = PMCFG {
@@ -183,7 +183,7 @@ fn test_pmcfg_from_str_correctness() {
 
 #[test]
 fn test_tree_stack_automaton_from_str() {
-    use TreeStackInstruction::{Up, Down, Push};
+    use crate::TreeStackInstruction::{Down, Push, Up};
 
     let unprocessed_transitions = vec![
         (
@@ -193,7 +193,7 @@ fn test_tree_stack_automaton_from_str() {
                 current_val: 1.to_string(),
                 new_val: 2.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -202,7 +202,7 @@ fn test_tree_stack_automaton_from_str() {
                 current_val: 1.to_string(),
                 new_val: 3.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -211,7 +211,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 18.to_string(),
                 new_val: 19.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -220,7 +220,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 6.to_string(),
                 new_val: 5.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -229,7 +229,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 7.to_string(),
                 new_val: 8.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "d",
@@ -239,7 +239,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 10.to_string(),
                 new_val: 11.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "d",
@@ -249,7 +249,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 5.to_string(),
                 new_val: 9.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -259,7 +259,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 2.to_string(),
                 new_val: 13.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -269,7 +269,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 14.to_string(),
                 new_val: 15.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "c",
@@ -279,7 +279,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 13.to_string(),
                 new_val: 10.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "c",
@@ -289,7 +289,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 16.to_string(),
                 new_val: 6.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -298,7 +298,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 9.to_string(),
                 new_val: 17.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -307,7 +307,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 8.to_string(),
                 new_val: 4.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "b",
@@ -317,7 +317,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 2.to_string(),
                 new_val: 13.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "b",
@@ -327,7 +327,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 14.to_string(),
                 new_val: 15.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -336,7 +336,7 @@ fn test_tree_stack_automaton_from_str() {
                 current_val: 18.to_string(),
                 new_val: 1.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -345,7 +345,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 9.to_string(),
                 new_val: 17.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -354,7 +354,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 8.to_string(),
                 new_val: 4.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -363,7 +363,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 3.to_string(),
                 new_val: 14.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -372,7 +372,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 1.to_string(),
                 new_val: 12.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -382,7 +382,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 10.to_string(),
                 new_val: 11.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -392,7 +392,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 5.to_string(),
                 new_val: 9.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "a",
@@ -401,7 +401,7 @@ fn test_tree_stack_automaton_from_str() {
                 current_val: 3.to_string(),
                 new_val: 2.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "a",
@@ -410,7 +410,7 @@ fn test_tree_stack_automaton_from_str() {
                 current_val: 3.to_string(),
                 new_val: 3.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -419,7 +419,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 15.to_string(),
                 new_val: 16.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -428,7 +428,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 12.to_string(),
                 new_val: 7.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -437,7 +437,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 6.to_string(),
                 new_val: 5.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -446,7 +446,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 7.to_string(),
                 new_val: 8.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -456,7 +456,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 13.to_string(),
                 new_val: 10.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -466,7 +466,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 16.to_string(),
                 new_val: 6.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -475,7 +475,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 3.to_string(),
                 new_val: 14.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -484,7 +484,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 1.to_string(),
                 new_val: 12.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -493,7 +493,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 15.to_string(),
                 new_val: 16.to_string(),
             },
-            1.0
+            1.0,
         ),
         (
             "",
@@ -502,7 +502,7 @@ fn test_tree_stack_automaton_from_str() {
                 old_val: 12.to_string(),
                 new_val: 7.to_string(),
             },
-            1.0
+            1.0,
         ),
     ];
 

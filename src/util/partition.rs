@@ -1,10 +1,10 @@
-use std::collections::{BTreeSet, BTreeMap};
 use std::collections::btree_map::Keys;
-use std::rc::Rc;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Deref;
+use std::rc::Rc;
 
-use serde::ser::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};
+use serde::ser::{Serialize, Serializer};
 
 /// A partition Π = {π₁, …, πₙ} of an alpbabet Σ, such that
 /// πᵢ ⊆ Σ for each i ∈ [n] and π₁ ∪ … ∪ πₙ = Σ.
@@ -81,7 +81,6 @@ impl<'de, T: Deserialize<'de> + Ord + Clone> Deserialize<'de> for Partition<T> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

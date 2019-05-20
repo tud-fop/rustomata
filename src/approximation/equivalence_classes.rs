@@ -1,12 +1,12 @@
-use nom::{IResult, is_space};
-use std::collections::{HashMap, HashSet};
+use nom::{is_space, IResult};
 use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::str::FromStr;
 
-use util::parsing::*;
+use crate::util::parsing::*;
 
 /// Structure containing the elements of type `A` in an equivalence class of type `B`
 #[derive(Debug, Eq, PartialEq)]
@@ -191,21 +191,12 @@ where
 {
     do_parse!(
         input,
-        label: parse_token >>
-            take_while!(is_space) >>
-            set: alt!(
-                do_parse!(
-                    tag!("*") >> (None)
-                )
-                    |
-                do_parse!(
-                    the_set: parse_set >> (Some(the_set))
-                )
-            ) >>
-            (EquivalenceClass {
-                label,
-                set,
-            })
+        label: parse_token
+            >> take_while!(is_space)
+            >> set: alt!(
+                do_parse!(tag!("*") >> (None)) | do_parse!(the_set: parse_set >> (Some(the_set)))
+            )
+            >> (EquivalenceClass { label, set })
     )
 }
 
@@ -216,8 +207,7 @@ where
 {
     do_parse!(
         input,
-        output: apply!(parse_vec, parse_token, "[", "]", ",") >>
-        (HashSet::from_iter(output))
+        output: apply!(parse_vec, parse_token, "[", "]", ",") >> (HashSet::from_iter(output))
     )
 }
 
@@ -231,17 +221,17 @@ mod tests {
             (
                 "0 [0, 1]xyz",
                 "xyz",
-                EquivalenceClass::from((0, Some(vec![0, 1])))
+                EquivalenceClass::from((0, Some(vec![0, 1]))),
             ),
             (
                 "0  [1, 0]1 [2, 3]",
                 "1 [2, 3]",
-                EquivalenceClass::from((0, Some(vec![0, 1])))
+                EquivalenceClass::from((0, Some(vec![0, 1]))),
             ),
             (
                 "0  [0, 1, 1]\nxyz",
                 "\nxyz",
-                EquivalenceClass::from((0, Some(vec![0, 1])))
+                EquivalenceClass::from((0, Some(vec![0, 1]))),
             ),
             ("0 *xyz", "xyz", EquivalenceClass::from((0, None))),
         ];
@@ -260,13 +250,10 @@ mod tests {
 
         for incomplete_input in incomplete_inputs {
             match parse_class::<u8, u8>(incomplete_input.as_bytes()) {
-                IResult::Done(_, _) |
-                IResult::Error(_) => {
-                    panic!(
-                        "The input was not handled as incomplete: \'{}\'",
-                        incomplete_input
-                    )
-                }
+                IResult::Done(_, _) | IResult::Error(_) => panic!(
+                    "The input was not handled as incomplete: \'{}\'",
+                    incomplete_input
+                ),
                 IResult::Incomplete(_) => (),
             }
         }
@@ -278,8 +265,7 @@ mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_class::<u8, u8>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) |
-                IResult::Incomplete(_) => {
+                IResult::Done(_, _) | IResult::Incomplete(_) => {
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input)
                 }
                 IResult::Error(_) => (),
@@ -338,7 +324,7 @@ mod tests {
                     EquivalenceClass::from((0, Some(vec![0, 1]))),
                     EquivalenceClass::from((1, Some(vec![2, 3]))),
                     EquivalenceClass::from((2, None)),
-                ])
+                ]),
             ),
             (
                 " 0 [0, 1]\n 1 [2, 3]  \n2 *  ",
@@ -346,7 +332,7 @@ mod tests {
                     EquivalenceClass::from((0, Some(vec![0, 1]))),
                     EquivalenceClass::from((1, Some(vec![2, 3]))),
                     EquivalenceClass::from((2, None)),
-                ])
+                ]),
             ),
         ];
 
@@ -371,13 +357,10 @@ mod tests {
 
         for illegal_input in illegal_inputs {
             match EquivalenceRelation::<u8, u8>::from_str(illegal_input) {
-                Ok(parsed) => {
-                    panic!(
-                        "Was able to parse the illegal input \'{}\' as \'{:?}\'",
-                        illegal_input,
-                        parsed
-                    )
-                }
+                Ok(parsed) => panic!(
+                    "Was able to parse the illegal input \'{}\' as \'{:?}\'",
+                    illegal_input, parsed
+                ),
                 Err(_) => (),
             }
         }

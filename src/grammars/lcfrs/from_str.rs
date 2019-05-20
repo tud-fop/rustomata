@@ -1,9 +1,9 @@
+use num_traits::One;
 use std::fmt::Debug;
 use std::str::FromStr;
-use num_traits::One;
 
-use util::parsing::initial_rule_grammar_from_str;
 use super::Lcfrs;
+use crate::util::parsing::initial_rule_grammar_from_str;
 
 impl<N, T, W> FromStr for Lcfrs<N, T, W>
 where

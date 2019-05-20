@@ -1,12 +1,12 @@
+use crate::automata::finite_state_automaton::{FiniteStateAutomaton, FiniteStateInstruction};
+use crate::recognisable::Transition;
+use crate::util::parsing::{parse_finals, parse_initial};
 use nom::IResult;
 use num_traits::One;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::vec::Vec;
 use std::str::FromStr;
-use recognisable::Transition;
-use automata::finite_state_automaton::{FiniteStateAutomaton, FiniteStateInstruction};
-use util::parsing::{parse_finals, parse_initial};
+use std::vec::Vec;
 
 impl<Q, T, W> FromStr for FiniteStateAutomaton<Q, T, W>
 where
@@ -36,7 +36,7 @@ where
                 }
             } else if l.trim_start().starts_with("final:") {
                 match parse_finals(l.trim_start().as_bytes()) {
-                     IResult::Done(_, result) => {
+                    IResult::Done(_, result) => {
                         fin = result;
                     }
                     _ => return Err(format!("Malformed final declaration: {}", l)),
@@ -47,14 +47,12 @@ where
         }
 
         match (init, fin) {
-            (None, ref r) if r.len() == 0 =>
-                Err(format!("No initial state and no final states found.")),
-            (None, _) =>
-                Err(format!("No initial state found.")),
-            (Some(_), ref r) if r.len() == 0 =>
-                Err(format!("No final states found.")),
-            (Some(i), r) =>
-                Ok(FiniteStateAutomaton::new(transitions, i, r)),
+            (None, ref r) if r.len() == 0 => {
+                Err(format!("No initial state and no final states found."))
+            }
+            (None, _) => Err(format!("No initial state found.")),
+            (Some(_), ref r) if r.len() == 0 => Err(format!("No final states found.")),
+            (Some(i), r) => Ok(FiniteStateAutomaton::new(transitions, i, r)),
         }
     }
 }
@@ -70,15 +68,11 @@ where
         let e: String = "Malformed state.".to_string();
         if v.len() == 3 {
             match v[1] {
-                "->" | "→" => {
-                    Ok(FiniteStateInstruction {
-                        source_state: v[0].parse().map_err(|_| e.clone())?,
-                        target_state: v[2].parse().map_err(|_| e.clone())?,
-                    })
-                },
-                _ => {
-                    Err(format!("FiniteStateInstruction malformed: {}", s))
-                },
+                "->" | "→" => Ok(FiniteStateInstruction {
+                    source_state: v[0].parse().map_err(|_| e.clone())?,
+                    target_state: v[2].parse().map_err(|_| e.clone())?,
+                }),
+                _ => Err(format!("FiniteStateInstruction malformed: {}", s)),
             }
         } else {
             Err(format!("FiniteStateInstruction malformed: {}", s))

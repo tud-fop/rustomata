@@ -1,15 +1,15 @@
-use nom::{IResult, is_space};
+use nom::{is_space, IResult};
 use num_traits::One;
 use std::fmt::Debug;
+use std::str::{from_utf8, FromStr};
 use std::vec::Vec;
-use std::str::{FromStr, from_utf8};
 
-use recognisable::{Instruction, Transition};
-use util::parsing::{parse_comment, parse_token, parse_vec};
-
+use crate::recognisable::{Instruction, Transition};
+use crate::util::parsing::{parse_comment, parse_token, parse_vec};
 
 impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I, T, W>
-    where I: FromStr,
+where
+    I: FromStr,
     I::Err: Debug,
     T: FromStr,
     T::Err: Debug,
@@ -21,7 +21,7 @@ impl<I: Instruction + FromStr, T: FromStr, W: FromStr> FromStr for Transition<I,
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match parse_transition(s.as_bytes()) {
             IResult::Done(_, result) => Ok(result),
-            _                        => Err(format!("Could not parse: {}", s)),
+            _ => Err(format!("Could not parse: {}", s)),
         }
     }
 }
@@ -37,25 +37,26 @@ where
 {
     do_parse!(
         input,
-        tag!("Transition") >>
-            take_while!(is_space) >>
-            word: parse_word >>
-            take_while!(is_space) >>
-            instruction: map_res!(delimited!(tag!("("), take_until!(")"), tag!(")")), from_utf8) >>
-            take_while!(is_space) >>
-            weight_o: opt!(
-                complete!(
-                    do_parse!(
-                        tag!("#") >>
-                            take_while!(is_space) >>
-                            weight_s: map_res!(is_not!(" "), from_utf8) >>
-                            (weight_s.parse().unwrap())
-                    )
+        tag!("Transition")
+            >> take_while!(is_space)
+            >> word: parse_word
+            >> take_while!(is_space)
+            >> instruction:
+                map_res!(
+                    delimited!(tag!("("), take_until!(")"), tag!(")")),
+                    from_utf8
                 )
-            ) >>
-            take_while!(is_space) >>
-            opt!(complete!(parse_comment)) >>
-            (Transition {
+            >> take_while!(is_space)
+            >> weight_o:
+                opt!(complete!(do_parse!(
+                    tag!("#")
+                        >> take_while!(is_space)
+                        >> weight_s: map_res!(is_not!(" "), from_utf8)
+                        >> (weight_s.parse().unwrap())
+                )))
+            >> take_while!(is_space)
+            >> opt!(complete!(parse_comment))
+            >> (Transition {
                 word: word,
                 weight: weight_o.unwrap_or(W::one()),
                 instruction: instruction.parse().unwrap(),
@@ -78,17 +79,17 @@ fn test_parse_word() {
         (
             "[a, b, c]",
             "",
-            vec![String::from("a"), String::from("b"), String::from("c")]
+            vec![String::from("a"), String::from("b"), String::from("c")],
         ),
         (
             "[xyz, ab]",
             "",
-            vec![String::from("xyz"), String::from("ab")]
+            vec![String::from("xyz"), String::from("ab")],
         ),
         (
             "[\"xyz\", \"ab\", cd] bla",
             " bla",
-            vec![String::from("xyz"), String::from("ab"), String::from("cd")]
+            vec![String::from("xyz"), String::from("ab"), String::from("cd")],
         ),
     ];
 
@@ -110,7 +111,7 @@ fn test_parse_transitions() {
                 word: vec![1usize, 2usize, 3usize],
                 weight: 2usize,
                 instruction: 1usize,
-            }
+            },
         ),
         (
             "Transition [1, 2, 3] (1) % blub",
@@ -119,7 +120,7 @@ fn test_parse_transitions() {
                 word: vec![1usize, 2usize, 3usize],
                 weight: 1usize,
                 instruction: 1usize,
-            }
+            },
         ),
         (
             "Transition [1, 2, 3] (1)",
@@ -128,7 +129,7 @@ fn test_parse_transitions() {
                 word: vec![1usize, 2usize, 3usize],
                 weight: 1usize,
                 instruction: 1usize,
-            }
+            },
         ),
     ];
 

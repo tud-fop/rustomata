@@ -11,7 +11,7 @@ where
 
     fn integerise(&self, integeriser: &mut Self::I) -> Self::AInt;
 
-    fn un_integerise(&Self::AInt, integeriser: &Self::I) -> Self;
+    fn un_integerise(_: &Self::AInt, integeriser: &Self::I) -> Self;
 }
 
 pub trait Integerisable2
@@ -28,5 +28,5 @@ where
 
     fn integerise(&self, integeriser1: &mut Self::I1, integeriser2: &mut Self::I2) -> Self::AInt;
 
-    fn un_integerise(&Self::AInt, integeriser1: &Self::I1, integeriser2: &Self::I2) -> Self;
+    fn un_integerise(_: &Self::AInt, integeriser1: &Self::I1, integeriser2: &Self::I2) -> Self;
 }

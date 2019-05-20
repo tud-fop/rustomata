@@ -1,17 +1,17 @@
-use clap::{Arg, ArgMatches, App, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use log_domain::LogDomain;
-use rustomata::grammars::pmcfg::PMCFG;
-use rustomata::grammars::cfg::CFG;
-use rustomata::recognisable::Recognisable;
-use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
-use rustomata::automata::push_down_automaton::{PushDownAutomaton, PushState};
-use rustomata::approximation::ApproximationStrategy;
+use rustomata::approximation::equivalence_classes::EquivalenceRelation;
 use rustomata::approximation::relabel::RlbElement;
 use rustomata::approximation::tts::TTSElement;
-use rustomata::approximation::equivalence_classes::EquivalenceRelation;
+use rustomata::approximation::ApproximationStrategy;
+use rustomata::automata::push_down_automaton::{PushDownAutomaton, PushState};
+use rustomata::automata::tree_stack_automaton::TreeStackAutomaton;
+use rustomata::grammars::cfg::CFG;
+use rustomata::grammars::pmcfg::PMCFG;
+use rustomata::recognisable::Recognisable;
 
-use std::io::{self, Read};
 use std::fs::File;
+use std::io::{self, Read};
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("approximation")
@@ -109,110 +109,104 @@ pub fn get_sub_command() -> App<'static, 'static> {
 
 pub fn handle_sub_matches(r_matches: &ArgMatches) {
     match r_matches.subcommand() {
-        ("relabel", Some(relabel_matches)) => {
-            match relabel_matches.subcommand() {
-                ("parse", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+        ("relabel", Some(relabel_matches)) => match relabel_matches.subcommand() {
+            ("parse", Some(parse_matches)) => {
+                let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                let mut grammar_file = File::open(grammar_file_name).unwrap();
+                let mut grammar_string = String::new();
+                let _ = grammar_file.read_to_string(&mut grammar_string);
+                let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
-                    let a = PushDownAutomaton::from(g);
+                let a = PushDownAutomaton::from(g);
 
-                    let classes_file_name = parse_matches.value_of("classes").unwrap();
-                    let mut classes_file = File::open(classes_file_name).unwrap();
-                    let mut classes_string = String::new();
-                    let _ = classes_file.read_to_string(&mut classes_string);
-                    let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
+                let classes_file_name = parse_matches.value_of("classes").unwrap();
+                let mut classes_file = File::open(classes_file_name).unwrap();
+                let mut classes_string = String::new();
+                let _ = classes_file.read_to_string(&mut classes_string);
+                let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
 
-                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-                    let rlb = RlbElement::new(&f);
+                let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                let rlb = RlbElement::new(&f);
 
-                    let (b, _) = rlb.approximate_automaton(&a);
+                let (b, _) = rlb.approximate_automaton(&a);
 
-                    let mut corpus = String::new();
-                    let _ = io::stdin().read_to_string(&mut corpus);
+                let mut corpus = String::new();
+                let _ = io::stdin().read_to_string(&mut corpus);
 
-                    for sentence in corpus.lines() {
-                        println!(
-                            "{:?}: {}",
-                            b.recognise(
-                                sentence.split_whitespace().map(|x| x.to_string()).collect(),
-                            ).next(),
-                            sentence
-                        );
-                    }
+                for sentence in corpus.lines() {
+                    println!(
+                        "{:?}: {}",
+                        b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect(),)
+                            .next(),
+                        sentence
+                    );
                 }
-                ("automaton", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
-
-                    let a = PushDownAutomaton::from(g);
-
-                    let classes_file_name = parse_matches.value_of("classes").unwrap();
-                    let mut classes_file = File::open(classes_file_name).unwrap();
-                    let mut classes_string = String::new();
-                    let _ = classes_file.read_to_string(&mut classes_string);
-                    let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
-
-                    let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
-                    let rlb = RlbElement::new(&f);
-
-                    let (b, _) = rlb.approximate_automaton(&a);
-
-                    println!("{}", b);
-                }
-                _ => (),
             }
-        }
-        ("tts", Some(tts_matches)) => {
-            match tts_matches.subcommand() {
-                ("parse", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+            ("automaton", Some(parse_matches)) => {
+                let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                let mut grammar_file = File::open(grammar_file_name).unwrap();
+                let mut grammar_string = String::new();
+                let _ = grammar_file.read_to_string(&mut grammar_string);
+                let g: CFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
 
-                    let a = TreeStackAutomaton::from(g);
+                let a = PushDownAutomaton::from(g);
 
-                    let tts = TTSElement::new();
+                let classes_file_name = parse_matches.value_of("classes").unwrap();
+                let mut classes_file = File::open(classes_file_name).unwrap();
+                let mut classes_string = String::new();
+                let _ = classes_file.read_to_string(&mut classes_string);
+                let e: EquivalenceRelation<String, String> = classes_string.parse().unwrap();
 
-                    let (b, _) = tts.approximate_automaton(&a);
+                let f = |ps: &PushState<_, _>| ps.map(|nt| e.project(nt));
+                let rlb = RlbElement::new(&f);
 
-                    let mut corpus = String::new();
-                    let _ = io::stdin().read_to_string(&mut corpus);
+                let (b, _) = rlb.approximate_automaton(&a);
 
-                    for sentence in corpus.lines() {
-                        println!(
-                            "{:?}: {}",
-                            b.recognise(
-                                sentence.split_whitespace().map(|x| x.to_string()).collect(),
-                            ).next(),
-                            sentence
-                        );
-                    }
-                }
-                ("automaton", Some(parse_matches)) => {
-                    let grammar_file_name = parse_matches.value_of("grammar").unwrap();
-                    let mut grammar_file = File::open(grammar_file_name).unwrap();
-                    let mut grammar_string = String::new();
-                    let _ = grammar_file.read_to_string(&mut grammar_string);
-                    let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
-
-                    let a = TreeStackAutomaton::from(g);
-                    let tts = TTSElement::new();
-
-                    let (b, _) = tts.approximate_automaton(&a);
-                    println!("{}", b);
-                }
-                _ => (),
+                println!("{}", b);
             }
-        }
+            _ => (),
+        },
+        ("tts", Some(tts_matches)) => match tts_matches.subcommand() {
+            ("parse", Some(parse_matches)) => {
+                let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                let mut grammar_file = File::open(grammar_file_name).unwrap();
+                let mut grammar_string = String::new();
+                let _ = grammar_file.read_to_string(&mut grammar_string);
+                let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+
+                let a = TreeStackAutomaton::from(g);
+
+                let tts = TTSElement::new();
+
+                let (b, _) = tts.approximate_automaton(&a);
+
+                let mut corpus = String::new();
+                let _ = io::stdin().read_to_string(&mut corpus);
+
+                for sentence in corpus.lines() {
+                    println!(
+                        "{:?}: {}",
+                        b.recognise(sentence.split_whitespace().map(|x| x.to_string()).collect(),)
+                            .next(),
+                        sentence
+                    );
+                }
+            }
+            ("automaton", Some(parse_matches)) => {
+                let grammar_file_name = parse_matches.value_of("grammar").unwrap();
+                let mut grammar_file = File::open(grammar_file_name).unwrap();
+                let mut grammar_string = String::new();
+                let _ = grammar_file.read_to_string(&mut grammar_string);
+                let g: PMCFG<String, String, LogDomain<f64>> = grammar_string.parse().unwrap();
+
+                let a = TreeStackAutomaton::from(g);
+                let tts = TTSElement::new();
+
+                let (b, _) = tts.approximate_automaton(&a);
+                println!("{}", b);
+            }
+            _ => (),
+        },
         _ => (),
     }
 }

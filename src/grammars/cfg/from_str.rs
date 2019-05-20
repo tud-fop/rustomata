@@ -1,10 +1,10 @@
-use nom::{IResult, is_space};
+use nom::{is_space, IResult};
 use num_traits::One;
 use std::fmt::Debug;
-use std::str::{FromStr, from_utf8};
+use std::str::{from_utf8, FromStr};
 
-use grammars::cfg::{CFG, CFGComposition, CFGRule, LetterT};
-use util::parsing::*;
+use crate::grammars::cfg::{CFGComposition, CFGRule, LetterT, CFG};
+use crate::util::parsing::*;
 
 impl<N, T, W> FromStr for CFG<N, T, W>
 where
@@ -54,33 +54,29 @@ where
 {
     do_parse!(
         input,
-        head: parse_token >>
-        take_while!(is_space) >>
-        alt!(tag!("→") | tag!("->") | tag!("=>")) >>
-        take_while!(is_space) >>
-        composition: parse_composition >>
-        take_while!(is_space) >>
-        weight_o: opt!(
-            complete!(
-                do_parse!(
-                    tag!("#") >>
-                    take_while!(is_space) >>
-                    weight_s: map_res!(is_not!(" "), from_utf8) >>
-                    weight: expr_res!(weight_s.parse()) >>
-                    (weight)
-                )
-            )
-        ) >>
-        take_while!(is_space) >>
-        alt!(
-            eof!() |
-            preceded!(tag!("%"), take_while!(|_| true))
-        ) >>
-        (CFGRule {
-            head: head,
-            composition: CFGComposition { composition: composition },
-            weight: weight_o.unwrap_or(W::one()),
-        })
+        head: parse_token
+            >> take_while!(is_space)
+            >> alt!(tag!("→") | tag!("->") | tag!("=>"))
+            >> take_while!(is_space)
+            >> composition: parse_composition
+            >> take_while!(is_space)
+            >> weight_o:
+                opt!(complete!(do_parse!(
+                    tag!("#")
+                        >> take_while!(is_space)
+                        >> weight_s: map_res!(is_not!(" "), from_utf8)
+                        >> weight: expr_res!(weight_s.parse())
+                        >> (weight)
+                )))
+            >> take_while!(is_space)
+            >> alt!(eof!() | preceded!(tag!("%"), take_while!(|_| true)))
+            >> (CFGRule {
+                head: head,
+                composition: CFGComposition {
+                    composition: composition
+                },
+                weight: weight_o.unwrap_or(W::one()),
+            })
     )
 }
 
@@ -93,21 +89,21 @@ where
 {
     do_parse!(
         input,
-        result: alt!(
-            do_parse!(
-                tag!("Nt") >>
-                take_while!(is_space) >>
-                token: parse_token >>
-                (LetterT::Label(token))
-            ) |
-            do_parse!(
-                tag!("T") >>
-                take_while!(is_space) >>
-                token: parse_token >>
-                (LetterT::Value(token))
+        result:
+            alt!(
+                do_parse!(
+                    tag!("Nt")
+                        >> take_while!(is_space)
+                        >> token: parse_token
+                        >> (LetterT::Label(token))
+                ) | do_parse!(
+                    tag!("T")
+                        >> take_while!(is_space)
+                        >> token: parse_token
+                        >> (LetterT::Value(token))
+                )
             )
-        ) >>
-        (result)
+            >> (result)
     )
 }
 
@@ -170,8 +166,7 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_letter_t::<u8, u8>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) |
-                IResult::Incomplete(_) => {
+                IResult::Done(_, _) | IResult::Incomplete(_) => {
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input)
                 }
                 IResult::Error(_) => (),
@@ -185,13 +180,10 @@ pub mod tests {
 
         for incomplete_input in incomplete_inputs {
             match parse_letter_t::<char, char>(incomplete_input.as_bytes()) {
-                IResult::Done(_, _) |
-                IResult::Error(_) => {
-                    panic!(
-                        "The input was not handled as incomplete: \'{}\'",
-                        incomplete_input
-                    )
-                }
+                IResult::Done(_, _) | IResult::Error(_) => panic!(
+                    "The input was not handled as incomplete: \'{}\'",
+                    incomplete_input
+                ),
                 IResult::Incomplete(_) => (),
             }
         }
@@ -201,7 +193,9 @@ pub mod tests {
     fn test_parse_cfg_rule_legal_input() {
         let rule = CFGRule {
             head: 'S',
-            composition: CFGComposition { composition: vec![LetterT::Value('a')] },
+            composition: CFGComposition {
+                composition: vec![LetterT::Value('a')],
+            },
             weight: 1.0,
         };
         let legal_inputs = vec![
@@ -236,8 +230,7 @@ pub mod tests {
 
         for illegal_input in illegal_inputs {
             match parse_cfg_rule::<char, char, f32>(illegal_input.as_bytes()) {
-                IResult::Done(_, _) |
-                IResult::Incomplete(_) => {
+                IResult::Done(_, _) | IResult::Incomplete(_) => {
                     panic!("Was able to parse the illegal input \'{}\'", illegal_input)
                 }
                 IResult::Error(_) => (),
@@ -264,7 +257,9 @@ pub mod tests {
     fn test_cfg_rule_from_str_legal_input() {
         let control_rule = CFGRule {
             head: 'S',
-            composition: CFGComposition { composition: vec![LetterT::Value('a')] },
+            composition: CFGComposition {
+                composition: vec![LetterT::Value('a')],
+            },
             weight: 1.0,
         };
 
@@ -295,7 +290,9 @@ pub mod tests {
 
         let rule_s0 = CFGRule {
             head: 'S',
-            composition: CFGComposition { composition: vec![LetterT::Label('A')] },
+            composition: CFGComposition {
+                composition: vec![LetterT::Label('A')],
+            },
             weight: 1.0,
         };
         let rule_a0 = CFGRule {
@@ -311,7 +308,9 @@ pub mod tests {
         };
         let rule_a1 = CFGRule {
             head: 'A',
-            composition: CFGComposition { composition: vec![LetterT::Value('a')] },
+            composition: CFGComposition {
+                composition: vec![LetterT::Value('a')],
+            },
             weight: 0.4,
         };
         let rule_b0 = CFGRule {
@@ -327,7 +326,9 @@ pub mod tests {
         };
         let rule_b1 = CFGRule {
             head: 'B',
-            composition: CFGComposition { composition: vec![LetterT::Value('b')] },
+            composition: CFGComposition {
+                composition: vec![LetterT::Value('b')],
+            },
             weight: 0.4,
         };
         let control_grammar = CFG {

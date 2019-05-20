@@ -10,11 +10,11 @@ use std::vec::Vec;
 
 use num_traits::One;
 
+use crate::recognisable::automaton::{recognise, recognise_beam, Automaton};
+use crate::recognisable::{Configuration, Item, Recognisable, Transition};
+use crate::util::integerisable::{Integerisable1, Integerisable2};
+use crate::util::push_down::Pushdown;
 use integeriser::{HashIntegeriser, Integeriser};
-use recognisable::{Configuration, Item, Recognisable, Transition};
-use recognisable::automaton::{Automaton, recognise, recognise_beam};
-use util::integerisable::{Integerisable1, Integerisable2};
-use util::push_down::Pushdown;
 
 mod from_pmcfg;
 mod from_str;
@@ -24,7 +24,6 @@ mod tree_stack_instruction;
 pub use self::from_pmcfg::*;
 pub use self::tree_stack::*;
 pub use self::tree_stack_instruction::*;
-
 
 type TransitionMap<A, T, W> = HashMap<A, BinaryHeap<Transition<TreeStackInstruction<A>, T, W>>>;
 
@@ -42,7 +41,6 @@ where
     initial: TreeStack<usize>,
 }
 
-
 impl<A, T, W> TreeStackAutomaton<A, T, W>
 where
     A: Clone + Eq + Hash + Ord,
@@ -58,14 +56,20 @@ where
         let init: TreeStack<usize> = initial.integerise(&mut a_inter);
         let mut transition_map: TransitionMap<usize, usize, W> = HashMap::new();
 
-        for t in transitions.into_iter().map(|t| {
-            t.integerise(&mut t_inter, &mut a_inter)
-        })
+        for t in transitions
+            .into_iter()
+            .map(|t| t.integerise(&mut t_inter, &mut a_inter))
         {
             let a = match t.instruction {
-                TreeStackInstruction::Up { ref current_val, .. } |
-                TreeStackInstruction::Push { ref current_val, .. } |
-                TreeStackInstruction::Down { ref current_val, .. } => current_val.clone(),
+                TreeStackInstruction::Up {
+                    ref current_val, ..
+                }
+                | TreeStackInstruction::Push {
+                    ref current_val, ..
+                }
+                | TreeStackInstruction::Down {
+                    ref current_val, ..
+                } => current_val.clone(),
             };
 
             if !transition_map.contains_key(&a) {
@@ -119,18 +123,11 @@ where
     }
 }
 
-
 impl<A, T, W> Recognisable<T, W> for TreeStackAutomaton<A, T, W>
 where
     A: Ord + PartialEq + Clone + Hash,
     T: Clone + Eq + Hash + Ord,
-    W: One
-        + Mul<Output = W>
-        + MulAssign
-        + Clone
-        + Copy
-        + Eq
-        + Ord,
+    W: One + Mul<Output = W> + MulAssign + Clone + Copy + Eq + Ord,
 {
     type Parse = Item<TreeStack<A>, TreeStackInstruction<A>, T, W>;
 
@@ -147,18 +144,11 @@ where
     }
 }
 
-
 impl<A, T, W> Automaton<T, W> for TreeStackAutomaton<A, T, W>
 where
     A: Clone + Eq + Hash + Ord,
     T: Clone + Eq + Hash + Ord,
-    W: Clone
-        + Copy
-        + Eq
-        + Mul<Output = W>
-        + MulAssign
-        + One
-        + Ord,
+    W: Clone + Copy + Eq + Mul<Output = W> + MulAssign + One + Ord,
 {
     type Key = usize;
     type I = TreeStackInstruction<A>;
@@ -183,9 +173,8 @@ where
     }
 
     fn initial(&self) -> TreeStack<A> {
-        self.initial.map(&mut |i| {
-            self.a_integeriser.find_value(*i).unwrap().clone()
-        })
+        self.initial
+            .map(&mut |i| self.a_integeriser.find_value(*i).unwrap().clone())
     }
 
     fn item_map(
@@ -193,12 +182,14 @@ where
         i: &Item<TreeStack<usize>, TreeStackInstruction<usize>, usize, W>,
     ) -> Item<TreeStack<A>, TreeStackInstruction<A>, T, W> {
         match *i {
-            Item(Configuration {
-                 ref word,
-                 ref storage,
-                 weight,
-             },
-             ref pd) => {
+            Item(
+                Configuration {
+                    ref word,
+                    ref storage,
+                    weight,
+                },
+                ref pd,
+            ) => {
                 let pd_vec: Vec<_> = pd.clone().into();
                 let pd_unint: Vec<_> = pd_vec
                     .iter()
@@ -208,7 +199,8 @@ where
                     .collect();
                 Item(
                     Configuration {
-                        word: word.iter()
+                        word: word
+                            .iter()
                             .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())
                             .collect(),
                         storage: Integerisable1::un_integerise(storage, &self.a_integeriser),
@@ -239,18 +231,11 @@ where
     }
 }
 
-
 impl<A, T, W> Display for TreeStackAutomaton<A, T, W>
 where
     A: Ord + PartialEq + Clone + Hash + Display,
     T: Clone + Eq + Debug + Hash + Ord,
-    W: One
-        + Mul<Output = W>
-        + Clone
-        + Copy
-        + Eq
-        + Ord
-        + Display,
+    W: One + Mul<Output = W> + Clone + Copy + Eq + Ord + Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted_transitions = String::new();

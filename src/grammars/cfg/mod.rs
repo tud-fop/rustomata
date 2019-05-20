@@ -1,8 +1,8 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-mod from_str;
 mod from_pmcfg;
+mod from_str;
 
 /// Variable or terminal symbol in a CFG.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -19,7 +19,9 @@ pub struct CFGComposition<N, T> {
 
 impl<N, T> From<Vec<LetterT<N, T>>> for CFGComposition<N, T> {
     fn from(encapsulated_value: Vec<LetterT<N, T>>) -> Self {
-        CFGComposition { composition: encapsulated_value }
+        CFGComposition {
+            composition: encapsulated_value,
+        }
     }
 }
 
@@ -122,9 +124,7 @@ impl<N: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for CFGRule
         write!(
             f,
             "\"{}\" → {}  # {}",
-            self.head,
-            self.composition,
-            self.weight
+            self.head, self.composition, self.weight
         )
     }
 }

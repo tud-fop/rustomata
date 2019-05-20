@@ -8,17 +8,15 @@ pub mod search;
 pub use crate::agenda::{Agenda, BeamHeap, LimitedHeap};
 pub use crate::search::Search;
 
-
 #[cfg(test)]
 mod tests {
-    use rand::{SeedableRng, rngs::SmallRng, Rng};
+    use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-    use super::LimitedHeap;
+    use super::test::{black_box, Bencher};
     use super::BeamHeap;
-    use std::collections::BinaryHeap;
-    use super::test::{Bencher, black_box};
+    use super::LimitedHeap;
     use min_max_heap::MinMaxHeap;
-
+    use std::collections::BinaryHeap;
 
     const CAP: usize = 500;
     const ELM: usize = 1000;
@@ -33,9 +31,7 @@ mod tests {
         b.iter(|| {
             q.clear();
             for element in elements.iter() {
-                black_box(
-                    q.push(*element, *element)
-                );
+                black_box(q.push(*element, *element));
             }
         });
     }
@@ -49,9 +45,7 @@ mod tests {
         b.iter(|| {
             q.clear();
             for element in elements.iter() {
-                black_box(
-                    q.push(*element)
-                );
+                black_box(q.push(*element));
             }
         });
     }
@@ -65,9 +59,7 @@ mod tests {
         b.iter(|| {
             q.clear();
             for element in elements.iter() {
-                black_box(
-                    q.push(*element)
-                );
+                black_box(q.push(*element));
             }
         });
     }
@@ -81,9 +73,7 @@ mod tests {
         b.iter(|| {
             q.clear();
             for element in elements.iter() {
-                black_box(
-                    q.push(*element, *element)
-                );
+                black_box(q.push(*element, *element));
             }
         });
     }

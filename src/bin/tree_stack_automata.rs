@@ -1,15 +1,16 @@
-use clap::{Arg, ArgMatches, App, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use log_domain::LogDomain;
-use rustomata::recognisable::{Item, Recognisable};
-use rustomata::automata::tree_stack_automaton::{TreeStackAutomaton, TreeStack,
-                                                TreeStackInstruction};
-use rustomata::approximation::ApproximationStrategy;
 use rustomata::approximation::tts::TTSElement;
+use rustomata::approximation::ApproximationStrategy;
+use rustomata::automata::tree_stack_automaton::{
+    TreeStack, TreeStackAutomaton, TreeStackInstruction,
+};
 use rustomata::recognisable::coarse_to_fine::CoarseToFineRecogniser;
+use rustomata::recognisable::{Item, Recognisable};
 use std::fmt::Debug;
+use std::fs::File;
 use std::io::{self, Read};
 use std::rc::Rc;
-use std::fs::File;
 
 pub fn get_sub_command() -> App<'static, 'static> {
     SubCommand::with_name("tsa")

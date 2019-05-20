@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, binary_heap::IntoIter};
+use std::collections::{binary_heap::IntoIter, BinaryHeap};
 use std::ops::Mul;
 
 use super::weighted::WeightedItem;
@@ -8,28 +8,30 @@ use super::weighted::WeightedItem;
 /// factor.
 pub struct BeamHeap<I, W>
 where
-    W: Ord
+    W: Ord,
 {
     heap: BinaryHeap<WeightedItem<I, W>>,
-    beta: W
+    beta: W,
 }
 
 impl<I, W> BeamHeap<I, W>
 where
-    W: Ord
+    W: Ord,
 {
     pub fn new(beta: W) -> Self {
         BeamHeap {
             heap: BinaryHeap::new(),
-            beta
+            beta,
         }
     }
 
     pub fn push(&mut self, element: I, priority: W) -> bool
     where
-        W: Clone + Mul<Output=W>
+        W: Clone + Mul<Output = W>,
     {
-        if self.heap.is_empty() || priority >= self.heap.peek().unwrap().1.clone() * self.beta.clone() {
+        if self.heap.is_empty()
+            || priority >= self.heap.peek().unwrap().1.clone() * self.beta.clone()
+        {
             self.heap.push(WeightedItem(element, priority));
             true
         } else {
@@ -58,13 +60,14 @@ pub mod weighted {
     use crate::agenda::weighted::Weighted;
     use std::ops::Mul;
     pub struct BeamHeap<I: Weighted>(super::BeamHeap<I, I::Weight>)
-        where I::Weight: Ord;
+    where
+        I::Weight: Ord;
 
     /// An adapter for `super::BeamHeap` that uses priorities of items given by
     /// the implementation of `Weighted`.
     impl<I: Weighted> BeamHeap<I>
     where
-        I::Weight: Ord
+        I::Weight: Ord,
     {
         pub fn new(beta: I::Weight) -> Self {
             BeamHeap(super::BeamHeap::new(beta))
@@ -72,7 +75,7 @@ pub mod weighted {
 
         pub fn push(&mut self, element: I) -> bool
         where
-            I::Weight: Clone + Mul<Output=I::Weight>
+            I::Weight: Clone + Mul<Output = I::Weight>,
         {
             let priority = element.get_weight();
             self.0.push(element, priority)
@@ -95,10 +98,9 @@ pub mod weighted {
         }
     }
 
-
     impl<I: Weighted> IntoIterator for BeamHeap<I>
     where
-        I::Weight: Ord
+        I::Weight: Ord,
     {
         type IntoIter = <super::BeamHeap<I, I::Weight> as IntoIterator>::IntoIter;
         type Item = I;
@@ -111,12 +113,12 @@ pub mod weighted {
 impl<I, W> Clone for BeamHeap<I, W>
 where
     I: Clone,
-    W: Clone + Ord
+    W: Clone + Ord,
 {
     fn clone(&self) -> Self {
         BeamHeap {
             heap: self.heap.clone(),
-            beta: self.beta.clone()
+            beta: self.beta.clone(),
         }
     }
 }
@@ -125,7 +127,7 @@ use super::weighted::RemoveWeight;
 
 impl<I, W> IntoIterator for BeamHeap<I, W>
 where
-    W: Ord
+    W: Ord,
 {
     type IntoIter = RemoveWeight<I, W, IntoIter<WeightedItem<I, W>>>;
     type Item = I;

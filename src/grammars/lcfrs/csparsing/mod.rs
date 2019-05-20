@@ -1,16 +1,21 @@
-mod fallback;
 mod automaton;
+mod fallback;
 
 use super::Lcfrs;
 
-use dyck::Bracket;
-use grammars::pmcfg::PMCFGRule;
-use util::{ tree::GornTree, factorizable::Factorizable };
-use std::{ collections::{BTreeMap}, fmt::{Display, Error, Formatter}, hash::Hash, ops::Mul };
-use num_traits::{Zero, One};
-use std::time::{Instant, Duration};
+use crate::dyck::Bracket;
+use crate::grammars::pmcfg::PMCFGRule;
+use crate::util::{factorizable::Factorizable, tree::GornTree};
+use num_traits::{One, Zero};
+use std::time::{Duration, Instant};
+use std::{
+    collections::BTreeMap,
+    fmt::{Display, Error, Formatter},
+    hash::Hash,
+    ops::Mul,
+};
 
-use self::automaton::{Automaton, SxOutside, RuleMaskBuilder};
+use self::automaton::{Automaton, RuleMaskBuilder, SxOutside};
 
 /// The indices of a bracket in a CS representation for an lcfrs.
 /// Assumes integerized an itergerized set of (at most 2^32) rules and fanouts
@@ -31,7 +36,7 @@ impl BracketContent {
     pub fn is_ignore(self) -> bool {
         match self {
             BracketContent::Ignore => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -44,7 +49,7 @@ impl Display for BracketContent {
             BracketContent::Component(rule_id, comp_id) => write!(f, "_{}^{}", rule_id, comp_id),
             BracketContent::Variable(rule_id, i, j) => write!(f, "_{{{},{}}}^{}", rule_id, i, j),
             BracketContent::Terminal => write!(f, "_{{TERM}}"),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -72,65 +77,116 @@ pub struct GeneratorBuilder<'a, N, T: Eq + Hash, W> {
 impl<'a, N, T, W> GeneratorBuilder<'a, N, T, W>
 where
     T: Eq + Hash + Clone,
-    W: Zero + Ord + Copy + One + Mul<Output=W>,
-    N: Clone
+    W: Zero + Ord + Copy + One + Mul<Output = W>,
+    N: Clone,
 {
-    pub fn set_candidates(&mut self, c: usize) { self.candidates = Some(c); }
-    pub fn set_beam(&mut self, b: usize) { self.beam = Some(b); }
-    pub fn set_delta(&mut self, d: W) { self.delta = d; }
-    pub fn allow_root_prediction(&mut self) { self.root_prediction = true; }
+    pub fn set_candidates(&mut self, c: usize) {
+        self.candidates = Some(c);
+    }
+    pub fn set_beam(&mut self, b: usize) {
+        self.beam = Some(b);
+    }
+    pub fn set_delta(&mut self, d: W) {
+        self.delta = d;
+    }
+    pub fn allow_root_prediction(&mut self) {
+        self.root_prediction = true;
+    }
 
-    pub fn with_fallback(&self, word: &[T]) -> (impl Iterator<Item=GornTree<&'a PMCFGRule<N, T, W>>> + 'a, Option<GornTree<PMCFGRule<N, T, W>>>) {
-        let &Self { grammar, mut candidates, beam, delta, .. } = self;
+    pub fn with_fallback(
+        &self,
+        word: &[T],
+    ) -> (
+        impl Iterator<Item = GornTree<&'a PMCFGRule<N, T, W>>> + 'a,
+        Option<GornTree<PMCFGRule<N, T, W>>>,
+    ) {
+        let &Self {
+            grammar,
+            mut candidates,
+            beam,
+            delta,
+            ..
+        } = self;
         let realbeam = beam.unwrap_or(grammar.generator.states());
         let rulemask = grammar.rulemaskbuilder.build(word);
-        let mut word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates, rulemask).peekable();
-        let first = word_iterator.peek().map(|w| fallback::FailedParseTree::new(w).merge(&grammar.rules));
+        let mut word_iterator = grammar
+            .generator
+            .generate(word, realbeam, delta, &grammar.estimates, rulemask)
+            .peekable();
+        let first = word_iterator
+            .peek()
+            .map(|w| fallback::FailedParseTree::new(w).merge(&grammar.rules));
 
         let count_candidates = move |_: &Vec<Delta>| -> bool {
-            candidates.as_mut().map_or(true, |c| if *c == 0 { false } else { *c -= 1; true } )
+            candidates.as_mut().map_or(true, |c| {
+                if *c == 0 {
+                    false
+                } else {
+                    *c -= 1;
+                    true
+                }
+            })
         };
-        
-        ( word_iterator.take_while(count_candidates).filter_map(move |bs| grammar.toderiv(&bs))
-        , first
+
+        (
+            word_iterator
+                .take_while(count_candidates)
+                .filter_map(move |bs| grammar.toderiv(&bs)),
+            first,
         )
     }
 
     pub fn debug(&self, word: &[T]) -> (usize, usize, Duration, DebugResult<N, T, W>) {
         let starting_time = Instant::now();
-        let &Self { grammar, mut candidates, beam, delta, .. } = self;
+        let &Self {
+            grammar,
+            mut candidates,
+            beam,
+            delta,
+            ..
+        } = self;
         let rulemask = grammar.rulemaskbuilder.build(word);
         let realbeam = beam.unwrap_or(grammar.generator.states());
         let count_candidates = move |_: &Vec<Delta>| -> bool {
-            candidates.as_mut().map_or(true, |c| if *c == 0 { false } else { *c -= 1; true } )
+            candidates.as_mut().map_or(true, |c| {
+                if *c == 0 {
+                    false
+                } else {
+                    *c -= 1;
+                    true
+                }
+            })
         };
-        let word_iterator = grammar.generator.generate(word, realbeam, delta, &grammar.estimates, rulemask);
+        let word_iterator =
+            grammar
+                .generator
+                .generate(word, realbeam, delta, &grammar.estimates, rulemask);
         let mut word_iterator = word_iterator.take_while(count_candidates).peekable();
 
         let mut enumerated_words = 0;
 
         let o_fallback_word = word_iterator.peek().cloned();
-        let o_parse_tree = word_iterator.filter_map(
-            |cfg_deriv| {
+        let o_parse_tree = word_iterator
+            .filter_map(|cfg_deriv| {
                 enumerated_words += 1;
                 grammar.toderiv(&cfg_deriv)
-            }).next();
-        
+            })
+            .next();
+
         let debug_result = match (o_parse_tree, o_fallback_word) {
-                (Some(t), _)
-                    => DebugResult::Parse(t.cloned(), enumerated_words),
-                (None, Some(w)) => {
-                    let tree = fallback::FailedParseTree::new(&w).merge(&grammar.rules);
-                    DebugResult::Fallback(tree, enumerated_words)
-                },
-                (None, None)
-                    => DebugResult::Noparse
+            (Some(t), _) => DebugResult::Parse(t.cloned(), enumerated_words),
+            (None, Some(w)) => {
+                let tree = fallback::FailedParseTree::new(&w).merge(&grammar.rules);
+                DebugResult::Fallback(tree, enumerated_words)
+            }
+            (None, None) => DebugResult::Noparse,
         };
-        
-        ( grammar.rules.len()
-        , word.len()
-        , starting_time.elapsed()
-        , debug_result
+
+        (
+            grammar.rules.len(),
+            word.len(),
+            starting_time.elapsed(),
+            debug_result,
         )
     }
 }
@@ -138,13 +194,13 @@ where
 pub enum DebugResult<N, T, W> {
     Parse(GornTree<PMCFGRule<N, T, W>>, usize),
     Fallback(GornTree<PMCFGRule<N, T, W>>, usize),
-    Noparse
-} 
+    Noparse,
+}
 
 impl<N, T, W> CSRepresentation<N, T, W>
 where
     T: Ord + Hash + Clone,
-    W: Ord + Copy + One + Mul<Output=W>,
+    W: Ord + Copy + One + Mul<Output = W>,
     N: Clone,
 {
     /// Instantiates a CS representation for an `LCFRS`.
@@ -152,35 +208,43 @@ where
     where
         M: Into<Lcfrs<N, T, W>>,
         W: Factorizable + Zero,
-        N: Hash + Eq
+        N: Hash + Eq,
     {
         assert!(estimates_max_width <= u8::max_value() as usize);
         let (rules, initial) = grammar.into().destruct();
         let generator = {
-            let mut rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
+            let rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
             Automaton::from_grammar(rules_with_id, initial.clone())
         };
         let rulemaskbuilder = RuleMaskBuilder::new(rules.iter(), &initial);
         let estimates = SxOutside::from_automaton(&generator, estimates_max_width as u8);
-        
-        CSRepresentation { generator, rulemaskbuilder, estimates, rules }
+
+        CSRepresentation {
+            generator,
+            rulemaskbuilder,
+            estimates,
+            rules,
+        }
     }
 
     pub fn build_generator<'a>(&'a self) -> GeneratorBuilder<'a, N, T, W>
     where
-        W: Zero
+        W: Zero,
     {
-        GeneratorBuilder{
+        GeneratorBuilder {
             grammar: self,
             beam: None,
             delta: W::zero(),
             candidates: None,
-            root_prediction: false
+            root_prediction: false,
         }
     }
 }
 
-impl<N, T, W> CSRepresentation<N, T, W> where T: Hash + Eq {
+impl<N, T, W> CSRepresentation<N, T, W>
+where
+    T: Hash + Eq,
+{
     /// Reads off a parse tree from a multiply Dyck word. Fails if the word is not in R ∩ D.
     fn toderiv<'a>(&'a self, word: &[Delta]) -> Option<GornTree<&'a PMCFGRule<N, T, W>>> {
         let mut tree = BTreeMap::new();
@@ -214,8 +278,8 @@ impl<N, T, W> CSRepresentation<N, T, W> where T: Hash + Eq {
 
 #[cfg(test)]
 mod test {
-    use grammars::pmcfg::{VarT, PMCFGRule, Composition};
     use super::{CSRepresentation, Lcfrs};
+    use crate::grammars::pmcfg::{Composition, PMCFGRule, VarT};
     use log_domain::LogDomain;
 
     #[test]
@@ -226,11 +290,15 @@ mod test {
             (vec![], &grammar.rules[0]),
             (vec![0], &grammar.rules[1]),
             (vec![1], &grammar.rules[1]),
-        ].into_iter()
-            .collect();
+        ]
+        .into_iter()
+        .collect();
 
         let cs = CSRepresentation::new(grammar.clone(), 0);
-        assert_eq!(cs.build_generator().with_fallback(&['A']).0.next(), Some(d1));
+        assert_eq!(
+            cs.build_generator().with_fallback(&['A']).0.next(),
+            Some(d1)
+        );
         assert_eq!(
             cs.build_generator().with_fallback(&['A', 'A']).0.next(),
             Some(d2)
@@ -252,7 +320,9 @@ mod test {
                 PMCFGRule {
                     head: "S",
                     tail: vec![],
-                    composition: Composition { composition: vec![vec![VarT::T('A')]] },
+                    composition: Composition {
+                        composition: vec![vec![VarT::T('A')]],
+                    },
                     weight: LogDomain::new(0.7f64).unwrap(),
                 },
             ],

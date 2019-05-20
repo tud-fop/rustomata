@@ -1,22 +1,21 @@
 extern crate bit_set;
 
+use crate::recognisable::{automaton::Automaton, Configuration, Instruction, Item, Transition};
+use crate::util::integerisable::{Integerisable1, Integerisable2};
+use crate::util::push_down::Pushdown;
 use integeriser::{HashIntegeriser, Integeriser};
 use num_traits::One;
-use recognisable::{automaton::Automaton,Configuration, Instruction, Item, Transition};
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::MulAssign;
 use std::rc::Rc;
-use util::integerisable::{Integerisable1, Integerisable2};
-use util::push_down::Pushdown;
 
 use self::bit_set::BitSet;
 
 mod from_str;
 
-type TransitionMap<Q, T, W>
-    = HashMap<Q, BinaryHeap<Transition<FiniteStateInstruction<Q>, T, W>>>;
+type TransitionMap<Q, T, W> = HashMap<Q, BinaryHeap<Transition<FiniteStateInstruction<Q>, T, W>>>;
 
 #[derive(Clone, Debug)]
 pub struct FiniteStateAutomaton<Q, T, W>
@@ -89,9 +88,9 @@ where
         let fin = finals.into_iter().map(|q| q_inter.integerise(q)).collect();
         let mut transition_map: TransitionMap<usize, usize, W> = HashMap::new();
 
-        for trans in transitions.into_iter().map(|t| {
-            t.integerise(&mut t_inter, &mut q_inter)
-        })
+        for trans in transitions
+            .into_iter()
+            .map(|t| t.integerise(&mut t_inter, &mut q_inter))
         {
             transition_map
                 .entry(trans.instruction.source_state)
@@ -117,7 +116,6 @@ where
             })
         }))
     }
-
 }
 
 impl<Q, T, W> Automaton<T, W> for FiniteStateAutomaton<Q, T, W>
@@ -145,7 +143,10 @@ where
     }
 
     fn initial(&self) -> Q {
-        self.q_integeriser.find_value(self.initial_state).unwrap().clone()
+        self.q_integeriser
+            .find_value(self.initial_state)
+            .unwrap()
+            .clone()
     }
 
     fn item_map(
@@ -159,7 +160,7 @@ where
                     ref storage,
                     ref weight,
                 },
-                ref pd
+                ref pd,
             ) => {
                 let pd_vec: Vec<_> = pd.clone().into();
                 let pd_unint: Vec<_> = pd_vec
@@ -170,7 +171,8 @@ where
                     .collect();
                 Item(
                     Configuration {
-                        word: word.iter()
+                        word: word
+                            .iter()
                             .map(|t| self.t_integeriser.find_value(*t).unwrap().clone())
                             .collect(),
                         storage: self.q_integeriser.find_value(*storage).unwrap().clone(),
@@ -212,7 +214,6 @@ where
     }
 }
 
-
 impl<Q, T, W> Display for FiniteStateAutomaton<Q, T, W>
 where
     Q: Clone + Display + Hash + Ord,
@@ -225,7 +226,7 @@ where
 
         buffer.push_str("final: [");
         let mut first = true;
-        for i in 0 .. self.final_states.len() {
+        for i in 0..self.final_states.len() {
             if self.final_states.contains(i) {
                 if first {
                     buffer.push_str(", ");

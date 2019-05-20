@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use std::collections::btree_map;
+use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
 /// A tree map where each node has a _Gorn address_, i.e. a sequence of integers that describes the
@@ -11,7 +11,9 @@ pub struct GornTree<V> {
 
 impl<V> GornTree<V> {
     pub fn new() -> GornTree<V> {
-        GornTree { map: BTreeMap::new() }
+        GornTree {
+            map: BTreeMap::new(),
+        }
     }
 
     pub fn clear(&mut self) {
@@ -47,7 +49,9 @@ impl<V> GornTree<V> {
     }
 
     pub fn split_off(&mut self, key: &Vec<usize>) -> GornTree<V> {
-        GornTree { map: self.map.split_off(key) }
+        GornTree {
+            map: self.map.split_off(key),
+        }
     }
 
     pub fn keys<'a>(&'a self) -> btree_map::Keys<'a, Vec<usize>, V> {
@@ -115,6 +119,8 @@ impl<V> FromIterator<(Vec<usize>, V)> for GornTree<V> {
     where
         T: IntoIterator<Item = (Vec<usize>, V)>,
     {
-        GornTree { map: iter.into_iter().collect() }
+        GornTree {
+            map: iter.into_iter().collect(),
+        }
     }
 }

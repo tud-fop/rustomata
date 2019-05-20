@@ -2,12 +2,18 @@ extern crate bincode;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use flate2::{read, write, Compression};
 use log_domain::LogDomain;
-use std::{fs::File,
-          io::{stdin, stdout, Read}};
 use rustomata::grammars::lcfrs::from_discodop::DiscoDopGrammar;
-use rustomata::grammars::{lcfrs::{csparsing::{CSRepresentation, DebugResult},
-                                  Lcfrs},
-                          pmcfg::negra::{to_negra, DumpMode, noparse}};
+use rustomata::grammars::{
+    lcfrs::{
+        csparsing::{CSRepresentation, DebugResult},
+        Lcfrs,
+    },
+    pmcfg::negra::{noparse, to_negra, DumpMode},
+};
+use std::{
+    fs::File,
+    io::{stdin, stdout, Read},
+};
 
 pub fn get_sub_command(name: &str) -> App {
     SubCommand::with_name(name)
@@ -125,13 +131,16 @@ pub fn get_sub_command(name: &str) -> App {
 
 enum FileReader<R: Read> {
     Plain(R),
-    GZipped(R)
+    GZipped(R),
 }
 
 impl<R: Read> FileReader<R> {
     fn new(file: R, zipped: bool) -> Self {
-        if zipped { FileReader::GZipped(file) }
-        else { FileReader::Plain(file) }
+        if zipped {
+            FileReader::GZipped(file)
+        } else {
+            FileReader::Plain(file)
+        }
     }
 
     fn read(self) -> Result<String, ::std::io::Error> {
@@ -139,7 +148,7 @@ impl<R: Read> FileReader<R> {
         match self {
             FileReader::Plain(mut f) => {
                 f.read_to_string(&mut s)?;
-            },
+            }
             FileReader::GZipped(f) => {
                 read::GzDecoder::new(f).read_to_string(&mut s)?;
             }
@@ -151,20 +160,40 @@ impl<R: Read> FileReader<R> {
 pub fn handle_sub_matches(submatches: &ArgMatches) {
     match submatches.subcommand() {
         ("extract", Some(params)) => {
-            let grammar_is_gzipped = (params.is_present("gzipped") || params.is_present("disco-grammar")) && !params.is_present("ungzipped");
+            let grammar_is_gzipped = (params.is_present("gzipped")
+                || params.is_present("disco-grammar"))
+                && !params.is_present("ungzipped");
             let grammar_string = if let Some(path) = params.value_of("grammar") {
-                FileReader::new(File::open(path).expect("could not open grammar file"), grammar_is_gzipped).read().expect("could not read grammar file")
+                FileReader::new(
+                    File::open(path).expect("could not open grammar file"),
+                    grammar_is_gzipped,
+                )
+                .read()
+                .expect("could not read grammar file")
             } else {
-                FileReader::new(stdin(), grammar_is_gzipped).read().expect("could not read grammar file")
+                FileReader::new(stdin(), grammar_is_gzipped)
+                    .read()
+                    .expect("could not read grammar file")
             };
-            let sxlen = params.value_of("sxlen").map_or(0usize, |s| s.parse().unwrap());
+            let sxlen = params
+                .value_of("sxlen")
+                .map_or(0usize, |s| s.parse().unwrap());
 
             let gmr: Lcfrs<String, String, LogDomain<f64>> = if params.is_present("disco-grammar") {
-                let dgmr: DiscoDopGrammar<_, _, _> = grammar_string.parse().expect("Could not parse grammar.");
+                let dgmr: DiscoDopGrammar<_, _, _> =
+                    grammar_string.parse().expect("Could not parse grammar.");
                 if params.is_present("disco-lexer") {
-                    let lexer = File::open(params.value_of("disco-lexer").expect("Missing lexer file as argument")).expect("could not open lexer file");
-                    let mut lexer_string = FileReader::new(lexer, grammar_is_gzipped).read().expect("could not read lexer file");
-                    dgmr.with_lexer(lexer_string.parse().expect("Could not parse lexer file.")).into()
+                    let lexer = File::open(
+                        params
+                            .value_of("disco-lexer")
+                            .expect("Missing lexer file as argument"),
+                    )
+                    .expect("could not open lexer file");
+                    let lexer_string = FileReader::new(lexer, grammar_is_gzipped)
+                        .read()
+                        .expect("could not read lexer file");
+                    dgmr.with_lexer(lexer_string.parse().expect("Could not parse lexer file."))
+                        .into()
                 } else {
                     dgmr.with_default_lexer().into()
                 }
@@ -178,7 +207,8 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 &mut write::GzEncoder::new(stdout(), Compression::best()),
                 &CSRepresentation::new(gmr, sxlen),
                 bincode::Infinite,
-            ).unwrap()
+            )
+            .unwrap()
         }
 
         ("parse", Some(params)) => {
@@ -190,14 +220,12 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 Some(n) => n.parse::<usize>().unwrap(),
                 None => 1usize,
             };
-            
-            let beam_width: Option<usize>
-                = params.value_of("beam").map(|s| s.parse().unwrap());
-            let beam_threshold: Option<LogDomain<f64>>
-                = params.value_of("threshold").map(|s| s.parse().unwrap());
-            let candidates: Option<usize>
-                = params.value_of("candidates").map(|s| s.parse().unwrap());
 
+            let beam_width: Option<usize> = params.value_of("beam").map(|s| s.parse().unwrap());
+            let beam_threshold: Option<LogDomain<f64>> =
+                params.value_of("threshold").map(|s| s.parse().unwrap());
+            let candidates: Option<usize> =
+                params.value_of("candidates").map(|s| s.parse().unwrap());
 
             let csfile = File::open(params.value_of("csfile").unwrap()).unwrap();
 
@@ -205,9 +233,15 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                 bincode::deserialize_from(&mut read::GzDecoder::new(csfile), bincode::Infinite)
                     .unwrap();
             let mut parser = csrep.build_generator();
-            if let Some(beam) = beam_width { parser.set_beam(beam) };
-            if let Some(delta) = beam_threshold { parser.set_delta(delta) };
-            if let Some(candidates) = candidates { parser.set_candidates(candidates) };
+            if let Some(beam) = beam_width {
+                parser.set_beam(beam)
+            };
+            if let Some(delta) = beam_threshold {
+                parser.set_delta(delta)
+            };
+            if let Some(candidates) = candidates {
+                parser.set_candidates(candidates)
+            };
 
             for (i, sentence) in word_strings.lines().enumerate() {
                 let (i, words) = split_line(sentence, params.is_present("with-lines"), i);
@@ -220,15 +254,15 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
                         DebugResult::Parse(t, n) => {
                             eprintln!("parse {}", n);
                             println!("{}", to_negra(&t, i, negra_mode));
-                        },
+                        }
                         DebugResult::Fallback(t, n) => {
                             eprintln!("fallback {}", n);
                             println!("{}", to_negra(&t, i, negra_mode));
-                        },
+                        }
                         DebugResult::Noparse => {
                             eprintln!("noparse 0");
                             println!("{}", noparse(&words, i, negra_mode));
-                        },
+                        }
                     }
                 } else {
                     let mut found_trees = false;
@@ -263,14 +297,19 @@ pub fn handle_sub_matches(submatches: &ArgMatches) {
     }
 }
 
-fn split_line<'a>(line: &'a str, with_line_number: bool, default_line_number: usize) -> (usize, impl Iterator<Item=&'a str> + 'a) {
+fn split_line<'a>(
+    line: &'a str,
+    with_line_number: bool,
+    default_line_number: usize,
+) -> (usize, impl Iterator<Item = &'a str> + 'a) {
     let mut word_iterator = line.split_whitespace();
-    
+
     let line_number = if with_line_number {
-        word_iterator.next()
-                     .expect("missing line number")
-                     .parse()
-                     .expect("invalid line numer")
+        word_iterator
+            .next()
+            .expect("missing line number")
+            .parse()
+            .expect("invalid line numer")
     } else {
         default_line_number
     };
@@ -278,16 +317,20 @@ fn split_line<'a>(line: &'a str, with_line_number: bool, default_line_number: us
     (line_number, word_iterator)
 }
 
-fn split_pos<'a>(words: impl Iterator<Item=&'a str> + 'a, with_pos: bool) -> (Vec<String>, DumpMode<String>) {
+fn split_pos<'a>(
+    words: impl Iterator<Item = &'a str> + 'a,
+    with_pos: bool,
+) -> (Vec<String>, DumpMode<String>) {
     if with_pos {
-        let (pos, ws) = words.map(
-            |wp| {
+        let (pos, ws) = words
+            .map(|wp| {
                 let mut it = wp.rsplitn(2, '/');
-                ( it.next().unwrap().to_string(),
-                  it.next().expect("missing pos annotation").to_string()
+                (
+                    it.next().unwrap().to_string(),
+                    it.next().expect("missing pos annotation").to_string(),
                 )
-            }
-        ).unzip();
+            })
+            .unzip();
         (pos, DumpMode::FromPos(ws))
     } else {
         (words.map(|s| s.to_string()).collect(), DumpMode::Default)

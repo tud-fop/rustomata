@@ -1,6 +1,6 @@
 extern crate clap;
-extern crate log_domain;
 extern crate flate2;
+extern crate log_domain;
 
 #[macro_use]
 extern crate rustomata;
@@ -9,9 +9,9 @@ use clap::App;
 
 mod approximation;
 mod cfg;
+mod csparsing;
 mod pmcfg;
 mod tree_stack_automata;
-mod csparsing;
 
 fn main() {
     let matches = App::new("rustomata")
@@ -33,5 +33,4 @@ fn main() {
         ("csparsing", Some(r_matches)) => csparsing::handle_sub_matches(r_matches),
         _ => (),
     }
-
 }

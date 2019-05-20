@@ -1,11 +1,9 @@
-use grammars::pmcfg::*;
-use grammars::cfg::{LetterT, CFGComposition, CFGRule, CFG};
+use crate::grammars::cfg::{CFGComposition, CFGRule, LetterT, CFG};
+use crate::grammars::pmcfg::*;
 
-impl<
-    N: Clone + Ord + PartialEq,
-    T: Clone + Ord + PartialEq,
-    W: Clone + Ord + PartialEq,
-> From<PMCFG<N, T, W>> for CFG<N, T, W> {
+impl<N: Clone + Ord + PartialEq, T: Clone + Ord + PartialEq, W: Clone + Ord + PartialEq>
+    From<PMCFG<N, T, W>> for CFG<N, T, W>
+{
     fn from(pmcfg: PMCFG<N, T, W>) -> CFG<N, T, W> {
         let mut rules = Vec::new();
 
@@ -29,11 +27,12 @@ impl<
                     }
                     _ => panic!("[ERROR] Access to wrong component in rule."),
                 }
-
             }
             rules.push(CFGRule {
                 head: r.head.clone(),
-                composition: CFGComposition { composition: new_composition },
+                composition: CFGComposition {
+                    composition: new_composition,
+                },
                 weight: r.weight.clone(),
             });
         }

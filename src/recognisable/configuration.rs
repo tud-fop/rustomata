@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 /// Configuration of an automaton containing sequence of symbols `word` to be read, a storage value `storage`, and a `weight`.
 #[derive(Clone, Debug)]
@@ -34,20 +34,13 @@ where
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.weight.partial_cmp(&other.weight) {
-            None |
-            Some(Ordering::Equal) => {
-                match other.word.len().partial_cmp(&self.word.len()) {
-                    None |
-                    Some(Ordering::Equal) => {
-                        match self.word.partial_cmp(&other.word) {
-                            None |
-                            Some(Ordering::Equal) => self.storage.partial_cmp(&other.storage),
-                            x => x,
-                        }
-                    }
+            None | Some(Ordering::Equal) => match other.word.len().partial_cmp(&self.word.len()) {
+                None | Some(Ordering::Equal) => match self.word.partial_cmp(&other.word) {
+                    None | Some(Ordering::Equal) => self.storage.partial_cmp(&other.storage),
                     x => x,
-                }
-            }
+                },
+                x => x,
+            },
             x => x,
         }
     }
@@ -61,17 +54,13 @@ where
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.weight.cmp(&other.weight) {
-            Ordering::Equal => {
-                match other.word.len().cmp(&self.word.len()) {
-                    Ordering::Equal => {
-                        match self.word.cmp(&other.word) {
-                            Ordering::Equal => self.storage.cmp(&other.storage),
-                            x => x,
-                        }
-                    }
+            Ordering::Equal => match other.word.len().cmp(&self.word.len()) {
+                Ordering::Equal => match self.word.cmp(&other.word) {
+                    Ordering::Equal => self.storage.cmp(&other.storage),
                     x => x,
-                }
-            }
+                },
+                x => x,
+            },
             x => x,
         }
     }
@@ -91,9 +80,7 @@ impl<S: fmt::Display, T: fmt::Display, W: fmt::Display> fmt::Display for Configu
         write!(
             f,
             "Configuration:\nword:[{}]\nweight:{}\n{}\n",
-            buffer,
-            self.weight,
-            self.storage
+            buffer, self.weight, self.storage
         )
     }
 }
