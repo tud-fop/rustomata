@@ -3,7 +3,7 @@ name = "rustomata"
 version = "0.1.0"
 authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
 autobins = false
-version = "2018"
+edition = "2018"
 
 [workspace]
 members = ["unique-heap", "search", "vecmultimap"]
