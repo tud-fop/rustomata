@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::Extend;
+use std::ops::Index;
 use std::slice;
 use std::vec;
 
@@ -68,7 +69,6 @@ impl<T> Composition<T> {
     }
 }
 
-use std::ops::Index;
 impl<T> Index<usize> for Composition<T> {
     type Output = Vec<VarT<T>>;
     fn index(&self, idx: usize) -> &Self::Output {

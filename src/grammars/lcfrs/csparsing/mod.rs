@@ -1,5 +1,4 @@
 mod automaton;
-mod fallback;
 mod cowderiv;
 
 use super::Lcfrs;
@@ -116,7 +115,7 @@ where
             .peekable();
         let first = word_iterator
             .peek()
-            .map(|w| fallback::FailedParseTree::new(w).merge(&grammar.rules));
+            .map(|w| cowderiv::CowDerivation::new(w).fallback(&grammar.rules));
 
         let count_candidates = move |_: &Vec<Delta>| -> bool {
             candidates.as_mut().map_or(true, |c| {
@@ -177,7 +176,7 @@ where
         let debug_result = match (o_parse_tree, o_fallback_word) {
             (Some(t), _) => DebugResult::Parse(t.cloned(), enumerated_words),
             (None, Some(w)) => {
-                let tree = fallback::FailedParseTree::new(&w).merge(&grammar.rules);
+                let tree = cowderiv::CowDerivation::new(&w).fallback(&grammar.rules);
                 DebugResult::Fallback(tree, enumerated_words)
             }
             (None, None) => DebugResult::Noparse,
