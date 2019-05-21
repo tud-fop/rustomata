@@ -100,7 +100,7 @@ impl CowDerivation {
         }
     }
 
-    fn collect_children<'a, 'b, 'c>(roots: &'a [(usize, &'b Self)], nt_offset_per_rule: HashMap<usize, usize>, index_after_removal: Vec<usize>) -> Vec<Vec<(usize, &'c Self)>>
+    fn collect_children<'a, 'b, 'c>(roots: &'a [(usize, &'b Self)], nt_reindex: HashMap<(usize, usize), usize>) -> Vec<Vec<(usize, &'c Self)>>
     where
         'a: 'c,
         'b: 'c
@@ -109,7 +109,7 @@ impl CowDerivation {
         
         for &(_, ref t) in roots {
             for &((i, j), ref successor) in &t.successors {
-                let index = index_after_removal[i + nt_offset_per_rule[&t.content]];
+                let index = nt_reindex[&(t.content, i)];
                 VecMultiMapAdapter(&mut successors_per_fst).push_to(index, (j, successor));
             }
         }
@@ -128,86 +128,45 @@ impl CowDerivation {
         deriv
     }
 
-    fn merge_rules<N, T, W>(head: N, roots: &[(usize, &Self)], int: &[PMCFGRule<N, T, W>]) -> (HashMap<usize, usize>, Vec<usize>, PMCFGRule<N, T, W>)
+    fn merge_rules<N, T, W>(head: N, roots: &[(usize, &Self)], int: &[PMCFGRule<N, T, W>]) -> (HashMap<(usize, usize), usize>, PMCFGRule<N, T, W>)
     where
         W: Zero,
         N: Clone,
         T: Clone
     {
-        use std::collections::HashSet;
-        use std::iter::{repeat, repeat_with};
-        use std::mem::replace;
-
-        // concatenate right-hand sides of rules:
-        // * collect all rhs nonterminals of all rules
-        //   (skip for already processed rules)
-        // * collect composition components, change first
-        //   index according to index in list of
-        //   collected nonterminals
-        let mut used_nts: Vec<bool> = Vec::new();
-        let mut used_nt_count = 0;
+        // first pass through compositions:
+        // collects all used nonterminals and reorders them by occurance
+        let mut nt_reindex: HashMap<(usize, usize), usize> = HashMap::new();
+        let mut tail = Vec::new();
         let mut fanout = 0;
-        let mut nt_offset_per_rule = HashMap::new();
         for &(component, t) in roots.iter() {
-            let offset = *nt_offset_per_rule.entry(t.content).or_insert_with(
-                || {
-                    let offset = used_nts.len();
-                    used_nts.extend(repeat(false).take(int[t.content].tail.len()));
-                    offset
-                }
-            );
-
             for i in roots.iter().flat_map(|&(_, t)| &int[t.content].composition[component])
                                  .filter_map(|symbol| match *symbol { VarT::Var(i, _) => Some(i) , _ => None }) {
-                if !replace(&mut used_nts[i+offset], true) {
-                    used_nt_count += 1;
-                }
+                nt_reindex.entry((t.content, i)).or_insert_with(|| {tail.push(int[t.content].tail[i].clone()); tail.len() - 1});
             }
 
             fanout = usize::max(fanout, component + 1);
         }
         
-        // remove unused nonterminals, store new index
-        let mut index_after_removal = vec![0; used_nts.len()];
+        // second pass through compositions:
+        // uses reordering of nonterminals and applies it
+        // to all variables' first indices
         let mut composition = Vec::new();
         composition.resize_with(fanout, Vec::new);
-        let mut tail = Vec::with_capacity(used_nt_count);
-        let mut processed_rules = HashSet::new();
-        let mut nt_index = 0;
-
         for &(component, ref t) in roots {
-            let nt_offset = nt_offset_per_rule[&t.content];
-            let nts = int[t.content].tail.len();
-            let used_nts_range = nt_offset .. nt_offset+nts;
-
-            if processed_rules.insert(t.content) {
-                tail.extend(int[t.content].tail.iter().enumerate().zip(&used_nts[used_nts_range])
-                    .filter_map(
-                        |((nti, nt), b)|
-                        if *b {
-                            index_after_removal[nt_offset + nti] = nt_index;
-                            nt_index += 1;
-                            Some(nt)
-                        } else {
-                            None
-                        }
-                    ).cloned());
-            }
-            
             composition[component].extend(
                 int[t.content].composition[component].iter().map(
                     |symbol|
                     match symbol {
                         VarT::T(t) => VarT::T(t.clone()),
-                        &VarT::Var(i, j) => VarT::Var(index_after_removal[nt_offset + i], j)
+                        &VarT::Var(i, j) => VarT::Var(nt_reindex[&(t.content, i)], j)
                     }
                 )
             );
         }
     
         (
-            nt_offset_per_rule,
-            index_after_removal,
+            nt_reindex,
             PMCFGRule{ head, tail, composition: composition.into(), weight: W::zero() }
         )
     }
@@ -219,10 +178,10 @@ impl CowDerivation {
         W: Zero
     {
         let root_lhs = int[roots[0].1.content].head.clone();
-        let (nt_offset, nt_removal, root_node) = Self::merge_rules(root_lhs, roots, int);
+        let (nt_reindex, root_node) = Self::merge_rules(root_lhs, roots, int);
         
         // process children with same first label
-        for (sidx, child_group) in Self::collect_children(roots, nt_offset, nt_removal).into_iter().enumerate().filter(|&(_, ref v)| !v.is_empty()) {
+        for (sidx, child_group) in Self::collect_children(roots, nt_reindex).into_iter().enumerate().filter(|&(_, ref v)| !v.is_empty()) {
             let mut spos = pos.clone();
             spos.push(sidx);
             Self::fallback_vec(&child_group, int, tree, spos);
@@ -272,7 +231,7 @@ mod test {
         ];
         
         assert_eq!(
-            CowDerivation::merge_rules('A', &treestubs, &rules).2,
+            CowDerivation::merge_rules('A', &treestubs, &rules).1,
             PMCFGRule {
                 head: 'A',
                 tail: vec!['C', 'D', 'E'],
@@ -374,7 +333,6 @@ mod test {
         use self::Bracket::*;
         use self::BracketContent::*;
         use self::VarT::*;
-        let one: LogDomain<f64> = LogDomain::one();
         let rules = rules();
 
         vec![
