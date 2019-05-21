@@ -100,16 +100,20 @@ impl CowDerivation {
         }
     }
 
-    fn collect_children<'a, 'b, 'c>(roots: &'a [(usize, &'b Self)], nt_reindex: HashMap<(usize, usize), usize>) -> Vec<Vec<(usize, &'c Self)>>
+    /// Collects the cildren of each cow derivation in the given iterator
+    /// and groups them all by the first index of the outgoing edge label.
+    /// The returned groups consists of tuples containing
+    /// * the second edge label, and
+    /// * a reference to the child cow derivation.
+    fn collect_children<'a, I>(trees: I, reindex: HashMap<(usize, usize), usize>) -> Vec<Vec<(usize, &'a Self)>>
     where
-        'a: 'c,
-        'b: 'c
+        I: Iterator<Item=&'a Self>
     {
         let mut successors_per_fst: Vec<Vec<(usize, &Self)>> = Vec::new();
         
-        for &(_, ref t) in roots {
+        for t in trees {
             for &((i, j), ref successor) in &t.successors {
-                let index = nt_reindex[&(t.content, i)];
+                let index = reindex[&(t.content, i)];
                 VecMultiMapAdapter(&mut successors_per_fst).push_to(index, (j, successor));
             }
         }
@@ -117,6 +121,7 @@ impl CowDerivation {
         successors_per_fst
     }
 
+    /// Constructs a derivation from a given cow derivation.
     pub fn fallback<N, T, W>(&self, int: &[PMCFGRule<N, T, W>]) -> GornTree<PMCFGRule<N, T, W>>
     where
         N: Clone,
@@ -128,21 +133,31 @@ impl CowDerivation {
         deriv
     }
 
-    fn merge_rules<N, T, W>(head: N, roots: &[(usize, &Self)], int: &[PMCFGRule<N, T, W>]) -> (HashMap<(usize, usize), usize>, PMCFGRule<N, T, W>)
+    /// Merge a list of rules given by an iterator over triples containing
+    /// * an index in the component,
+    /// * a unique rule id, and
+    /// * the rules.
+    /// Returns a reordering of rhs nonterminals (ruleid, rhs index ↦ new rhs index)
+    /// and the constructed rule.
+    fn merge_rules<'a, N, T, W, I>(head: N, roots: I) -> (HashMap<(usize, usize), usize>, PMCFGRule<N, T, W>)
     where
-        W: Zero,
-        N: Clone,
-        T: Clone
+        W: 'a + Zero,
+        N: 'a + Clone,
+        T: 'a + Clone,
+        I: Clone + Iterator<Item=(usize, usize, &'a PMCFGRule<N, T, W>)>,
     {
+        // store iterator for a second pass
+        let second_pass = roots.clone();
+        
         // first pass through compositions:
         // collects all used nonterminals and reorders them by occurance
         let mut nt_reindex: HashMap<(usize, usize), usize> = HashMap::new();
         let mut tail = Vec::new();
         let mut fanout = 0;
-        for &(component, t) in roots.iter() {
-            for i in roots.iter().flat_map(|&(_, t)| &int[t.content].composition[component])
-                                 .filter_map(|symbol| match *symbol { VarT::Var(i, _) => Some(i) , _ => None }) {
-                nt_reindex.entry((t.content, i)).or_insert_with(|| {tail.push(int[t.content].tail[i].clone()); tail.len() - 1});
+        for (component, ruleid, rule) in roots {
+            for i in rule.composition[component].iter()
+                        .filter_map(|symbol| match *symbol { VarT::Var(i, _) => Some(i) , _ => None }) {
+                nt_reindex.entry((ruleid, i)).or_insert_with(|| {tail.push(rule.tail[i].clone()); tail.len() - 1});
             }
 
             fanout = usize::max(fanout, component + 1);
@@ -153,13 +168,13 @@ impl CowDerivation {
         // to all variables' first indices
         let mut composition = Vec::new();
         composition.resize_with(fanout, Vec::new);
-        for &(component, ref t) in roots {
+        for (component, ruleid, rule) in second_pass {
             composition[component].extend(
-                int[t.content].composition[component].iter().map(
+                rule.composition[component].iter().map(
                     |symbol|
                     match symbol {
                         VarT::T(t) => VarT::T(t.clone()),
-                        &VarT::Var(i, j) => VarT::Var(nt_reindex[&(t.content, i)], j)
+                        &VarT::Var(i, j) => VarT::Var(nt_reindex[&(ruleid, i)], j)
                     }
                 )
             );
@@ -171,6 +186,7 @@ impl CowDerivation {
         )
     }
 
+    // Merges a group of cow derivations.
     fn fallback_vec<N, T, W>(roots: &[(usize, &Self)], int: &[PMCFGRule<N, T, W>], tree: &mut GornTree<PMCFGRule<N, T, W>>, pos: Vec<usize>)
     where
         N: Clone,
@@ -178,10 +194,10 @@ impl CowDerivation {
         W: Zero
     {
         let root_lhs = int[roots[0].1.content].head.clone();
-        let (nt_reindex, root_node) = Self::merge_rules(root_lhs, roots, int);
+        let (nt_reindex, root_node) = Self::merge_rules(root_lhs, roots.iter().map(|&(j, ref t)| (j, t.content, &int[t.content])));
         
         // process children with same first label
-        for (sidx, child_group) in Self::collect_children(roots, nt_reindex).into_iter().enumerate().filter(|&(_, ref v)| !v.is_empty()) {
+        for (sidx, child_group) in Self::collect_children(roots.iter().map(|&(_, t)| t), nt_reindex).into_iter().enumerate().filter(|&(_, ref v)| !v.is_empty()) {
             let mut spos = pos.clone();
             spos.push(sidx);
             Self::fallback_vec(&child_group, int, tree, spos);
@@ -203,35 +219,34 @@ mod test {
         use self::VarT::*;
         let one: LogDomain<f64> = LogDomain::one();
 
-        let rules: Vec<PMCFGRule<char, char, LogDomain<f64>>> = vec![
-            PMCFGRule {
-                head: 'A',
-                tail: vec!['B', 'C'],
-                weight: one,
-                composition: Composition {
-                    composition: vec![vec![Var(1, 0)], vec![Var(0, 0)]],
+        let rules: Vec<(usize, usize, PMCFGRule<char, char, LogDomain<f64>>)> = vec![
+            (
+                0,
+                0,
+                PMCFGRule {
+                    head: 'A',
+                    tail: vec!['B', 'C'],
+                    weight: one,
+                    composition: Composition {
+                        composition: vec![vec![Var(1, 0)], vec![Var(0, 0)]],
+                    },
                 },
-            },
-            PMCFGRule {
-                head: 'A',
-                tail: vec!['D', 'E'],
-                weight: one,
-                composition: Composition {
-                    composition: vec![vec![], vec![Var(0, 0), Var(1, 0)]],
+            ), (
+                1,
+                1,
+                PMCFGRule {
+                    head: 'A',
+                    tail: vec!['D', 'E'],
+                    weight: one,
+                    composition: Composition {
+                        composition: vec![vec![], vec![Var(0, 0), Var(1, 0)]],
+                    },
                 },
-            }
+            )
         ];
 
-        let treestub1 = LabelledTreeNode{ content: 0, successors: vec![] };
-        let treestub2 = LabelledTreeNode{ content: 1, successors: vec![] };
-        
-        let treestubs = vec![
-            (0, &treestub1),
-            (1, &treestub2)
-        ];
-        
         assert_eq!(
-            CowDerivation::merge_rules('A', &treestubs, &rules).1,
+            CowDerivation::merge_rules('A', rules.iter().map(|&(c, rid, ref r)| (c, rid, r))).1,
             PMCFGRule {
                 head: 'A',
                 tail: vec!['C', 'D', 'E'],
