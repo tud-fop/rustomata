@@ -68,6 +68,14 @@ impl<T> Composition<T> {
     }
 }
 
+use std::ops::Index;
+impl<T> Index<usize> for Composition<T> {
+    type Output = Vec<VarT<T>>;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.composition[idx]
+    }
+}
+
 impl<T> From<Vec<Vec<VarT<T>>>> for Composition<T> {
     fn from(encapsulated_value: Vec<Vec<VarT<T>>>) -> Self {
         Composition {

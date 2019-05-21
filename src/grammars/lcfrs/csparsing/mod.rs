@@ -1,5 +1,6 @@
 mod automaton;
 mod fallback;
+mod cowderiv;
 
 use super::Lcfrs;
 
