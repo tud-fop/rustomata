@@ -210,8 +210,11 @@ where
         W: Factorizable + Zero,
         N: Hash + Eq,
     {
-        assert!(estimates_max_width <= u8::max_value() as usize);
-        let (rules, initial) = grammar.into().destruct();
+        assert!(estimates_max_width <= u8::max_value() as usize, "the maximum width for estimates should be less than {}", u8::max_value());
+        let grammar = grammar.into();
+        assert!(grammar.in_normal_form(), "the given grammar is not in normal form (ε-free and terminal-separated)");
+        
+        let (rules, initial) = grammar.destruct();
         let generator = {
             let rules_with_id = rules.iter().enumerate().map(|(i, r)| (i as u32, r));
             Automaton::from_grammar(rules_with_id, initial.clone())

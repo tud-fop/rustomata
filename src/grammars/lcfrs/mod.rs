@@ -48,6 +48,21 @@ where
 
         Some(Lcfrs { rules, init })
     }
+
+    pub fn in_normal_form(&self) -> bool {
+        self.rules.iter().all(
+            |r|
+            // epsilon-free
+            r.composition.iter().all(|c| !c.is_empty())
+            && (
+                // terminal-separated
+                r.composition.iter().flat_map(|v| v).all(|vart| vart.is_var())
+                ||(
+                    r.composition.len() == 1
+                    && r.composition[0].len() == 1
+                    && r.composition[0][0].is_t()))
+        )
+    }
 }
 
 impl<N, T, W> Lcfrs<N, T, W> {
