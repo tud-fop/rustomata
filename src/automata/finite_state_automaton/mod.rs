@@ -109,7 +109,7 @@ where
 
     pub fn list_transitions<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Transition<FiniteStateInstruction<Q>, T, W>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Transition<FiniteStateInstruction<Q>, T, W>> + 'a> {
         Box::new(self.transitions.values().flat_map(move |h| {
             h.iter().map(move |t| {
                 Transition::un_integerise(t, &self.t_integeriser, &self.q_integeriser)
@@ -138,7 +138,7 @@ where
 
     fn transitions<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Transition<FiniteStateInstruction<Q>, T, W>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Transition<FiniteStateInstruction<Q>, T, W>> + 'a> {
         self.list_transitions()
     }
 

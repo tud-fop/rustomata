@@ -189,7 +189,7 @@ where
 {
     pub fn list_transitions<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Transition<PushDownInstruction<A>, T, W>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Transition<PushDownInstruction<A>, T, W>> + 'a> {
         Box::new(self.transitions.values().flat_map(move |h| {
             h.iter().map(move |t| {
                 Transition::un_integerise(t, &self.t_integeriser, &self.a_integeriser)
@@ -234,7 +234,7 @@ where
 
     fn transitions<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Transition<PushDownInstruction<A>, T, W>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Transition<PushDownInstruction<A>, T, W>> + 'a> {
         self.list_transitions()
     }
 
@@ -306,7 +306,7 @@ where
 {
     type Parse = Item<PushDown<A>, PushDownInstruction<A>, T, W>;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item = Self::Parse> + 'a> {
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<dyn Iterator<Item = Self::Parse> + 'a> {
         Box::new(recognisable::automaton::recognise(self, word))
     }
 
@@ -314,7 +314,7 @@ where
         &'a self,
         beam: usize,
         word: Vec<T>,
-    ) -> Box<Iterator<Item = Self::Parse> + 'a> {
+    ) -> Box<dyn Iterator<Item = Self::Parse> + 'a> {
         Box::new(recognisable::automaton::recognise_beam(self, beam, word))
     }
 }

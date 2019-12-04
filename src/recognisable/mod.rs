@@ -41,11 +41,11 @@ pub trait Recognisable<T, W> {
     // TODO rename to Recogniser
     type Parse;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item = Self::Parse> + 'a>;
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<dyn Iterator<Item = Self::Parse> + 'a>;
 
     fn recognise_beam_search<'a>(
         &'a self,
         beam: usize,
         word: Vec<T>,
-    ) -> Box<Iterator<Item = Self::Parse> + 'a>;
+    ) -> Box<dyn Iterator<Item = Self::Parse> + 'a>;
 }

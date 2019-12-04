@@ -36,7 +36,7 @@ where
     W: 'a + Clone + MulAssign + One + Ord,
 {
     sublevel_parses:
-        Box<Iterator<Item = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> + 'a>,
+        Box<dyn Iterator<Item = Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>> + 'a>,
     recogniser: Rc<Rec>,
     approximation_instance: Rc<ApproximationInstance<Strategy, T, W>>,
     input_buffer: Option<Option<Item<<Strategy::I2 as Instruction>::Storage, Strategy::I2, T, W>>>,
@@ -126,7 +126,7 @@ where
 {
     type Parse = Item<<Strategy::I1 as Instruction>::Storage, Strategy::I1, T, W>;
 
-    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<Iterator<Item = Self::Parse> + 'a> {
+    fn recognise<'a>(&'a self, word: Vec<T>) -> Box<dyn Iterator<Item = Self::Parse> + 'a> {
         Box::new(CoarseToFineParseForest {
             sublevel_parses: self.sublevel.recognise(word),
             recogniser: self.recogniser.clone(),
@@ -140,7 +140,7 @@ where
         &'a self,
         _: usize,
         _: Vec<T>,
-    ) -> Box<Iterator<Item = Self::Parse> + 'a> {
+    ) -> Box<dyn Iterator<Item = Self::Parse> + 'a> {
         unimplemented!()
     }
 }

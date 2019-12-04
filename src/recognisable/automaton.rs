@@ -48,7 +48,7 @@ where
         It: IntoIterator<Item = Transition<Self::I, T, W>>;
 
     /// Returns a boxed `Iterator` over the `Transitions` of this `Automaton`.
-    fn transitions<'a>(&'a self) -> Box<Iterator<Item = Transition<Self::I, T, W>> + 'a>;
+    fn transitions<'a>(&'a self) -> Box<dyn Iterator<Item = Transition<Self::I, T, W>> + 'a>;
 
     /// Returns the initial storage configuration.
     fn initial(&self) -> <Self::I as Instruction>::Storage;

@@ -105,7 +105,7 @@ where
         panic!("not implemented")
     }
 
-    fn transitions<'a>(&'a self) -> Box<Iterator<Item = MDTransition<T>> + 'a> {
+    fn transitions<'a>(&'a self) -> Box<dyn Iterator<Item = MDTransition<T>> + 'a> {
         Box::new(self.transitions.get(&()).unwrap().iter().cloned())
     }
 

@@ -1,6 +1,5 @@
 use super::{RangeT, StateT};
 use num_traits::Zero;
-use std::mem::zeroed;
 use std::ops::AddAssign;
 
 /// A chart for cfg parsing.
@@ -39,9 +38,9 @@ impl<W: Copy> DenseChart<W> {
     {
         assert!(bt_per_cell <= u16::max_value() as usize);
         DenseChart(
-            vec![unsafe { zeroed() }; chart_size(n)],
-            vec![unsafe { zeroed() }; chart_size(n) * bt_per_cell],
-            vec![W::zero(); chart_size_with_states(n, states)],
+            vec![ 0; chart_size(n) ],
+            vec![ (0, W::zero()); chart_size(n) * bt_per_cell ],
+            vec![ W::zero(); chart_size_with_states(n, states) ],
             n,
             states,
             bt_per_cell as u16,
@@ -72,18 +71,18 @@ impl<W: Copy> DenseChart<W> {
         }
     }
 
-    pub fn get_best(&self, i: RangeT, j: RangeT) -> Option<(StateT, W)>
-    where
-        W: Zero + PartialEq,
-    {
-        let index = index(i, j, self.3) * self.5 as usize;
-        let (state, w) = self.1[index];
-        if w == W::zero() {
-            None
-        } else {
-            Some((state, w))
-        }
-    }
+    // pub fn get_best(&self, i: RangeT, j: RangeT) -> Option<(StateT, W)>
+    // where
+    //     W: Zero + PartialEq,
+    // {
+    //     let index = index(i, j, self.3) * self.5 as usize;
+    //     let (state, w) = self.1[index];
+    //     if w == W::zero() {
+    //         None
+    //     } else {
+    //         Some((state, w))
+    //     }
+    // }
 }
 
 impl<W> DenseChart<W> {

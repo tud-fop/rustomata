@@ -11,11 +11,11 @@ where
     A1: 'a,
     A2: 'a,
 {
-    pub mapping: &'a Fn(&A1) -> A2,
+    pub mapping: &'a dyn Fn(&A1) -> A2,
 }
 
 impl<'a, A1, A2> RlbElement<'a, A1, A2> {
-    pub fn new(mapping: &'a Fn(&A1) -> A2) -> Self {
+    pub fn new(mapping: &'a dyn Fn(&A1) -> A2) -> Self {
         RlbElement { mapping }
     }
 }
